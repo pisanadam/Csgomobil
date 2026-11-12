@@ -55,7 +55,7 @@ class Bot {
     const e = this.e;
     let best = null, bestScore = 1e9, bestVis = false;
     for (const t of G.entities) {
-      if (!t.alive || t.team === e.team) continue;
+      if (!t.alive || t === e || G.ally(t, e)) continue;
       const vis = this.canSee(t, now);
       if (!vis) continue;
       const d = dist2(e.pos, t.pos);
@@ -90,7 +90,7 @@ class Bot {
     this.noise = { x: pos.x, y: pos.y || 0, z: pos.z }; this.noiseT = now;
   }
   onDamaged(att, now) {
-    if (!att || att.team === this.e.team) return;
+    if (!att || att === this.e || G.ally(att, this.e)) return;
     if (!this.target) { this.noise = { x: att.pos.x, y: att.pos.y, z: att.pos.z }; this.noiseT = now + 0.5; }
   }
   // ----- Hedef seçimi (strateji) -----
@@ -101,7 +101,7 @@ class Bot {
       if (this.lastSeen && now - this.lastSeenT < 4) return { key: 'hunt', p: this.lastSeen };
       if (!this.roam || dist2(e.pos, this.roam) < 2 || now > this.roamUntil) {
         let near = null, nd = 1e9;
-        for (const o of G.entities) if (o.alive && o.team !== e.team) { const d = dist2(o.pos, e.pos); if (d < nd) { nd = d; near = o; } }
+        for (const o of G.entities) if (o.alive && o !== e && !G.ally(o, e)) { const d = dist2(o.pos, e.pos); if (d < nd) { nd = d; near = o; } }
         this.roam = near && Math.random() < 0.6 ? G.randomNear(near.pos, 2, 10) : G.randomNear(e.pos, 15, 45);
         this.roamUntil = now + 12 + Math.random() * 8;
       }

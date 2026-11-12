@@ -105,7 +105,7 @@ const UI = {
   },
   onRoundStart(n, pistol) {
     if (G.dm) {
-      this.message('ÖLÜM KALIM', 3, `${Math.round(S.dmTime / 60)} dakika • Takım öldürmeleri sayılır • Satın alma ücretsiz ve her zaman açık`);
+      this.message('ÖLÜM KALIM', 3, `${Math.round(S.dmTime / 60)} dakika • Herkes herkese karşı • Satın alma ücretsiz ve her zaman açık`);
       $('specInfo').classList.add('hidden'); this.cache.slots = null; return;
     }
     const half = G.halfRounds();
@@ -127,10 +127,12 @@ const UI = {
   matchEnd(a, b) {
     $('hud').classList.add('hidden');
     if (document.exitPointerLock) document.exitPointerLock();
-    const won = a > b, draw = a === b;
-    const top = G.entities.slice().sort((x, y) => y.stats.kills - x.stats.kills)[0];
+    let won = a > b, draw = a === b;
+    const rank = G.entities.slice().sort((x, y) => y.stats.kills - x.stats.kills);
+    const top = rank[0];
+    if (G.ffa) { won = top === G.player; draw = false; a = G.player.stats.kills; b = top.stats.kills; }
     $('meTitle').textContent = draw ? 'BERABERE' : won ? 'ZAFER' : 'MAĞLUBİYET';
-    $('meSub').textContent = `Skor ${a} - ${b}` + (G.dm && top ? ` • En iyi: ${top.name} (${top.stats.kills} öldürme)` : '');
+    $('meSub').textContent = G.ffa ? `Sıran: ${rank.indexOf(G.player) + 1}/${rank.length} • Öldürmen: ${G.player.stats.kills} • Kazanan: ${top.name} (${top.stats.kills})` : `Skor ${a} - ${b}`;
     $('meBoard').innerHTML = this.scoreTable();
     $('matchEnd').classList.remove('hidden');
   },
@@ -230,6 +232,16 @@ const UI = {
   },
   scoreTable() {
     let h = '';
+    if (G.ffa) {
+      const list = G.entities.slice().sort((a, b) => b.stats.kills - a.stats.kills || a.stats.deaths - b.stats.deaths);
+      h += '<div class="sbHead"><span>ÖLÜM KALIM — HERKES HERKESE KARŞI</span></div>';
+      h += '<table><tr><th>#</th><th>Oyuncu</th><th>Ö</th><th>A</th><th>Ö/K</th><th>HS%</th><th>HASAR</th></tr>';
+      list.forEach((e, i) => {
+        const hs = e.stats.kills ? Math.round(e.stats.hs / e.stats.kills * 100) : 0;
+        h += `<tr class="${e.alive ? '' : 'dead'} ${e.isPlayer ? 'me' : ''}"><td>${i + 1}</td><td style="text-align:left">${e.isPlayer ? '★ ' : ''}${e.name}</td><td>${e.stats.kills}</td><td>${e.stats.assists}</td><td>${e.stats.deaths}</td><td>${hs}</td><td>${e.stats.dmg}</td></tr>`;
+      });
+      return h + '</table>';
+    }
     for (const team of ['CT', 'T']) {
       const g = G.sideOfGroup.indexOf(team);
       const list = G.entities.filter(e => e.team === team).sort((a, b) => b.stats.kills - a.stats.kills || b.stats.dmg - a.stats.dmg);
@@ -251,8 +263,13 @@ const UI = {
     const p = G.player, R = G.round;
     const view = !p.alive && G.spec ? G.spec : p;
     // skor & zaman
-    const lg = G.sideOfGroup.indexOf('CT'), rg = 1 - lg;
-    this.set('scL', String(G.score[lg])); this.set('scR', String(G.score[rg]));
+    if (G.ffa) {
+      let best = 0; for (const e of G.entities) if (e !== p) best = Math.max(best, e.stats.kills);
+      this.set('scL', String(p.stats.kills)); this.set('scR', String(best));
+    } else {
+      const lg = G.sideOfGroup.indexOf('CT'), rg = 1 - lg;
+      this.set('scL', String(G.score[lg])); this.set('scR', String(G.score[rg]));
+    }
     let t = R.phase === 'freeze' ? R.timer : R.phase === 'planted' ? G.bomb.timer : R.phase === 'end' ? R.timer : R.timeLeft;
     t = Math.max(0, t);
     const ts = R.phase === 'planted' ? '💣 ' + t.toFixed(1) : `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
@@ -261,7 +278,7 @@ const UI = {
     if (this.cache.timerCls !== bombCls) { this.cache.timerCls = bombCls; $('timer').className = bombCls; }
     // canlı göstergeleri
     const aliveStr = team => G.entities.filter(e => e.team === team).map(e => `<i class="${e.alive ? '' : 'dead'}"></i>`).join('');
-    const aL = aliveStr('CT'), aR = aliveStr('T');
+    const aL = G.ffa ? '<b style="font-size:11px;color:#fff">SEN</b>' : aliveStr('CT'), aR = G.ffa ? '<b style="font-size:11px;color:#fff">LİDER</b>' : aliveStr('T');
     if (this.cache.aL !== aL) { this.cache.aL = aL; $('aliveL').innerHTML = aL; }
     if (this.cache.aR !== aR) { this.cache.aR = aR; $('aliveR').innerHTML = aR; }
     // oyuncu
@@ -356,7 +373,7 @@ const UI = {
     const now = G.now;
     for (const e of G.entities) {
       if (!e.alive) continue;
-      const mate = e.team === G.player.team;
+      const mate = e === view || (!G.ffa && e.team === G.player.team);
       if (!mate && e.spottedUntil < now) continue;
       const [x, y] = toR(e.pos);
       c.fillStyle = mate ? (e.team === 'T' ? '#f0b43c' : '#6aa8ff') : '#ff3b30';

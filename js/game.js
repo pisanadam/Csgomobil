@@ -78,7 +78,7 @@ G.startMatch = function () {
   let pt = S.playerTeam; if (pt === 'auto') pt = Math.random() < 0.5 ? 'T' : 'CT';
   this.sideOfGroup = [pt, pt === 'T' ? 'CT' : 'T'];
   this.score = [0, 0]; this.lossStreak = { T: 0, CT: 0 };
-  this.dm = S.mode === 'dm';
+  this.dm = S.mode === 'dm'; this.ffa = this.dm;
   this.FREEZE = this.dm ? 3 : 6; this.ROUND_TIME = this.dm ? S.dmTime : 115;
   const names = BOT_NAMES.slice().sort(() => Math.random() - 0.5);
   const n = Math.max(1, Math.min(5, S.teamSize));
@@ -222,7 +222,7 @@ G.update = function (dt) {
   // izleyici
   if (!this.player.alive) {
     if (!this.spec || !this.spec.alive) {
-      this.spec = this.entities.find(e => e.alive && e.team === this.player.team) || this.entities.find(e => e.alive) || null;
+      this.spec = this.entities.find(e => e.alive && e !== this.player && this.ally(e, this.player)) || this.entities.find(e => e.alive) || null;
     }
   }
 };
@@ -318,7 +318,7 @@ G.fireBullet = function (sh, o, d, def, first) {
   let victim = null, vh = null;
   for (const e of this.entities) {
     if (e === sh || !e.alive) continue;
-    if (e.team === sh.team && !S.friendlyFire) continue;
+    if (this.ally(e, sh) && !S.friendlyFire) continue;
     const r = this.hitTestEntity(e, o, d, endT);
     if (r && (!vh || r.t < vh.t)) { vh = r; victim = e; }
   }
@@ -360,7 +360,7 @@ G.knifeAttack = function (e) {
   const o = e.eye(), d = dirFromAngles(e.yaw, e.pitch);
   let best = null, bt = 1.7;
   for (const t of this.entities) {
-    if (t === e || !t.alive || (t.team === e.team && !S.friendlyFire)) continue;
+    if (t === e || !t.alive || (this.ally(t, e) && !S.friendlyFire)) continue;
     const r = this.hitTestEntity(t, o, d, bt);
     if (r && r.t < bt) { bt = r.t; best = t; }
   }
@@ -387,16 +387,16 @@ G.onShot = function (e, def) {
   // botlar duyar
   const range = def.silenced ? 18 : 60;
   for (const b of this.bots) {
-    if (b.e.team === e.team || !b.e.alive) continue;
+    if (b.e === e || this.ally(b.e, e) || !b.e.alive) continue;
     if (dist2(b.e.pos, e.pos) < range) b.hear(e.pos, this.now, 'shot');
   }
   if (!def.silenced) e.spottedUntil = Math.max(e.spottedUntil, this.now + 0.3); // radarda görünür
 };
 G.onFootstep = function (e) {
-  if (!e.isPlayer) Audio3.footstep(e.pos, e.team === this.player.team ? 0.5 : 1);
+  if (!e.isPlayer) Audio3.footstep(e.pos, this.ally(e, this.player) ? 0.5 : 1);
   else Audio3.footstep(null, 0.35);
   for (const b of this.bots) {
-    if (b.e.team === e.team || !b.e.alive) continue;
+    if (b.e === e || this.ally(b.e, e) || !b.e.alive) continue;
     if (dist2(b.e.pos, e.pos) < 20) b.hear(e.pos, this.now, 'step');
   }
 };
@@ -416,7 +416,7 @@ G.onKill = function (v, k, def, hs, wallbang) {
   v.plantT = 0; v.defuseT = 0;
   if (this.bomb.defuser === v) this.bomb.defuser = null;
   if (k && k !== v) {
-    if (k.team !== v.team) {
+    if (!this.ally(k, v)) {
       k.stats.kills++; if (hs) k.stats.hs++;
       if (this.dm) {
         this.score[k.group]++;
@@ -429,7 +429,7 @@ G.onKill = function (v, k, def, hs, wallbang) {
     } else { k.stats.kills--; this.addMoney(k, -300); }
   }
   // asist
-  for (const [a, dmg] of v.dmgBy) if (a !== k && a.team !== v.team && dmg >= 40) a.stats.assists++;
+  for (const [a, dmg] of v.dmgBy) if (a !== k && !this.ally(a, v) && dmg >= 40) a.stats.assists++;
   UI.killfeed(k && k !== v ? k : null, v, def, hs, wallbang);
   // eşyaları düşür
   const drop = v.inv.primary || v.inv.secondary;
@@ -688,7 +688,7 @@ G.detonate = function (n) {
     FX.explosion(p, false); Audio3.explosion(p, false);
     for (const e of this.entities) {
       if (!e.alive) continue;
-      if (e.team === n.team && e !== n.owner && !S.friendlyFire) continue;
+      if (e !== n.owner && this.ally(e, n.owner) && !S.friendlyFire) continue;
       const c = { x: e.pos.x, y: e.pos.y + 1.0, z: e.pos.z };
       const d = Math.hypot(c.x - p.x, c.y - p.y, c.z - p.z);
       if (d > 11) continue;
@@ -734,7 +734,7 @@ G.updateFireDamage = function (dt) {
     if (f.t > f.life - 0.3) continue;
     for (const e of this.entities) {
       if (!e.alive) continue;
-      if (e.team === f.team && e !== f.owner && !S.friendlyFire) continue;
+      if (e !== f.owner && (f.owner ? this.ally(e, f.owner) : e.team === f.team) && !S.friendlyFire) continue;
       if (Math.hypot(e.pos.x - f.pos.x, e.pos.z - f.pos.z) > f.radius || e.pos.y > 1.2) continue;
       e.fireAcc = (e.fireAcc || 0) + dt * 40;
       if (e.fireAcc >= 8) {
@@ -752,7 +752,7 @@ G.updateFireDamage = function (dt) {
 // ================= TAKIM BİLGİSİ =================
 G.spot = function (t, team, now) {
   this.know[team].set(t, { pos: { x: t.pos.x, z: t.pos.z }, time: now });
-  if (team === this.player.team) t.spottedUntil = now + 1.2;
+  if (!this.ffa && team === this.player.team) t.spottedUntil = now + 1.2;
 };
 G.knownSiteThreat = function (team, now) {
   let a = 0, b = 0;
@@ -782,6 +782,14 @@ G.checkWin = function () {
   if (this.dm) {
     if (R.timeLeft <= 0) {
       R.phase = 'end'; R.timer = this.END_TIME; R.endReason = 'dmtime';
+      if (this.ffa) {
+        const rank = this.entities.slice().sort((a, b) => b.stats.kills - a.stats.kills);
+        const pw = rank[0] === this.player;
+        Audio3.roundEnd(pw);
+        UI.message(pw ? '<span style="color:var(--ok)">BİRİNCİ OLDUN!</span>' : `<span style="color:var(--accent)">${rank[0].name} KAZANDI</span>`, 5, `Süre doldu • Sıran: ${rank.indexOf(this.player) + 1}/${rank.length}`);
+        UI.toggleBuy(false);
+        return;
+      }
       const pw = this.score[0] > this.score[1];
       Audio3.roundEnd(pw);
       UI.message(this.score[0] === this.score[1] ? 'BERABERE' : (pw ? '<span style="color:var(--ok)">TAKIMIN KAZANDI</span>' : '<span style="color:var(--danger)">TAKIMIN KAYBETTİ</span>'), 5, `Süre doldu • ${this.score[0]} - ${this.score[1]}`);
@@ -842,7 +850,7 @@ G.updatePlayerAssist = function (dt) {
     this.assistCheckT = 0.08;
     this.assistVis = new Map();
     for (const e of this.entities) {
-      if (!e.alive || e.team === p.team) continue;
+      if (!e.alive || e === p || this.ally(e, p)) continue;
       if (dist2(e.pos, p.pos) > 70) continue;
       const head = { x: e.pos.x, y: e.pos.y + e.height - 0.12, z: e.pos.z }, chest = { x: e.pos.x, y: e.pos.y + e.height * 0.62, z: e.pos.z };
       const vh = !Phys.blocked(eye, head) && !FX.smokeBlocks(eye, head);
@@ -1001,7 +1009,7 @@ G.dmLoadout = function (e) {
   e.slot = e.bestSlot(); e.deployT = 0; e.onEquip();
 };
 G.dmSpawnPoint = function (e) {
-  const enemies = this.entities.filter(o => o.alive && o.team !== e.team);
+  const enemies = this.entities.filter(o => o.alive && o !== e && !this.ally(o, e));
   let best = null, bestScore = -1e9;
   for (let i = 0; i < 40; i++) {
     const c = Math.floor(Math.random() * MAP.W), r = Math.floor(Math.random() * MAP.H);
@@ -1026,10 +1034,12 @@ G.respawn = function (e) {
   e.recoilIdx = 0; e.fireInacc = 0; e.punch.x = e.punch.y = 0; e.scoped = 0; e.reloadT = 0; e.trig = false;
   e.dmgBy.clear(); e.protectUntil = this.now + 1.5;
   let near = null, nd = 1e9;
-  for (const o of this.entities) if (o.alive && o.team !== e.team && o !== e) { const d = dist2(o.pos, e.pos); if (d < nd) { nd = d; near = o; } }
+  for (const o of this.entities) if (o.alive && o !== e && !this.ally(o, e)) { const d = dist2(o.pos, e.pos); if (d < nd) { nd = d; near = o; } }
   e.yaw = near ? Math.atan2(-(near.pos.x - e.pos.x), -(near.pos.z - e.pos.z)) : Math.random() * 6.28; e.pitch = 0;
   if (e.model) { e.model.root.rotation.set(0, e.yaw, 0); }
   this.dmLoadout(e);
   if (e.bot) e.bot.roundStart({});
   if (e.isPlayer) { this.spec = null; UI.message('', 0); }
 };
+
+G.ally = function (a, b) { return !this.ffa && a.team === b.team; };
