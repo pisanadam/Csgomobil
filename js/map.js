@@ -149,11 +149,12 @@ const MAP = (function () {
 
   function build(scene, quality) {
     const lam = (map, extra) => new THREE.MeshLambertMaterial(Object.assign({ map, vertexColors: true }, extra || {}));
+    const R2 = Tex.RETRO;
     const mats = {
-      wall0: lam(Tex.sandstone(11, '#c8a674')),
-      wall1: lam(Tex.plaster(22, '#d6c19c')),
-      wall2: lam(Tex.sandstone(33, '#b99668')),
-      sand: lam(Tex.ground(44, '#bc9d6b')),
+      wall0: lam(Tex.sandstone(11, R2 ? '#c9a15c' : '#c8a674')),
+      wall1: lam(Tex.plaster(22, R2 ? '#d4b880' : '#d6c19c')),
+      wall2: lam(Tex.sandstone(33, R2 ? '#b98c4e' : '#b99668')),
+      sand: lam(Tex.ground(44, R2 ? '#bf9a5c' : '#bc9d6b')),
       tsand: lam(Tex.ground(55, '#b08f5f', 500)),
       tiles: lam(Tex.tiles(66, '#a8a08f', 4)),
       tunnelFloor: lam(Tex.tiles(77, '#7d776c', 6)),

@@ -17,19 +17,19 @@ G.init = function () {
   r.setPixelRatio(Math.min(window.devicePixelRatio || 1, [0.75, 1.25, 2][q]));
   r.setSize(window.innerWidth, window.innerHeight);
   r.outputEncoding = THREE.sRGBEncoding;
-  r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.05;
+  if (Tex.RETRO) { r.toneMapping = THREE.NoToneMapping; } else { r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.05; }
   r.shadowMap.enabled = S.shadows && q >= 1;
-  r.shadowMap.type = q >= 2 ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
+  r.shadowMap.type = Tex.RETRO ? THREE.BasicShadowMap : (q >= 2 ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap);
   r.autoClear = false;
   document.getElementById('game').appendChild(r.domElement);
   const sc = this.scene = new THREE.Scene();
-  sc.fog = new THREE.Fog(0xd8c8a6, 70, 260);
+  sc.fog = Tex.RETRO ? new THREE.Fog(0xcdb88e, 110, 320) : new THREE.Fog(0xd8c8a6, 70, 260);
   sc.background = new THREE.Color(0x9cc3ea);
   this.camera = new THREE.PerspectiveCamera(S.fov, window.innerWidth / window.innerHeight, 0.05, 900);
   this.camera.rotation.order = 'YXZ';
   // ışıklar
-  sc.add(new THREE.HemisphereLight(0xcfe2ff, 0x8a6a45, 0.62));
-  const sun = this.sun = new THREE.DirectionalLight(0xfff0d0, 1.25);
+  sc.add(Tex.RETRO ? new THREE.HemisphereLight(0xfff2d8, 0x8a7050, 0.72) : new THREE.HemisphereLight(0xcfe2ff, 0x8a6a45, 0.62));
+  const sun = this.sun = new THREE.DirectionalLight(Tex.RETRO ? 0xffe6b8 : 0xfff0d0, Tex.RETRO ? 0.95 : 1.25);
   sun.position.set(45, 90, 25); sun.target.position.set(0, 0, 0);
   sun.castShadow = r.shadowMap.enabled;
   const ss = q >= 2 ? 2048 : 1024;

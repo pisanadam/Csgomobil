@@ -23,11 +23,43 @@ const Tex = (function () {
       ctx.fillStyle = g; ctx.fillRect(x - rad, y - rad, rad * 2, rad * 2);
     }
   }
+  const RETRO = (typeof S !== 'undefined') && S.texStyle === 'retro';
+  // Eski okul görünüm: düşük çözünürlük, sınırlı renk, sıralı titreşim (dither), daha doygun ve kontrastlı
+  const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+  function retroize(src, size, keepAlpha) {
+    const c = canvas(size, size), x = c.getContext('2d');
+    x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+    x.drawImage(src, 0, 0, size, size);
+    const img = x.getImageData(0, 0, size, size), d = img.data;
+    const levels = 24;
+    for (let y = 0; y < size; y++) for (let xx = 0; xx < size; xx++) {
+      const i = (y * size + xx) * 4;
+      const dth = (BAYER[(y & 3) * 4 + (xx & 3)] / 16 - 0.5) * (255 / levels);
+      let r = d[i], g = d[i + 1], b = d[i + 2];
+      const l = (r + g + b) / 3;
+      // doygunluk & kontrast
+      r = l + (r - l) * 1.35; g = l + (g - l) * 1.35; b = l + (b - l) * 1.35;
+      r = (r - 128) * 1.12 + 128; g = (g - 128) * 1.12 + 128; b = (b - 128) * 1.12 + 128;
+      const q = v => Math.max(0, Math.min(255, Math.round((v + dth) / 255 * (levels - 1)) * 255 / (levels - 1)));
+      d[i] = q(r); d[i + 1] = q(g); d[i + 2] = q(b);
+      if (!keepAlpha) d[i + 3] = 255;
+    }
+    x.putImageData(img, 0, 0);
+    return c;
+  }
+  function pixelate(t) {
+    t.magFilter = THREE.NearestFilter;
+    t.minFilter = THREE.NearestMipmapLinearFilter;
+    t.anisotropy = 1;
+    return t;
+  }
   function toTex(c, repeat) {
+    if (RETRO) c = retroize(c, c.width >= 512 ? 128 : 64);
     const t = new THREE.CanvasTexture(c);
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
     t.anisotropy = 4;
     t.encoding = THREE.sRGBEncoding;
+    if (RETRO) pixelate(t);
     return t;
   }
   // Kumtaşı blok duvar
@@ -125,6 +157,14 @@ const Tex = (function () {
     // çiviler
     x.fillStyle = 'rgba(40,40,40,0.9)';
     [[11, 11], [S - 11, 11], [11, S - 11], [S - 11, S - 11]].forEach(p => { x.beginPath(); x.arc(p[0], p[1], 3, 0, 7); x.fill(); });
+    if (RETRO) {
+      // şablon boya: yön okları ve kargo yazısı
+      x.fillStyle = 'rgba(25,18,8,0.75)'; x.font = 'bold 26px Impact, Arial Black, sans-serif'; x.textAlign = 'center';
+      x.fillText(dark ? 'KARGO' : 'KIRILIR', S / 2, S * 0.36);
+      x.beginPath(); x.moveTo(S / 2 - 30, S * 0.66); x.lineTo(S / 2 - 16, S * 0.54); x.lineTo(S / 2 - 2, S * 0.66); x.fill();
+      x.beginPath(); x.moveTo(S / 2 + 2, S * 0.66); x.lineTo(S / 2 + 16, S * 0.54); x.lineTo(S / 2 + 30, S * 0.66); x.fill();
+      x.fillRect(S / 2 - 20, S * 0.66, 8, 22); x.fillRect(S / 2 + 12, S * 0.66, 8, 22);
+    }
     noise(x, S, S, 18, r);
     return toTex(c);
   }
@@ -151,12 +191,13 @@ const Tex = (function () {
     // sprey dağılımı
     const r = rng(letter.charCodeAt(0));
     for (let i = 0; i < 300; i++) { x.fillStyle = 'rgba(200,40,20,0.25)'; x.fillRect(S / 2 + (r() - 0.5) * 180, S / 2 + (r() - 0.5) * 200, 2, 2); }
-    const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; return t;
+    const t = new THREE.CanvasTexture(RETRO ? retroize(c, 64, true) : c); t.encoding = THREE.sRGBEncoding; if (RETRO) pixelate(t); return t;
   }
   function sky() {
     const c = canvas(16, 256), x = c.getContext('2d');
     const g = x.createLinearGradient(0, 0, 0, 256);
-    g.addColorStop(0, '#3f7cc7'); g.addColorStop(0.45, '#8fbde8'); g.addColorStop(0.5, '#e9dcc3'); g.addColorStop(1, '#c9b48e');
+    if (RETRO) { g.addColorStop(0, '#2f63b8'); g.addColorStop(0.42, '#7fb0e6'); g.addColorStop(0.5, '#d9c08a'); g.addColorStop(1, '#b8955a'); }
+    else { g.addColorStop(0, '#3f7cc7'); g.addColorStop(0.45, '#8fbde8'); g.addColorStop(0.5, '#e9dcc3'); g.addColorStop(1, '#c9b48e'); }
     x.fillStyle = g; x.fillRect(0, 0, 16, 256);
     const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; return t;
   }
@@ -210,5 +251,5 @@ const Tex = (function () {
     noise(x, S, S, 14, r);
     return toTex(c);
   }
-  return { sandstone, plaster, ground, tiles, crate, metal, concrete, siteLetter, sky, soft, smokePuff, muzzle, bulletHole, camo };
+  return { RETRO, sandstone, plaster, ground, tiles, crate, metal, concrete, siteLetter, sky, soft, smokePuff, muzzle, bulletHole, camo };
 })();
