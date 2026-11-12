@@ -261,6 +261,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
       <div class="field"><label>Maç Uzunluğu</label><div class="seg" data-set="maxRounds" data-opts='[[8,"Kısa (8)"],[16,"Normal (16)"],[30,"Rekabetçi (30)"]]'></div></div>
       <div class="field"><label>Ölüm Kalım Süresi</label><div class="seg" data-set="dmTime" data-opts='[[180,"3 dk"],[300,"5 dk"],[600,"10 dk"]]'></div></div>
       <div class="field"><label>Nişan Yardımı</label><div class="seg" data-set="aimAssist" data-opts='[[0,"Kapalı"],[1,"Düşük"],[2,"Orta"],[3,"Yüksek"]]'></div></div>
+      <div class="field"><label>Tarama Yardımı</label><div class="seg" data-set="sprayAssist" data-opts='[[0,"Kapalı"],[1,"Düşük"],[2,"Orta"],[3,"Yüksek"]]'></div></div>
       <div class="field"><label>Grafik</label><div class="seg" data-set="graphics" data-opts='[[0,"Düşük"],[1,"Orta"],[2,"Yüksek"]]' data-reload="1"></div></div>
       <div class="field"><label>Doku Stili</label><div class="seg" data-set="texStyle" data-opts='[["retro","Retro"],["modern","Modern"]]' data-reload="1"></div></div>
       <div class="field"><label>Netlik (Çözünürlük)</label><div class="seg" data-set="sharp" data-opts='[[0,"Düşük"],[1,"Orta"],[2,"Yüksek"],[3,"Ultra"]]'></div></div>
@@ -284,6 +285,8 @@ input[type=range]{width:100%;accent-color:#e9a83a}
     <div class="menuGrid tabc" data-tab="aim">
       <div class="field"><label>Nişan Yardımı Gücü</label><div class="seg" data-set="aimAssist" data-opts='[[0,"Kapalı"],[1,"Düşük"],[2,"Orta"],[3,"Yüksek"]]'></div>
         <div style="font-size:12px;color:var(--dim)">Düşmana yakınken nişangahı yavaşlatır (sürtünme) ve hedefe doğru çeker (mıknatıs).</div></div>
+      <div class="field"><label>Tarama Yardımı (Geri Tepme)</label><div class="seg" data-set="sprayAssist" data-opts='[[0,"Kapalı"],[1,"Düşük"],[2,"Orta"],[3,"Yüksek"]]'></div>
+        <div style="font-size:12px;color:var(--dim)">Uzun taramada silahın yukarı/yana kaçmasını ve dağılmayı azaltır. Kapalı = gerçek sprey deseni.</div></div>
       <div class="field"><label>Otomatik Ateş</label><label class="check"><input type="checkbox" data-set="autoFire"> Nişangah düşmana gelince ateş et</label>
         <div style="font-size:12px;color:var(--dim)">Mobilde kolay oynanış için. Rekabetçi his için kapalı tutun.</div></div>
     </div>

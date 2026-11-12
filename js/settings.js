@@ -3,6 +3,7 @@
 const DEFAULT_SETTINGS = {
   // Nişan yardımı
   aimAssist: 2,          // 0 kapalı, 1 düşük, 2 orta, 3 yüksek
+  sprayAssist: 2,        // tarama (geri tepme) yardımı: 0 kapalı .. 3 yüksek
   autoFire: false,       // nişangah düşmana gelince otomatik ateş
   // Kontroller
   touchSens: 1.0,

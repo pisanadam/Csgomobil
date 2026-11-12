@@ -261,6 +261,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
       <div class="field"><label>Maç Uzunluğu</label><div class="seg" data-set="maxRounds" data-opts='[[8,"Kısa (8)"],[16,"Normal (16)"],[30,"Rekabetçi (30)"]]'></div></div>
       <div class="field"><label>Ölüm Kalım Süresi</label><div class="seg" data-set="dmTime" data-opts='[[180,"3 dk"],[300,"5 dk"],[600,"10 dk"]]'></div></div>
       <div class="field"><label>Nişan Yardımı</label><div class="seg" data-set="aimAssist" data-opts='[[0,"Kapalı"],[1,"Düşük"],[2,"Orta"],[3,"Yüksek"]]'></div></div>
+      <div class="field"><label>Tarama Yardımı</label><div class="seg" data-set="sprayAssist" data-opts='[[0,"Kapalı"],[1,"Düşük"],[2,"Orta"],[3,"Yüksek"]]'></div></div>
       <div class="field"><label>Grafik</label><div class="seg" data-set="graphics" data-opts='[[0,"Düşük"],[1,"Orta"],[2,"Yüksek"]]' data-reload="1"></div></div>
       <div class="field"><label>Doku Stili</label><div class="seg" data-set="texStyle" data-opts='[["retro","Retro"],["modern","Modern"]]' data-reload="1"></div></div>
       <div class="field"><label>Netlik (Çözünürlük)</label><div class="seg" data-set="sharp" data-opts='[[0,"Düşük"],[1,"Orta"],[2,"Yüksek"],[3,"Ultra"]]'></div></div>
@@ -284,6 +285,8 @@ input[type=range]{width:100%;accent-color:#e9a83a}
     <div class="menuGrid tabc" data-tab="aim">
       <div class="field"><label>Nişan Yardımı Gücü</label><div class="seg" data-set="aimAssist" data-opts='[[0,"Kapalı"],[1,"Düşük"],[2,"Orta"],[3,"Yüksek"]]'></div>
         <div style="font-size:12px;color:var(--dim)">Düşmana yakınken nişangahı yavaşlatır (sürtünme) ve hedefe doğru çeker (mıknatıs).</div></div>
+      <div class="field"><label>Tarama Yardımı (Geri Tepme)</label><div class="seg" data-set="sprayAssist" data-opts='[[0,"Kapalı"],[1,"Düşük"],[2,"Orta"],[3,"Yüksek"]]'></div>
+        <div style="font-size:12px;color:var(--dim)">Uzun taramada silahın yukarı/yana kaçmasını ve dağılmayı azaltır. Kapalı = gerçek sprey deseni.</div></div>
       <div class="field"><label>Otomatik Ateş</label><label class="check"><input type="checkbox" data-set="autoFire"> Nişangah düşmana gelince ateş et</label>
         <div style="font-size:12px;color:var(--dim)">Mobilde kolay oynanış için. Rekabetçi his için kapalı tutun.</div></div>
     </div>
@@ -375,6 +378,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
 const DEFAULT_SETTINGS = {
   // Nişan yardımı
   aimAssist: 2,          // 0 kapalı, 1 düşük, 2 orta, 3 yüksek
+  sprayAssist: 2,        // tarama (geri tepme) yardımı: 0 kapalı .. 3 yüksek
   autoFire: false,       // nişangah düşmana gelince otomatik ateş
   // Kontroller
   touchSens: 1.0,
@@ -1964,6 +1968,7 @@ const DEG = Math.PI / 180;
 const MOVE = { scale: 6.2 / 250, friction: 5.2, stop: 1.9, accel: 5.5, airAccel: 12, airCap: 0.8, gravity: 20, jumpV: 7.0 };
 const STAND_H = 1.8, CROUCH_H = 1.4, EYE_STAND = 1.66, EYE_CROUCH = 1.24;
 let ENT_ID = 0;
+const SPRAY_ASSIST = [0, 0.35, 0.6, 0.85]; // oyuncu için geri tepme azaltma oranı
 function dirFromAngles(yaw, pitch) {
   const cp = Math.cos(pitch);
   return { x: -Math.sin(yaw) * cp, y: Math.sin(pitch), z: -Math.cos(yaw) * cp };
@@ -2131,7 +2136,8 @@ class Entity {
     const pat = d.pattern;
     if (pat) {
       const i0 = Math.min(pat.length - 1, Math.floor(this.recoilIdx)), i1 = Math.min(pat.length - 1, i0 + 1), f = this.recoilIdx - Math.floor(this.recoilIdx);
-      const tx = pat[i0][0] + (pat[i1][0] - pat[i0][0]) * f, ty = pat[i0][1] + (pat[i1][1] - pat[i0][1]) * f;
+      const ra = this.isPlayer ? 1 - SPRAY_ASSIST[S.sprayAssist || 0] : 1;
+      const tx = (pat[i0][0] + (pat[i1][0] - pat[i0][0]) * f) * ra, ty = (pat[i0][1] + (pat[i1][1] - pat[i0][1]) * f) * ra;
       const k = Math.min(1, dt * 25);
       this.punch.x += (tx - this.punch.x) * k; this.punch.y += (ty - this.punch.y) * k;
     } else { this.punch.x *= 0.8; this.punch.y *= 0.8; }
@@ -2198,7 +2204,7 @@ class Entity {
     }
     this.lastShot = now;
     this.recoilIdx += 1;
-    this.fireInacc = Math.min(this.fireInacc + d.fireInacc, 8);
+    this.fireInacc = Math.min(this.fireInacc + d.fireInacc * (this.isPlayer ? 1 - SPRAY_ASSIST[S.sprayAssist || 0] * 0.6 : 1), 8);
     G.onShot(this, d);
     if (d.bolt) {
       if (this.scoped) { this.rescopeLevel = this.scoped; this.scoped = 0; this.rescopeAt = now + d.interval * 0.85; }

@@ -4,6 +4,7 @@ const DEG = Math.PI / 180;
 const MOVE = { scale: 6.2 / 250, friction: 5.2, stop: 1.9, accel: 5.5, airAccel: 12, airCap: 0.8, gravity: 20, jumpV: 7.0 };
 const STAND_H = 1.8, CROUCH_H = 1.4, EYE_STAND = 1.66, EYE_CROUCH = 1.24;
 let ENT_ID = 0;
+const SPRAY_ASSIST = [0, 0.35, 0.6, 0.85]; // oyuncu için geri tepme azaltma oranı
 function dirFromAngles(yaw, pitch) {
   const cp = Math.cos(pitch);
   return { x: -Math.sin(yaw) * cp, y: Math.sin(pitch), z: -Math.cos(yaw) * cp };
@@ -171,7 +172,8 @@ class Entity {
     const pat = d.pattern;
     if (pat) {
       const i0 = Math.min(pat.length - 1, Math.floor(this.recoilIdx)), i1 = Math.min(pat.length - 1, i0 + 1), f = this.recoilIdx - Math.floor(this.recoilIdx);
-      const tx = pat[i0][0] + (pat[i1][0] - pat[i0][0]) * f, ty = pat[i0][1] + (pat[i1][1] - pat[i0][1]) * f;
+      const ra = this.isPlayer ? 1 - SPRAY_ASSIST[S.sprayAssist || 0] : 1;
+      const tx = (pat[i0][0] + (pat[i1][0] - pat[i0][0]) * f) * ra, ty = (pat[i0][1] + (pat[i1][1] - pat[i0][1]) * f) * ra;
       const k = Math.min(1, dt * 25);
       this.punch.x += (tx - this.punch.x) * k; this.punch.y += (ty - this.punch.y) * k;
     } else { this.punch.x *= 0.8; this.punch.y *= 0.8; }
@@ -238,7 +240,7 @@ class Entity {
     }
     this.lastShot = now;
     this.recoilIdx += 1;
-    this.fireInacc = Math.min(this.fireInacc + d.fireInacc, 8);
+    this.fireInacc = Math.min(this.fireInacc + d.fireInacc * (this.isPlayer ? 1 - SPRAY_ASSIST[S.sprayAssist || 0] * 0.6 : 1), 8);
     G.onShot(this, d);
     if (d.bolt) {
       if (this.scoped) { this.rescopeLevel = this.scoped; this.scoped = 0; this.rescopeAt = now + d.interval * 0.85; }
