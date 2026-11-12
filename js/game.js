@@ -14,7 +14,7 @@ const G = {
 G.init = function () {
   const q = S.graphics;
   const r = this.renderer = new THREE.WebGLRenderer({ antialias: q >= 1, powerPreference: 'high-performance' });
-  r.setPixelRatio(Math.min(window.devicePixelRatio || 1, [0.75, 1.25, 2][q]));
+  r.setPixelRatio(Math.min(window.devicePixelRatio || 1, [1, 1.5, 2, 3][S.sharp] || 2));
   r.setSize(window.innerWidth, window.innerHeight);
   r.outputEncoding = THREE.sRGBEncoding;
   if (Tex.RETRO) { r.toneMapping = THREE.NoToneMapping; } else { r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.05; }
@@ -23,7 +23,7 @@ G.init = function () {
   r.autoClear = false;
   document.getElementById('game').appendChild(r.domElement);
   const sc = this.scene = new THREE.Scene();
-  sc.fog = Tex.RETRO ? new THREE.Fog(0xcdb88e, 110, 320) : new THREE.Fog(0xd8c8a6, 70, 260);
+  sc.fog = Tex.RETRO ? new THREE.Fog(0xcdb88e, 150, 420) : new THREE.Fog(0xd8c8a6, 120, 380);
   sc.background = new THREE.Color(0x9cc3ea);
   this.camera = new THREE.PerspectiveCamera(S.fov, window.innerWidth / window.innerHeight, 0.05, 900);
   this.camera.rotation.order = 'YXZ';
@@ -65,7 +65,7 @@ G.resize = function () {
 };
 G.applyGraphics = function () {
   const q = S.graphics, r = this.renderer;
-  r.setPixelRatio(Math.min(window.devicePixelRatio || 1, [0.75, 1.25, 2][q]));
+  r.setPixelRatio(Math.min(window.devicePixelRatio || 1, [1, 1.5, 2, 3][S.sharp] || 2));
   this.resize();
 };
 
@@ -102,6 +102,11 @@ G.makeModel = function (e) {
   if (e.model) this.scene.remove(e.model.root);
   e.model = Models.character(e.team);
   e.model.root.rotation.order = 'YXZ';
+  // modele özel malzemeler (düşman vurgusu için)
+  const gh = e.model.parts.gun;
+  const cl = o => { if (o === gh) return; if (o.isMesh && o.material && o.material.emissive) o.material = o.material.clone(); o.children.forEach(cl); };
+  cl(e.model.root);
+  e._glow = null;
   this.scene.add(e.model.root);
   Models.setCharGun(e.model, e.def);
   e.model.root.visible = !e.isPlayer;
@@ -945,10 +950,21 @@ G.render = function (dt) {
   let fov = S.fov;
   const sc = viewE.scoped && viewE.def.scope ? viewE.def.scope[viewE.scoped - 1] : 0;
   if (sc) fov = 2 * Math.atan(Math.tan(S.fov * DEG / 2) * sc / 90) / DEG;
+  else if (viewE.zoomed && viewE.alive) fov = 2 * Math.atan(Math.tan(S.fov * DEG / 2) / 1.5) / DEG;
   if (Math.abs(cam.fov - fov) > 0.01) { cam.fov += (fov - cam.fov) * Math.min(1, dt * 25); if (Math.abs(cam.fov - fov) < 0.3) cam.fov = fov; cam.updateProjectionMatrix(); }
   // dinleyici
   Audio3.listener.x = eye.x; Audio3.listener.y = eye.y; Audio3.listener.z = eye.z; Audio3.listener.yaw = viewE.yaw;
   // görünürlük: izlenen karakterin modeli gizli
+  for (const e of this.entities) {
+    if (!e.model) continue;
+    const glow = S.enemyGlow && e !== p && (this.ffa || e.team !== p.team);
+    if (e._glow !== glow) {
+      e._glow = glow;
+      const gunH = e.model.parts.gun;
+      const walk = o => { if (o === gunH) return; if (o.isMesh && o.material && o.material.emissive) o.material.emissive.setHex(glow ? 0x8a1a0c : 0x000000); o.children.forEach(walk); };
+      walk(e.model.root);
+    }
+  }
   for (const e of this.entities) if (e.model) e.model.root.visible = !(e === viewE && e.alive) && !(e.isPlayer && e.alive) && (e.alive || e.deathT < 15);
   FX.update(dt, eye);
   r.clear();

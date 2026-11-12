@@ -221,7 +221,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
   <div class="tb sz" id="bJump" data-b="jump">ZIPLA</div>
   <div class="tb sz" id="bCrouch" data-b="crouch">EĞİL</div>
   <div class="tb sz" id="bReload" data-b="reload">DOLDUR</div>
-  <div class="tb sz hidden" id="bScope" data-b="scope">DÜRBÜN</div>
+  <div class="tb sz hidden" id="bScope" data-b="scope">NİŞAN</div>
   <div class="tb hidden" id="bUse" data-b="use">KUR</div>
   <div class="tb" id="bWalk" data-b="walk">YÜRÜ</div>
   <div class="tb" id="bBuy" data-b="buy">SATIN<br>AL</div>
@@ -263,6 +263,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
       <div class="field"><label>Nişan Yardımı</label><div class="seg" data-set="aimAssist" data-opts='[[0,"Kapalı"],[1,"Düşük"],[2,"Orta"],[3,"Yüksek"]]'></div></div>
       <div class="field"><label>Grafik</label><div class="seg" data-set="graphics" data-opts='[[0,"Düşük"],[1,"Orta"],[2,"Yüksek"]]' data-reload="1"></div></div>
       <div class="field"><label>Doku Stili</label><div class="seg" data-set="texStyle" data-opts='[["retro","Retro"],["modern","Modern"]]' data-reload="1"></div></div>
+      <div class="field"><label>Netlik (Çözünürlük)</label><div class="seg" data-set="sharp" data-opts='[[0,"Düşük"],[1,"Orta"],[2,"Yüksek"],[3,"Ultra"]]'></div></div>
     </div>
     <div class="row" style="margin-top:16px">
       <button class="btn pri" id="btnPlay" style="flex:1;min-width:180px;font-size:18px;padding:16px">▶ OYNA</button>
@@ -304,8 +305,9 @@ input[type=range]{width:100%;accent-color:#e9a83a}
     <div class="menuGrid tabc hidden" data-tab="gfx">
       <div class="field"><label>Grafik Kalitesi</label><div class="seg" data-set="graphics" data-opts='[[0,"Düşük"],[1,"Orta"],[2,"Yüksek"]]' data-reload="1"></div><div style="font-size:12px;color:var(--dim)">Gölge/kalite değişiklikleri sonraki açılışta tam uygulanır.</div></div>
       <div class="field"><label>Doku Stili</label><div class="seg" data-set="texStyle" data-opts='[["retro","Retro (eski okul)"],["modern","Modern"]]' data-reload="1"></div><div style="font-size:12px;color:var(--dim)">Değişiklik oyun yeniden açılınca uygulanır.</div></div>
-      <div class="field"><label>Görüş Açısı (FOV) <span class="val" data-val="fov"></span></label><input type="range" min="60" max="95" step="1" data-set="fov"></div>
-      <div class="field"><label>Seçenekler</label><label class="check"><input type="checkbox" data-set="shadows" data-reload="1"> Gölgeler</label><label class="check"><input type="checkbox" data-set="showFps"> FPS göster</label></div>
+      <div class="field"><label>Netlik (Çözünürlük)</label><div class="seg" data-set="sharp" data-opts='[[0,"Düşük"],[1,"Orta"],[2,"Yüksek"],[3,"Ultra"]]'></div><div style="font-size:12px;color:var(--dim)">Yüksek = keskin görüntü. Telefon ısınır/kasarsa Orta seç.</div></div>
+      <div class="field"><label>Görüş Açısı (FOV) <span class="val" data-val="fov"></span> <small style="text-transform:none">— küçük = uzaktaki rakip daha büyük</small></label><input type="range" min="60" max="95" step="1" data-set="fov"></div>
+      <div class="field"><label>Seçenekler</label><label class="check"><input type="checkbox" data-set="shadows" data-reload="1"> Gölgeler</label><label class="check"><input type="checkbox" data-set="showFps"> FPS göster</label><label class="check"><input type="checkbox" data-set="enemyGlow"> Düşmanları vurgula (kırmızı ton)</label></div>
       <div class="field"><label>Ses <span class="val" data-val="volume"></span></label><input type="range" min="0" max="1" step="0.05" data-set="volume"></div>
     </div>
     <div class="menuGrid tabc hidden" data-tab="bot">

@@ -52,6 +52,7 @@ const Input = {
     const p = G.player; if (!p || !p.alive) return;
     let s = k * G.lookScale;
     if (p.scoped && p.def.scope) s *= S.scopeSens * (p.def.scope[p.scoped - 1] / 90);
+    else if (p.zoomed) s *= S.scopeSens / 1.5;
     p.yaw -= dx * s;
     p.pitch -= dy * s * (S.invertY ? -1 : 1);
     p.pitch = Math.max(-1.5, Math.min(1.5, p.pitch));

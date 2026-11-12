@@ -67,7 +67,7 @@ class Entity {
     if (!this.weapon(slot)) return;
     if (slot === this.slot && !force) return;
     if (this.slot !== slot) this.prevSlot = this.slot;
-    this.slot = slot; this.reloadT = 0; this.scoped = 0; this.rescopeAt = 0;
+    this.slot = slot; this.reloadT = 0; this.scoped = 0; this.rescopeAt = 0; this.zoomed = false;
     this.deployT = slot === 'knife' ? 0.5 : (this.def.type === 'sniper' ? 1.1 : 0.85);
     this.plantT = 0;
     this.onEquip();
@@ -246,7 +246,9 @@ class Entity {
     if (w.mag === 0 && w.reserve > 0) { this.autoReloadAt = now + 0.35; }
   }
   toggleScope() {
-    const d = this.def; if (!d.scope || this.reloadT > 0 || this.deployT > 0) return;
+    const d = this.def;
+    if (!d.scope) { if (d.mag) { this.zoomed = !this.zoomed; if (typeof G !== 'undefined') G.sound('click', this, 2000); } return; }
+    if (this.reloadT > 0 || this.deployT > 0) return;
     this.rescopeAt = 0;
     this.scoped = (this.scoped + 1) % (d.scope.length + 1);
     if (typeof G !== 'undefined') G.sound('click', this, 2200);

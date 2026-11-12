@@ -62,7 +62,7 @@ const UI = {
     Input.applyButtonStyle();
     Audio3.setVolume(S.volume);
     $('fps').classList.toggle('hidden', !S.showFps);
-    if (key === 'graphics' && G.renderer) G.applyGraphics();
+    if ((key === 'graphics' || key === 'sharp') && G.renderer) G.applyGraphics();
     if (key === 'fov' && G.camera) { G.camera.fov = S.fov; G.camera.updateProjectionMatrix(); }
   },
   openSettings() { this.refreshSettings(); $('settings').classList.remove('hidden'); },
@@ -333,7 +333,7 @@ const UI = {
       if (um && !Input.isMobile) this.toast(um === 'plant' ? '[E] basılı tut: Bombayı kur' : um === 'defuse' ? '[E] basılı tut: İmha et' : '[E] Silahı al', 1.5);
     }
     // dürbün tuşu
-    const hasScope = p.alive && !!d.scope;
+    const hasScope = p.alive && !!(d.scope || d.mag);
     if (this.cache.hs !== hasScope) { this.cache.hs = hasScope; $('bScope').classList.toggle('hidden', !hasScope); }
     // yuvalar
     const slotSig = ['primary', 'secondary', 'grenade', 'bomb'].map(s => { const ww = p.weapon(s); return ww ? ww.def.id : '-'; }).join() + p.slot + p.inv.grenades.length;

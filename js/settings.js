@@ -13,7 +13,9 @@ const DEFAULT_SETTINGS = {
   btnScale: 1.0,
   btnOpacity: 0.6,
   // Görüntü
-  fov: 74,
+  fov: 66,
+  sharp: 2,
+  enemyGlow: true,       // düşmanları hafif kırmızı vurgula              // netlik: 0=1x, 1=1.5x, 2=2x, 3=3x (piksel oranı)
   graphics: 1,           // 0 düşük, 1 orta, 2 yüksek
   shadows: true,
   showFps: false,
@@ -35,7 +37,7 @@ const DEFAULT_SETTINGS = {
   // Ses
   volume: 0.8,
   texStyle: 'retro',     // 'retro' (eski okul, piksel) veya 'modern'
-  layoutV: 2,
+  layoutV: 3,
 };
 
 const Settings = {
@@ -46,6 +48,7 @@ const Settings = {
       if (raw) {
         const d = JSON.parse(raw);
         if (!d.layoutV) { d.leftFire = false; d.btnScale = 1; d.btnOpacity = 0.6; d.layoutV = 2; }
+        if (d.layoutV < 3) { if (d.fov === 74) d.fov = 66; d.layoutV = 3; }
         Object.assign(this.data, d);
       }
     } catch (e) { /* depolama yok */ }
