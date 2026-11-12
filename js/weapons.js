@@ -123,7 +123,7 @@ const WEAPONS = {
   molotov: { id: 'molotov', name: 'Molotof', slot: 'grenade', type: 'grenade', price: 400, side: 'T', reward: 300, speed: 245, nade: 'fire', model: { kind: 'molotov', color: 0x6b8a3a } },
   incendiary: { id: 'incendiary', name: 'Yangın Bombası', slot: 'grenade', type: 'grenade', price: 600, side: 'CT', reward: 300, speed: 245, nade: 'fire', model: { kind: 'nade', color: 0x8a3a2a } },
   // ---------- BOMBA (C4) ----------
-  c4: { id: 'c4', name: 'C4 Patlayıcı', slot: 'bomb', type: 'bomb', price: 0, speed: 250, side: 'T', model: { kind: 'bomb' } },
+  c4: { id: 'c4', name: 'C4', slot: 'bomb', type: 'bomb', price: 0, speed: 250, side: 'T', model: { kind: 'bomb' } },
 };
 // Desen & görsel varsayılanlar
 (function () {

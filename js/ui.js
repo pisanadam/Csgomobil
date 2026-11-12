@@ -18,6 +18,7 @@ const UI = {
     $('pResume').onclick = () => this.pause(false);
     $('pSettings').onclick = () => this.openSettings();
     $('pQuit').onclick = () => this.quit();
+    $('pScore').onclick = () => { this.showScore(true); setTimeout(() => this.showScore(false), 4000); };
     $('meAgain').onclick = () => { $('matchEnd').classList.add('hidden'); this.play(); };
     $('meMenu').onclick = () => { $('matchEnd').classList.add('hidden'); this.quit(); };
     $('buyClose').onclick = () => this.toggleBuy(false);
@@ -340,9 +341,8 @@ const UI = {
       this.cache.slots = slotSig;
       document.querySelectorAll('.slot').forEach(el => {
         const s = el.dataset.s, ww = p.weapon(s);
-        el.classList.toggle('act', p.slot === s); el.classList.toggle('empty', !ww);
+        el.classList.toggle('act', p.slot === s); el.classList.toggle('empty', !ww); el.classList.toggle('hidden', !ww);
         el.querySelector('span').textContent = ww ? (s === 'grenade' ? ww.def.name.split(' ')[0] + (p.inv.grenades.length > 1 ? ' +' + (p.inv.grenades.length - 1) : '') : ww.def.name) : '—';
-        el.classList.toggle('hidden', s === 'bomb' && !ww);
       });
     }
     // izleyici

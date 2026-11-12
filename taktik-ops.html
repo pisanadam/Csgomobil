@@ -69,49 +69,61 @@ html,body{margin:0;height:100%;overflow:hidden;background:#000;color:var(--txt);
 #fps{position:absolute;top:calc(max(6px,env(safe-area-inset-top)) + 42px);left:50%;transform:translateX(-50%);font-size:11px;color:#9f9}
 #nadeList{position:absolute;bottom:calc(max(8px,env(safe-area-inset-bottom)) + 52px);left:50%;transform:translateX(140px);font-size:12px;color:var(--dim);font-weight:700;padding:2px 8px}
 /* ---------- DOKUNMATİK ---------- */
-#touch{position:fixed;inset:0;z-index:6;display:none}
+#touch{position:fixed;inset:0;z-index:6;display:none;--u:calc(var(--bs,1) * min(1px, 0.25vh));--sr:env(safe-area-inset-right);--sl:env(safe-area-inset-left);--sb:env(safe-area-inset-bottom);--st:env(safe-area-inset-top)}
 body.mobile #touch{display:block}
-.tb{position:absolute;border-radius:50%;background:rgba(20,22,26,.45);border:2px solid rgba(255,255,255,.35);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;text-align:center;line-height:1.05;opacity:var(--bo,.55)}
-.tb.on{background:rgba(240,180,60,.55);border-color:#ffd27a}
-.tb svg{width:55%;height:55%;fill:#fff}
-#bFire{width:calc(84px*var(--bs,1));height:calc(84px*var(--bs,1));right:calc(130px*var(--bs,1) + env(safe-area-inset-right));bottom:calc(70px*var(--bs,1));background:rgba(200,50,40,.45)}
-#bFire2{width:calc(62px*var(--bs,1));height:calc(62px*var(--bs,1));left:calc(30px + env(safe-area-inset-left));top:calc(140px + 60px);background:rgba(200,50,40,.4)}
-#bJump{width:calc(60px*var(--bs,1));height:calc(60px*var(--bs,1));right:calc(30px + env(safe-area-inset-right));bottom:calc(120px*var(--bs,1))}
-#bCrouch{width:calc(56px*var(--bs,1));height:calc(56px*var(--bs,1));right:calc(40px + env(safe-area-inset-right));bottom:calc(40px*var(--bs,1))}
-#bReload{width:calc(50px*var(--bs,1));height:calc(50px*var(--bs,1));right:calc(140px*var(--bs,1) + env(safe-area-inset-right));bottom:calc(175px*var(--bs,1))}
-#bScope{width:calc(56px*var(--bs,1));height:calc(56px*var(--bs,1));right:calc(40px + env(safe-area-inset-right));bottom:calc(200px*var(--bs,1))}
-#bUse{width:calc(72px*var(--bs,1));height:calc(72px*var(--bs,1));right:calc(240px*var(--bs,1) + env(safe-area-inset-right));bottom:calc(110px*var(--bs,1));background:rgba(240,180,60,.5);font-size:12px}
-#bWalk{width:calc(46px*var(--bs,1));height:calc(46px*var(--bs,1));left:calc(30px + env(safe-area-inset-left));bottom:calc(200px*var(--bs,1));font-size:10px}
-#bBuy{width:54px;height:54px;left:calc(162px + env(safe-area-inset-left));top:calc(6px + env(safe-area-inset-top));border-radius:10px;font-size:12px;background:rgba(40,120,60,.6)}
-#bMenu{width:42px;height:42px;right:calc(8px + env(safe-area-inset-right));top:calc(50% - 21px);border-radius:10px;font-size:18px}
-#bScore{width:42px;height:42px;right:calc(8px + env(safe-area-inset-right));top:calc(50% - 70px);border-radius:10px;font-size:15px}
-#bDrop{width:42px;height:42px;right:calc(8px + env(safe-area-inset-right));top:calc(50% + 28px);border-radius:10px;font-size:10px}
-#slots{position:absolute;bottom:calc(6px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);display:flex;gap:5px}
-.slot{min-width:58px;height:40px;padding:0 8px;border-radius:7px;background:rgba(20,22,26,.55);border:1px solid rgba(255,255,255,.25);color:#ddd;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:700;opacity:var(--bo,.6)}
+.tb{position:absolute;border-radius:50%;background:rgba(15,17,21,.42);border:2px solid rgba(255,255,255,.32);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:calc(12 * var(--u));text-align:center;line-height:1.05;opacity:var(--bo,.6)}
+.tb.on{background:rgba(240,180,60,.55);border-color:#ffd27a;opacity:1}
+.tb svg{width:58%;height:58%;fill:#fff}
+.sz{width:calc(var(--s) * var(--u));height:calc(var(--s) * var(--u))}
+/* sağ küme */
+#bFire{--s:88;right:calc(84 * var(--u) + var(--sr));bottom:calc(26 * var(--u) + var(--sb));background:rgba(200,50,40,.5)}
+#bCrouch{--s:56;right:calc(16 * var(--u) + var(--sr));bottom:calc(18 * var(--u) + var(--sb))}
+#bJump{--s:56;right:calc(16 * var(--u) + var(--sr));bottom:calc(86 * var(--u) + var(--sb))}
+#bScope{--s:52;right:calc(102 * var(--u) + var(--sr));bottom:calc(126 * var(--u) + var(--sb))}
+#bReload{--s:46;right:calc(178 * var(--u) + var(--sr));bottom:calc(110 * var(--u) + var(--sb))}
+/* sol ateş (isteğe bağlı) */
+#bFire2{--s:60;left:calc(18px + var(--sl));top:42%;background:rgba(200,50,40,.42)}
+/* bağlamsal kullan tuşu: ortada, yuvaların üstünde */
+#bUse{left:50%;transform:translateX(-50%);bottom:calc(60px + var(--sb));width:auto;height:40px;padding:0 22px;border-radius:20px;background:rgba(240,170,50,.75);font-size:15px;opacity:1}
+/* üst */
+#bBuy{left:calc(112px + var(--sl));top:calc(6px + var(--st));width:56px;height:40px;border-radius:9px;font-size:11px;background:rgba(40,130,60,.7);opacity:.9}
+#bMenu{right:calc(8px + var(--sr));top:calc(6px + var(--st));width:40px;height:40px;border-radius:9px;font-size:16px}
+#bScore{left:50%;transform:translateX(-50%);top:0;width:300px;height:46px;border:0;background:transparent;border-radius:0;opacity:0}
+#bWalk,#bDrop{display:none}
+/* silah yuvaları */
+#slots{position:absolute;bottom:calc(6px + var(--sb));left:50%;transform:translateX(-50%);display:flex;gap:4px}
+.slot{min-width:52px;max-width:74px;height:42px;padding:0 6px;border-radius:7px;background:rgba(15,17,21,.55);border:1px solid rgba(255,255,255,.22);color:#ddd;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:700;opacity:var(--bo,.6);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.slot span{max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .slot b{font-size:9px;color:var(--dim)}
-.slot.act{border-color:var(--accent);color:#fff;background:rgba(240,180,60,.3)}
-.slot.empty{opacity:.2}
-#joyBase{position:absolute;width:130px;height:130px;margin:-65px 0 0 -65px;border-radius:50%;border:2px solid rgba(255,255,255,.3);background:rgba(0,0,0,.18);display:none}
-#joyKnob{position:absolute;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:rgba(255,255,255,.4);left:65px;top:65px}
-#joyHint{position:absolute;left:calc(40px + env(safe-area-inset-left));bottom:calc(60px + env(safe-area-inset-bottom));width:120px;height:120px;border-radius:50%;border:2px dashed rgba(255,255,255,.18)}
-body.mobile #slots{bottom:calc(6px + env(safe-area-inset-bottom))}
-body.mobile #bottomL{bottom:calc(52px + env(safe-area-inset-bottom));left:50%}
-body.mobile #ammoBox{font-size:18px}
-body.mobile #hpBox,body.mobile #arBox{font-size:18px;padding:2px 8px}
-body.mobile #bMenu{top:calc(6px + env(safe-area-inset-top))}
-body.mobile #bScore{top:calc(6px + env(safe-area-inset-top));right:calc(56px + env(safe-area-inset-right))}
-body.mobile #bDrop{top:calc(6px + env(safe-area-inset-top));right:calc(104px + env(safe-area-inset-right))}
-body.mobile #killfeed{top:calc(54px + env(safe-area-inset-top))}
-body.mobile #bBuy{left:calc(132px + env(safe-area-inset-left))}
-body.mobile #bWalk{left:calc(192px + env(safe-area-inset-left));top:calc(10px + env(safe-area-inset-top));bottom:auto;width:46px;height:46px}
-body.mobile #bottomL{transform:translateX(calc(-100% - 8px))}
-body.mobile #ammoBox{left:50%;right:auto;transform:translateX(8px);bottom:calc(52px + env(safe-area-inset-bottom));padding:2px 10px}
+.slot.act{border-color:var(--accent);color:#fff;background:rgba(240,180,60,.32);opacity:1}
+/* joystick */
+#joyBase{position:absolute;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:2px solid rgba(255,255,255,.3);background:rgba(0,0,0,.18);display:none}
+#joyKnob{position:absolute;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;background:rgba(255,255,255,.45);left:60px;top:60px}
+#joyHint{position:absolute;left:calc(36px + var(--sl));bottom:calc(36px + var(--sb));width:110px;height:110px;border-radius:50%;border:2px dashed rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.3);font-size:11px;font-weight:700}
+body.joying #joyHint{display:none}
+/* mobil HUD yerleşimi */
+body.mobile #radarWrap,body.mobile #radar{width:100px;height:100px}
+body.mobile #money{top:calc(max(6px,env(safe-area-inset-top)) + 106px);font-size:13px;padding:2px 8px}
+body.mobile #bottomL{left:max(6px,env(safe-area-inset-left));top:calc(max(6px,env(safe-area-inset-top)) + 134px);bottom:auto;transform:none;gap:4px}
+body.mobile #hpBox,body.mobile #arBox{font-size:15px;padding:1px 7px}
+body.mobile #hpBox .ic,body.mobile #arBox .ic{font-size:12px}
+body.mobile #ammoBox{left:auto;transform:none;right:calc(16px + env(safe-area-inset-right));bottom:calc(152 * var(--bs,1) * min(1px, 0.25vh) + env(safe-area-inset-bottom));font-size:18px;padding:1px 8px}
+body.mobile #ammoBox small{font-size:12px}
 body.mobile #wname{display:none}
-body.mobile #bombIcon{transform:translateX(-50%);bottom:calc(92px + env(safe-area-inset-bottom));left:50%}
+body.mobile #bombIcon{left:max(6px,env(safe-area-inset-left));top:calc(max(6px,env(safe-area-inset-top)) + 164px);bottom:auto;transform:none;font-size:11px}
 body.mobile #nadeList{display:none}
-body.mobile #radarWrap,body.mobile #radar{width:120px;height:120px}
-body.mobile #money{top:calc(max(6px,env(safe-area-inset-top)) + 126px);font-size:15px}
-body.mobile #topbar .sc,body.mobile #timer{font-size:18px}
+body.mobile #killfeed{top:calc(52px + env(safe-area-inset-top))}
+body.mobile .kf{font-size:11px;padding:2px 6px}
+body.mobile .kf .w{font-size:10px}
+body.mobile #topbar .sc,body.mobile #timer{font-size:17px;padding:2px 8px}
+body.mobile #topbar .sc{min-width:36px}
+body.mobile #timer{min-width:62px}
+body.mobile .alive i{width:5px;height:12px}
+body.mobile #centerMsg{font-size:22px;top:20%}
+body.mobile #centerMsg small{font-size:13px}
+body.mobile #toast{font-size:14px;top:30%}
+body.mobile #specInfo{bottom:calc(110px + env(safe-area-inset-bottom));font-size:13px}
+body.mobile #progress{top:auto;bottom:calc(110px + env(safe-area-inset-bottom))}
 /* ---------- MENÜLER ---------- */
 .screen{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 30% 20%,rgba(60,50,30,.85),rgba(8,9,12,.95));overflow:auto;padding:16px}
 .panel{width:min(760px,100%);max-height:100%;overflow:auto;background:rgba(18,20,25,.92);border:1px solid var(--line);border-radius:12px;padding:18px 20px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
@@ -202,19 +214,19 @@ input[type=range]{width:100%;accent-color:#e9a83a}
 
 <!-- ============ DOKUNMATİK ============ -->
 <div id="touch">
-  <div id="joyHint"></div>
+  <div id="joyHint">HAREKET</div>
   <div id="joyBase"><div id="joyKnob"></div></div>
-  <div class="tb" id="bFire" data-b="fire"><svg viewBox="0 0 24 24"><path d="M12 2a1 1 0 011 1v2.06A7 7 0 0118.94 11H21a1 1 0 010 2h-2.06A7 7 0 0113 18.94V21a1 1 0 01-2 0v-2.06A7 7 0 015.06 13H3a1 1 0 010-2h2.06A7 7 0 0111 5.06V3a1 1 0 011-1zm0 5a5 5 0 100 10 5 5 0 000-10zm0 3a2 2 0 110 4 2 2 0 010-4z"/></svg></div>
-  <div class="tb" id="bFire2" data-b="fire"><svg viewBox="0 0 24 24"><path d="M12 7a5 5 0 100 10 5 5 0 000-10zm0 3a2 2 0 110 4 2 2 0 010-4z"/></svg></div>
-  <div class="tb" id="bJump" data-b="jump">ZIPLA</div>
-  <div class="tb" id="bCrouch" data-b="crouch">EĞİL</div>
-  <div class="tb" id="bReload" data-b="reload">R</div>
-  <div class="tb hidden" id="bScope" data-b="scope">DÜRBÜN</div>
+  <div class="tb sz" id="bFire" data-b="fire"><svg viewBox="0 0 24 24"><path d="M12 2a1 1 0 011 1v2.06A7 7 0 0118.94 11H21a1 1 0 010 2h-2.06A7 7 0 0113 18.94V21a1 1 0 01-2 0v-2.06A7 7 0 015.06 13H3a1 1 0 010-2h2.06A7 7 0 0111 5.06V3a1 1 0 011-1zm0 5a5 5 0 100 10 5 5 0 000-10zm0 3a2 2 0 110 4 2 2 0 010-4z"/></svg></div>
+  <div class="tb sz" id="bFire2" data-b="fire"><svg viewBox="0 0 24 24"><path d="M12 7a5 5 0 100 10 5 5 0 000-10zm0 3a2 2 0 110 4 2 2 0 010-4z"/></svg></div>
+  <div class="tb sz" id="bJump" data-b="jump">ZIPLA</div>
+  <div class="tb sz" id="bCrouch" data-b="crouch">EĞİL</div>
+  <div class="tb sz" id="bReload" data-b="reload">DOLDUR</div>
+  <div class="tb sz hidden" id="bScope" data-b="scope">DÜRBÜN</div>
   <div class="tb hidden" id="bUse" data-b="use">KUR</div>
   <div class="tb" id="bWalk" data-b="walk">YÜRÜ</div>
   <div class="tb" id="bBuy" data-b="buy">SATIN<br>AL</div>
   <div class="tb" id="bMenu" data-b="menu">❚❚</div>
-  <div class="tb" id="bScore" data-b="score">☰</div>
+  <div class="tb" id="bScore" data-b="score"></div>
   <div class="tb" id="bDrop" data-b="drop">BIRAK</div>
   <div id="slots">
     <div class="slot" data-b="slot" data-s="primary"><b>1</b><span>—</span></div>
@@ -313,7 +325,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
     <p><b>Ölüm Kalım:</b> Öldükten 2,5 saniye sonra haritada rastgele, düşmanların görmediği bir yerde yeniden doğarsın. Herkes herkese karşıdır, takım yoktur. Satın alma ücretsiz ve her yerde açık; son seçtiğin silahla doğarsın. Doğunca 1,5 sn korumalısın. Süre bitince en çok öldürme yapan oyuncu kazanır.</p>
     <p><b>Ekonomi:</b> Her raunt kazanç/kayıp parası ve öldürme ödülleri alırsın. Raunt başında doğma bölgesindeyken <b>SATIN AL</b> ile silah, zırh, kit ve bomba al. Hayatta kalırsan eşyaların sonraki raunta geçer.</p>
     <p><b>İsabet:</b> Koşarken atış isabetsizdir. Durarak (veya eğilerek) ateş et, uzun mesafede kısa seri at. Sprey deseni sabittir — aşağı çekerek kontrol edebilirsin. Kafa vuruşu 4x hasar.</p>
-    <p><b>Mobil:</b> Sol tarafa dokun = joystick. Sağ tarafı kaydır = bakış. Ateş tuşuna basılıyken parmağını kaydırarak nişan alabilirsin. Bomba bölgesinde <b>KUR</b>, bombanın yanında <b>İMHA</b> tuşuna basılı tut.</p>
+    <p><b>Mobil:</b> Sol yarıya dokunup sürükle = yürü/koş (az itersen sessiz yürür). Sağ yarıyı kaydır = etrafa bak. Ateş tuşuna basılıyken parmağını kaydırarak nişan alabilirsin. Üstteki skora basılı tut = skor tablosu. Silah değiştirmek için alttaki silah kutularına dokun. Bomba bölgesinde <b>KUR</b>, bombanın yanında <b>İMHA</b> tuşuna basılı tut.</p>
     <p><b>Masaüstü:</b> <kbd>WASD</kbd> hareket, <kbd>Fare</kbd> nişan/ateş, <kbd>Sağ tık</kbd> dürbün, <kbd>Boşluk</kbd> zıpla, <kbd>Ctrl</kbd>/<kbd>C</kbd> eğil, <kbd>Shift</kbd> yürü (sessiz), <kbd>R</kbd> doldur, <kbd>E</kbd> kur/imha/silah al, <kbd>G</kbd> bırak, <kbd>B</kbd> satın al, <kbd>1-5</kbd> silahlar, <kbd>Q</kbd> son silah, <kbd>Tab</kbd> skor, <kbd>Esc</kbd> menü.</p>
     <p><b>Bombalar:</b> HE hasar verir, flaş kör eder (bakmayın!), sis görüşü keser ve yangını söndürür, molotof/yangın bölgeyi kapatır.</p>
   </div>
@@ -326,6 +338,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
     <div style="display:flex;flex-direction:column;gap:10px">
       <button class="btn pri" id="pResume">DEVAM ET</button>
       <button class="btn" id="pSettings">AYARLAR</button>
+      <button class="btn" id="pScore">SKOR TABLOSU</button>
       <button class="btn" id="pQuit">ANA MENÜ</button>
     </div>
   </div>
@@ -364,9 +377,9 @@ const DEFAULT_SETTINGS = {
   mouseSens: 1.0,
   scopeSens: 0.8,
   invertY: false,
-  leftFire: true,        // sol tarafta ikinci ateş tuşu
+  leftFire: false,       // sol tarafta ikinci ateş tuşu
   btnScale: 1.0,
-  btnOpacity: 0.55,
+  btnOpacity: 0.6,
   // Görüntü
   fov: 74,
   graphics: 1,           // 0 düşük, 1 orta, 2 yüksek
@@ -389,6 +402,7 @@ const DEFAULT_SETTINGS = {
   dmTime: 300,           // ölüm kalım süresi (sn)
   // Ses
   volume: 0.8,
+  layoutV: 2,
 };
 
 const Settings = {
@@ -396,7 +410,11 @@ const Settings = {
   load() {
     try {
       const raw = localStorage.getItem('taktikops_settings');
-      if (raw) Object.assign(this.data, JSON.parse(raw));
+      if (raw) {
+        const d = JSON.parse(raw);
+        if (!d.layoutV) { d.leftFire = false; d.btnScale = 1; d.btnOpacity = 0.6; d.layoutV = 2; }
+        Object.assign(this.data, d);
+      }
     } catch (e) { /* depolama yok */ }
     return this.data;
   },
@@ -732,7 +750,7 @@ const WEAPONS = {
   molotov: { id: 'molotov', name: 'Molotof', slot: 'grenade', type: 'grenade', price: 400, side: 'T', reward: 300, speed: 245, nade: 'fire', model: { kind: 'molotov', color: 0x6b8a3a } },
   incendiary: { id: 'incendiary', name: 'Yangın Bombası', slot: 'grenade', type: 'grenade', price: 600, side: 'CT', reward: 300, speed: 245, nade: 'fire', model: { kind: 'nade', color: 0x8a3a2a } },
   // ---------- BOMBA (C4) ----------
-  c4: { id: 'c4', name: 'C4 Patlayıcı', slot: 'bomb', type: 'bomb', price: 0, speed: 250, side: 'T', model: { kind: 'bomb' } },
+  c4: { id: 'c4', name: 'C4', slot: 'bomb', type: 'bomb', price: 0, speed: 250, side: 'T', model: { kind: 'bomb' } },
 };
 // Desen & görsel varsayılanlar
 (function () {
@@ -3712,6 +3730,7 @@ const Input = {
         const jb = document.getElementById('joyBase'); jb.style.display = 'block'; jb.style.left = t.clientX + 'px'; jb.style.top = t.clientY + 'px';
         document.getElementById('joyKnob').style.transform = '';
         this.touches.set(t.identifier, { kind: 'joy' });
+        document.body.classList.add('joying');
       } else {
         this.touches.set(t.identifier, { kind: 'look', x: t.clientX, y: t.clientY });
       }
@@ -3748,6 +3767,7 @@ const Input = {
       if (st.kind === 'joy') {
         this.joy.id = null; this.joy.dx = this.joy.dy = 0;
         document.getElementById('joyBase').style.display = 'none';
+        document.body.classList.remove('joying');
       } else if (st.el) this.pressButton(st.kind, st.el, false);
     }
   },
@@ -3844,6 +3864,7 @@ const UI = {
     $('pResume').onclick = () => this.pause(false);
     $('pSettings').onclick = () => this.openSettings();
     $('pQuit').onclick = () => this.quit();
+    $('pScore').onclick = () => { this.showScore(true); setTimeout(() => this.showScore(false), 4000); };
     $('meAgain').onclick = () => { $('matchEnd').classList.add('hidden'); this.play(); };
     $('meMenu').onclick = () => { $('matchEnd').classList.add('hidden'); this.quit(); };
     $('buyClose').onclick = () => this.toggleBuy(false);
@@ -4166,9 +4187,8 @@ const UI = {
       this.cache.slots = slotSig;
       document.querySelectorAll('.slot').forEach(el => {
         const s = el.dataset.s, ww = p.weapon(s);
-        el.classList.toggle('act', p.slot === s); el.classList.toggle('empty', !ww);
+        el.classList.toggle('act', p.slot === s); el.classList.toggle('empty', !ww); el.classList.toggle('hidden', !ww);
         el.querySelector('span').textContent = ww ? (s === 'grenade' ? ww.def.name.split(' ')[0] + (p.inv.grenades.length > 1 ? ' +' + (p.inv.grenades.length - 1) : '') : ww.def.name) : '—';
-        el.classList.toggle('hidden', s === 'bomb' && !ww);
       });
     }
     // izleyici

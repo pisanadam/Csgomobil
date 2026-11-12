@@ -9,9 +9,9 @@ const DEFAULT_SETTINGS = {
   mouseSens: 1.0,
   scopeSens: 0.8,
   invertY: false,
-  leftFire: true,        // sol tarafta ikinci ateş tuşu
+  leftFire: false,       // sol tarafta ikinci ateş tuşu
   btnScale: 1.0,
-  btnOpacity: 0.55,
+  btnOpacity: 0.6,
   // Görüntü
   fov: 74,
   graphics: 1,           // 0 düşük, 1 orta, 2 yüksek
@@ -34,6 +34,7 @@ const DEFAULT_SETTINGS = {
   dmTime: 300,           // ölüm kalım süresi (sn)
   // Ses
   volume: 0.8,
+  layoutV: 2,
 };
 
 const Settings = {
@@ -41,7 +42,11 @@ const Settings = {
   load() {
     try {
       const raw = localStorage.getItem('taktikops_settings');
-      if (raw) Object.assign(this.data, JSON.parse(raw));
+      if (raw) {
+        const d = JSON.parse(raw);
+        if (!d.layoutV) { d.leftFire = false; d.btnScale = 1; d.btnOpacity = 0.6; d.layoutV = 2; }
+        Object.assign(this.data, d);
+      }
     } catch (e) { /* depolama yok */ }
     return this.data;
   },

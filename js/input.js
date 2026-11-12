@@ -75,6 +75,7 @@ const Input = {
         const jb = document.getElementById('joyBase'); jb.style.display = 'block'; jb.style.left = t.clientX + 'px'; jb.style.top = t.clientY + 'px';
         document.getElementById('joyKnob').style.transform = '';
         this.touches.set(t.identifier, { kind: 'joy' });
+        document.body.classList.add('joying');
       } else {
         this.touches.set(t.identifier, { kind: 'look', x: t.clientX, y: t.clientY });
       }
@@ -111,6 +112,7 @@ const Input = {
       if (st.kind === 'joy') {
         this.joy.id = null; this.joy.dx = this.joy.dy = 0;
         document.getElementById('joyBase').style.display = 'none';
+        document.body.classList.remove('joying');
       } else if (st.el) this.pressButton(st.kind, st.el, false);
     }
   },
