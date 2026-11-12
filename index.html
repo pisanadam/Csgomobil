@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#111418">
+<title>Taktik Ops: Kum Vadisi</title>
+<style>
+:root{--t:#e0a83a;--ct:#5d9be0;--ui:rgba(12,14,18,.62);--line:rgba(255,255,255,.12);--txt:#eef1f4;--dim:#9aa3ad;--accent:#f0b43c;--danger:#e8503a;--ok:#5fd16b}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+html,body{margin:0;height:100%;overflow:hidden;background:#000;color:var(--txt);font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;touch-action:none}
+#game{position:fixed;inset:0}
+#game canvas{display:block;width:100%;height:100%}
+.hidden{display:none!important}
+/* ---------- HUD ---------- */
+#hud{position:fixed;inset:0;pointer-events:none;z-index:5}
+.hudbox{background:var(--ui);border:1px solid var(--line);border-radius:6px;backdrop-filter:blur(2px)}
+#topbar{position:absolute;top:max(6px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);display:flex;align-items:stretch;gap:0}
+#topbar .sc{min-width:46px;padding:4px 10px;font-weight:800;font-size:22px;text-align:center}
+#scL{color:var(--ct);border-radius:6px 0 0 6px}#scR{color:var(--t);border-radius:0 6px 6px 0}
+#timer{min-width:76px;padding:4px 10px;font-size:22px;font-weight:700;text-align:center;border-radius:0;font-variant-numeric:tabular-nums}
+#timer.bomb{color:var(--danger)}
+.alive{display:flex;gap:3px;align-items:center;padding:0 6px}
+.alive i{width:7px;height:16px;border-radius:2px;background:currentColor;opacity:.95}
+.alive i.dead{opacity:.18}
+#aliveL{color:var(--ct)}#aliveR{color:var(--t)}
+#radarWrap{position:absolute;top:max(6px,env(safe-area-inset-top));left:max(6px,env(safe-area-inset-left));width:150px;height:150px;border-radius:8px;overflow:hidden}
+#radar{width:150px;height:150px}
+#money{position:absolute;top:calc(max(6px,env(safe-area-inset-top)) + 158px);left:max(6px,env(safe-area-inset-left));padding:3px 10px;color:#7fe08a;font-weight:800;font-size:18px}
+#money.buyzone::after{content:" 🛒";font-size:14px}
+#bottomL{position:absolute;bottom:max(8px,env(safe-area-inset-bottom));left:50%;transform:translateX(-260px);display:flex;gap:6px}
+#hpBox,#arBox{padding:4px 12px;font-size:26px;font-weight:800;display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums}
+#hpBox .ic{color:#fff;font-size:20px}#arBox .ic{font-size:18px}
+#hpBox.low{color:var(--danger)}
+#ammoBox{position:absolute;bottom:max(8px,env(safe-area-inset-bottom));left:50%;transform:translateX(120px);padding:4px 12px;font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;text-align:right}
+#ammoBox small{font-size:15px;color:var(--dim);font-weight:600}
+#wname{font-size:11px;color:var(--dim);font-weight:600;letter-spacing:.5px;text-transform:uppercase}
+#killfeed{position:absolute;top:max(6px,env(safe-area-inset-top));right:max(8px,env(safe-area-inset-right));display:flex;flex-direction:column;gap:3px;align-items:flex-end}
+.kf{background:rgba(0,0,0,.55);padding:3px 8px;border-radius:4px;font-size:13px;font-weight:700;white-space:nowrap;border:1px solid transparent}
+.kf.me{border-color:#d33}
+.kf .w{color:#ddd;font-weight:500;margin:0 6px;font-size:12px}
+.kf .T{color:var(--t)}.kf .CT{color:var(--ct)}
+#centerMsg{position:absolute;top:22%;left:0;right:0;text-align:center;font-size:30px;font-weight:900;text-shadow:0 2px 6px #000;letter-spacing:1px}
+#centerMsg small{display:block;font-size:16px;font-weight:600;color:#ddd}
+#toast{position:absolute;top:41%;left:0;right:0;text-align:center;font-size:17px;font-weight:700;text-shadow:0 1px 4px #000}
+#toast.money{color:#7fe08a}#toast.warn{color:var(--danger);font-size:24px}
+#crosshair{position:absolute;left:50%;top:50%;width:0;height:0}
+#crosshair div{position:absolute;background:var(--cc,#3cff6e);box-shadow:0 0 0 1px rgba(0,0,0,.55)}
+#hitmarker{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;opacity:0;transition:opacity .25s}
+#hitmarker:before,#hitmarker:after{content:"";position:absolute;left:12px;top:0;width:2px;height:26px;background:#fff;transform:rotate(45deg);
+  -webkit-mask:linear-gradient(#000 0 35%,transparent 35% 65%,#000 65%);mask:linear-gradient(#000 0 35%,transparent 35% 65%,#000 65%)}
+#hitmarker:after{transform:rotate(-45deg)}
+#hitmarker.hs:before,#hitmarker.hs:after{background:#ff4a3a}
+#scope{position:absolute;inset:0;display:none}
+#scope.on{display:block;background:radial-gradient(circle at center,transparent 0,transparent 44vmin,#000 44.3vmin)}
+#scope:before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:#000}
+#scope:after{content:"";position:absolute;top:0;bottom:0;left:50%;width:1px;background:#000}
+#flash{position:absolute;inset:0;background:#fff;opacity:0}
+#dmgVignette{position:absolute;inset:0;opacity:0;background:radial-gradient(circle at center,transparent 45%,rgba(200,0,0,.55) 100%)}
+#dmgDirs{position:absolute;left:50%;top:50%}
+.dd{position:absolute;width:90px;height:16px;margin:-8px 0 0 -45px;border-radius:50%;background:radial-gradient(ellipse at center,rgba(255,40,30,.95),rgba(255,40,30,0) 70%);transition:opacity .9s}
+#progress{position:absolute;left:50%;top:62%;transform:translateX(-50%);width:240px;text-align:center;font-weight:700;font-size:14px}
+#progress .bar{height:8px;background:rgba(0,0,0,.6);border-radius:4px;overflow:hidden;margin-top:4px;border:1px solid var(--line)}
+#progress .bar div{height:100%;width:0;background:var(--accent)}
+#bombIcon{position:absolute;bottom:calc(max(8px,env(safe-area-inset-bottom)) + 52px);left:50%;transform:translateX(-250px);font-size:13px;font-weight:800;color:var(--danger);padding:2px 8px}
+#specInfo{position:absolute;bottom:calc(max(8px,env(safe-area-inset-bottom)) + 60px);left:50%;transform:translateX(-50%);padding:6px 14px;font-weight:700;text-align:center}
+#fps{position:absolute;top:calc(max(6px,env(safe-area-inset-top)) + 42px);left:50%;transform:translateX(-50%);font-size:11px;color:#9f9}
+#nadeList{position:absolute;bottom:calc(max(8px,env(safe-area-inset-bottom)) + 52px);left:50%;transform:translateX(140px);font-size:12px;color:var(--dim);font-weight:700;padding:2px 8px}
+/* ---------- DOKUNMATİK ---------- */
+#touch{position:fixed;inset:0;z-index:6;display:none}
+body.mobile #touch{display:block}
+.tb{position:absolute;border-radius:50%;background:rgba(20,22,26,.45);border:2px solid rgba(255,255,255,.35);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;text-align:center;line-height:1.05;opacity:var(--bo,.55)}
+.tb.on{background:rgba(240,180,60,.55);border-color:#ffd27a}
+.tb svg{width:55%;height:55%;fill:#fff}
+#bFire{width:calc(84px*var(--bs,1));height:calc(84px*var(--bs,1));right:calc(130px*var(--bs,1) + env(safe-area-inset-right));bottom:calc(70px*var(--bs,1));background:rgba(200,50,40,.45)}
+#bFire2{width:calc(62px*var(--bs,1));height:calc(62px*var(--bs,1));left:calc(30px + env(safe-area-inset-left));top:calc(140px + 60px);background:rgba(200,50,40,.4)}
+#bJump{width:calc(60px*var(--bs,1));height:calc(60px*var(--bs,1));right:calc(30px + env(safe-area-inset-right));bottom:calc(120px*var(--bs,1))}
+#bCrouch{width:calc(56px*var(--bs,1));height:calc(56px*var(--bs,1));right:calc(40px + env(safe-area-inset-right));bottom:calc(40px*var(--bs,1))}
+#bReload{width:calc(50px*var(--bs,1));height:calc(50px*var(--bs,1));right:calc(140px*var(--bs,1) + env(safe-area-inset-right));bottom:calc(175px*var(--bs,1))}
+#bScope{width:calc(56px*var(--bs,1));height:calc(56px*var(--bs,1));right:calc(40px + env(safe-area-inset-right));bottom:calc(200px*var(--bs,1))}
+#bUse{width:calc(72px*var(--bs,1));height:calc(72px*var(--bs,1));right:calc(240px*var(--bs,1) + env(safe-area-inset-right));bottom:calc(110px*var(--bs,1));background:rgba(240,180,60,.5);font-size:12px}
+#bWalk{width:calc(46px*var(--bs,1));height:calc(46px*var(--bs,1));left:calc(30px + env(safe-area-inset-left));bottom:calc(200px*var(--bs,1));font-size:10px}
+#bBuy{width:54px;height:54px;left:calc(162px + env(safe-area-inset-left));top:calc(6px + env(safe-area-inset-top));border-radius:10px;font-size:12px;background:rgba(40,120,60,.6)}
+#bMenu{width:42px;height:42px;right:calc(8px + env(safe-area-inset-right));top:calc(50% - 21px);border-radius:10px;font-size:18px}
+#bScore{width:42px;height:42px;right:calc(8px + env(safe-area-inset-right));top:calc(50% - 70px);border-radius:10px;font-size:15px}
+#bDrop{width:42px;height:42px;right:calc(8px + env(safe-area-inset-right));top:calc(50% + 28px);border-radius:10px;font-size:10px}
+#slots{position:absolute;bottom:calc(6px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);display:flex;gap:5px}
+.slot{min-width:58px;height:40px;padding:0 8px;border-radius:7px;background:rgba(20,22,26,.55);border:1px solid rgba(255,255,255,.25);color:#ddd;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:700;opacity:var(--bo,.6)}
+.slot b{font-size:9px;color:var(--dim)}
+.slot.act{border-color:var(--accent);color:#fff;background:rgba(240,180,60,.3)}
+.slot.empty{opacity:.2}
+#joyBase{position:absolute;width:130px;height:130px;margin:-65px 0 0 -65px;border-radius:50%;border:2px solid rgba(255,255,255,.3);background:rgba(0,0,0,.18);display:none}
+#joyKnob{position:absolute;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:rgba(255,255,255,.4);left:65px;top:65px}
+#joyHint{position:absolute;left:calc(40px + env(safe-area-inset-left));bottom:calc(60px + env(safe-area-inset-bottom));width:120px;height:120px;border-radius:50%;border:2px dashed rgba(255,255,255,.18)}
+body.mobile #slots{bottom:calc(6px + env(safe-area-inset-bottom))}
+body.mobile #bottomL{bottom:calc(52px + env(safe-area-inset-bottom));left:50%}
+body.mobile #ammoBox{font-size:18px}
+body.mobile #hpBox,body.mobile #arBox{font-size:18px;padding:2px 8px}
+body.mobile #bMenu{top:calc(6px + env(safe-area-inset-top))}
+body.mobile #bScore{top:calc(6px + env(safe-area-inset-top));right:calc(56px + env(safe-area-inset-right))}
+body.mobile #bDrop{top:calc(6px + env(safe-area-inset-top));right:calc(104px + env(safe-area-inset-right))}
+body.mobile #killfeed{top:calc(54px + env(safe-area-inset-top))}
+body.mobile #bBuy{left:calc(132px + env(safe-area-inset-left))}
+body.mobile #bWalk{left:calc(192px + env(safe-area-inset-left));top:calc(10px + env(safe-area-inset-top));bottom:auto;width:46px;height:46px}
+body.mobile #bottomL{transform:translateX(calc(-100% - 8px))}
+body.mobile #ammoBox{left:50%;right:auto;transform:translateX(8px);bottom:calc(52px + env(safe-area-inset-bottom));padding:2px 10px}
+body.mobile #wname{display:none}
+body.mobile #bombIcon{transform:translateX(-50%);bottom:calc(92px + env(safe-area-inset-bottom));left:50%}
+body.mobile #nadeList{display:none}
+body.mobile #radarWrap,body.mobile #radar{width:120px;height:120px}
+body.mobile #money{top:calc(max(6px,env(safe-area-inset-top)) + 126px);font-size:15px}
+body.mobile #topbar .sc,body.mobile #timer{font-size:18px}
+/* ---------- MENÜLER ---------- */
+.screen{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 30% 20%,rgba(60,50,30,.85),rgba(8,9,12,.95));overflow:auto;padding:16px}
+.panel{width:min(760px,100%);max-height:100%;overflow:auto;background:rgba(18,20,25,.92);border:1px solid var(--line);border-radius:12px;padding:18px 20px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.title{font-size:clamp(30px,7vw,54px);font-weight:900;letter-spacing:2px;line-height:1;margin:0;background:linear-gradient(180deg,#ffd27a,#c7862a);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--dim);margin:6px 0 16px;font-size:14px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 20px;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:#2a2f38;color:#fff;font-weight:800;font-size:15px;cursor:pointer;letter-spacing:.5px}
+.btn:active{transform:scale(.97)}
+.btn.pri{background:linear-gradient(180deg,#e9a83a,#b8741c);border-color:#f3c46a;color:#1a1206}
+.btn.sm{padding:7px 12px;font-size:13px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.menuGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+@media (max-width:560px){.menuGrid{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:5px;padding:10px;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.03)}
+.field label{font-size:12px;color:var(--dim);font-weight:700;text-transform:uppercase;letter-spacing:.6px}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+.seg button{flex:1;min-width:52px;padding:8px 6px;border-radius:6px;border:1px solid rgba(255,255,255,.14);background:#1f232a;color:#cfd5dc;font-weight:700;font-size:13px;cursor:pointer}
+.seg button.sel{background:#e9a83a;color:#1a1206;border-color:#ffd27a}
+input[type=range]{width:100%;accent-color:#e9a83a}
+.val{float:right;color:#fff;font-weight:800}
+.tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.tabs button{padding:8px 12px;border-radius:6px;border:1px solid var(--line);background:#1f232a;color:#cfd5dc;font-weight:800;cursor:pointer}
+.tabs button.sel{background:#3a404b;color:#fff;border-color:#e9a83a}
+.check{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;cursor:pointer}
+.check input{width:20px;height:20px;accent-color:#e9a83a}
+/* satın alma */
+#buyMenu{position:fixed;inset:0;z-index:15;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);padding:10px}
+#buyPanel{width:min(900px,100%);max-height:100%;overflow:auto;background:rgba(16,18,22,.95);border:1px solid var(--line);border-radius:12px;padding:12px}
+#buyHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;flex-wrap:wrap}
+#buyMoney{color:#7fe08a;font-size:22px;font-weight:900}
+#buyCats{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+#buyCats button{padding:8px 12px;border-radius:6px;border:1px solid var(--line);background:#20242b;color:#ddd;font-weight:800;font-size:13px}
+#buyCats button.sel{background:#e9a83a;color:#1a1206}
+#buyItems{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.bi{padding:9px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:#22262e;color:#fff;text-align:left;cursor:pointer;font-weight:800;font-size:14px;display:flex;flex-direction:column;gap:3px}
+.bi span{font-size:12px;color:#7fe08a;font-weight:800}
+.bi em{font-style:normal;font-size:11px;color:var(--dim);font-weight:600}
+.bi.no{opacity:.35}
+.bi.own{border-color:#5d9be0}
+.bi:active{transform:scale(.97)}
+/* skor tablosu */
+#scoreboard{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:12;width:min(720px,96vw);max-height:90vh;overflow:auto;background:rgba(14,16,20,.9);border:1px solid var(--line);border-radius:10px;padding:10px}
+#scoreboard table{width:100%;border-collapse:collapse;font-size:14px}
+#scoreboard th{color:var(--dim);font-size:11px;text-align:right;padding:4px 6px;text-transform:uppercase}
+#scoreboard th:first-child,#scoreboard td:first-child{text-align:left}
+#scoreboard td{padding:5px 6px;text-align:right;border-top:1px solid rgba(255,255,255,.06);font-weight:700}
+#scoreboard tr.dead td{opacity:.45}
+#scoreboard tr.me td{background:rgba(240,180,60,.12)}
+.sbHead{font-weight:900;font-size:16px;padding:8px 4px 4px;display:flex;justify-content:space-between}
+.sbHead.T{color:var(--t)}.sbHead.CT{color:var(--ct)}
+#rotate{position:fixed;inset:0;z-index:50;background:#0c0d10;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;text-align:center;padding:20px}
+@media (orientation:portrait){body.mobile.ingame #rotate{display:flex}}
+.help p{margin:6px 0;color:#cdd3da;font-size:14px;line-height:1.45}
+.help kbd{background:#2a2f38;border:1px solid #444;border-radius:4px;padding:1px 6px;font-size:12px}
+.legal{font-size:11px;color:#6d747d;margin-top:14px}
+</style>
+</head>
+<body>
+<div id="game"></div>
+
+<!-- ============ HUD ============ -->
+<div id="hud" class="hidden">
+  <div id="radarWrap" class="hudbox"><canvas id="radar" width="300" height="300"></canvas></div>
+  <div id="money" class="hudbox">$800</div>
+  <div id="topbar">
+    <div class="alive hudbox" id="aliveL"></div>
+    <div class="sc hudbox" id="scL">0</div>
+    <div class="hudbox" id="timer">1:55</div>
+    <div class="sc hudbox" id="scR">0</div>
+    <div class="alive hudbox" id="aliveR"></div>
+  </div>
+  <div id="fps" class="hidden"></div>
+  <div id="killfeed"></div>
+  <div id="scope"></div>
+  <div id="crosshair"></div>
+  <div id="hitmarker"></div>
+  <div id="dmgVignette"></div>
+  <div id="dmgDirs"></div>
+  <div id="centerMsg"></div>
+  <div id="toast"></div>
+  <div id="progress" class="hidden"><span id="progTxt">Kuruluyor</span><div class="bar"><div id="progBar"></div></div></div>
+  <div id="bottomL"><div id="hpBox" class="hudbox"><span class="ic">✚</span><span id="hp">100</span></div><div id="arBox" class="hudbox"><span class="ic">🛡</span><span id="ar">0</span></div></div>
+  <div id="bombIcon" class="hudbox hidden">💣 BOMBA SENDE</div>
+  <div id="nadeList" class="hudbox hidden"></div>
+  <div id="ammoBox" class="hudbox"><div id="wname">USP-S</div><span id="ammo">12</span> <small id="reserve">/ 24</small></div>
+  <div id="specInfo" class="hudbox hidden"></div>
+  <div id="flash"></div>
+</div>
+
+<!-- ============ DOKUNMATİK ============ -->
+<div id="touch">
+  <div id="joyHint"></div>
+  <div id="joyBase"><div id="joyKnob"></div></div>
+  <div class="tb" id="bFire" data-b="fire"><svg viewBox="0 0 24 24"><path d="M12 2a1 1 0 011 1v2.06A7 7 0 0118.94 11H21a1 1 0 010 2h-2.06A7 7 0 0113 18.94V21a1 1 0 01-2 0v-2.06A7 7 0 015.06 13H3a1 1 0 010-2h2.06A7 7 0 0111 5.06V3a1 1 0 011-1zm0 5a5 5 0 100 10 5 5 0 000-10zm0 3a2 2 0 110 4 2 2 0 010-4z"/></svg></div>
+  <div class="tb" id="bFire2" data-b="fire"><svg viewBox="0 0 24 24"><path d="M12 7a5 5 0 100 10 5 5 0 000-10zm0 3a2 2 0 110 4 2 2 0 010-4z"/></svg></div>
+  <div class="tb" id="bJump" data-b="jump">ZIPLA</div>
+  <div class="tb" id="bCrouch" data-b="crouch">EĞİL</div>
+  <div class="tb" id="bReload" data-b="reload">R</div>
+  <div class="tb hidden" id="bScope" data-b="scope">DÜRBÜN</div>
+  <div class="tb hidden" id="bUse" data-b="use">KUR</div>
+  <div class="tb" id="bWalk" data-b="walk">YÜRÜ</div>
+  <div class="tb" id="bBuy" data-b="buy">SATIN<br>AL</div>
+  <div class="tb" id="bMenu" data-b="menu">❚❚</div>
+  <div class="tb" id="bScore" data-b="score">☰</div>
+  <div class="tb" id="bDrop" data-b="drop">BIRAK</div>
+  <div id="slots">
+    <div class="slot" data-b="slot" data-s="primary"><b>1</b><span>—</span></div>
+    <div class="slot" data-b="slot" data-s="secondary"><b>2</b><span>—</span></div>
+    <div class="slot" data-b="slot" data-s="knife"><b>3</b><span>Bıçak</span></div>
+    <div class="slot" data-b="slot" data-s="grenade"><b>4</b><span>—</span></div>
+    <div class="slot" data-b="slot" data-s="bomb"><b>5</b><span>C4</span></div>
+  </div>
+</div>
+
+<!-- ============ SATIN ALMA ============ -->
+<div id="buyMenu" class="hidden">
+  <div id="buyPanel">
+    <div id="buyHead"><div><b style="font-size:18px">SATIN ALMA</b> <span id="buyTime" style="color:var(--dim);font-size:13px"></span></div><div id="buyMoney">$800</div><button class="btn sm" id="buyClose">KAPAT ✕</button></div>
+    <div id="buyCats"></div>
+    <div id="buyItems"></div>
+  </div>
+</div>
+
+<div id="scoreboard" class="hidden"></div>
+
+<!-- ============ ANA MENÜ ============ -->
+<div id="mainMenu" class="screen">
+  <div class="panel">
+    <h1 class="title">TAKTİK OPS</h1>
+    <div class="sub">Kum Vadisi • 5v5 Bomba Kurma / İmha • Mobil & Masaüstü</div>
+    <div class="menuGrid">
+      <div class="field"><label>Takım</label><div class="seg" data-set="playerTeam" data-opts='[["auto","Otomatik"],["T","Saldırı"],["CT","Savunma"]]'></div></div>
+      <div class="field"><label>Bot Zorluğu</label><div class="seg" data-set="botDifficulty" data-opts='[[0,"Kolay"],[1,"Normal"],[2,"Zor"],[3,"Uzman"]]'></div></div>
+      <div class="field"><label>Takım Boyutu</label><div class="seg" data-set="teamSize" data-opts='[[1,"1v1"],[2,"2v2"],[3,"3v3"],[4,"4v4"],[5,"5v5"]]'></div></div>
+      <div class="field"><label>Maç Uzunluğu</label><div class="seg" data-set="maxRounds" data-opts='[[8,"Kısa (8)"],[16,"Normal (16)"],[30,"Rekabetçi (30)"]]'></div></div>
+      <div class="field"><label>Nişan Yardımı</label><div class="seg" data-set="aimAssist" data-opts='[[0,"Kapalı"],[1,"Düşük"],[2,"Orta"],[3,"Yüksek"]]'></div></div>
+      <div class="field"><label>Grafik</label><div class="seg" data-set="graphics" data-opts='[[0,"Düşük"],[1,"Orta"],[2,"Yüksek"]]' data-reload="1"></div></div>
+    </div>
+    <div class="row" style="margin-top:16px">
+      <button class="btn pri" id="btnPlay" style="flex:1;min-width:180px;font-size:18px;padding:16px">▶ OYNA</button>
+      <button class="btn" id="btnSettings">⚙ AYARLAR</button>
+      <button class="btn" id="btnHelp">? NASIL OYNANIR</button>
+    </div>
+    <div class="legal">Özgün hayran yapımı taktik nişancı. Harita, karakterler ve isimler özgündür.</div>
+  </div>
+</div>
+
+<!-- ============ AYARLAR ============ -->
+<div id="settings" class="screen hidden">
+  <div class="panel">
+    <div class="row" style="justify-content:space-between;margin-bottom:10px"><b style="font-size:22px">⚙ AYARLAR</b><button class="btn sm" id="setClose">TAMAM ✓</button></div>
+    <div class="tabs" id="setTabs">
+      <button data-tab="aim" class="sel">Nişan Yardımı</button><button data-tab="ctrl">Kontroller</button><button data-tab="cross">Nişangah</button><button data-tab="gfx">Grafik & Ses</button><button data-tab="bot">Botlar & Maç</button>
+    </div>
+    <div class="menuGrid tabc" data-tab="aim">
+      <div class="field"><label>Nişan Yardımı Gücü</label><div class="seg" data-set="aimAssist" data-opts='[[0,"Kapalı"],[1,"Düşük"],[2,"Orta"],[3,"Yüksek"]]'></div>
+        <div style="font-size:12px;color:var(--dim)">Düşmana yakınken nişangahı yavaşlatır (sürtünme) ve hedefe doğru çeker (mıknatıs).</div></div>
+      <div class="field"><label>Otomatik Ateş</label><label class="check"><input type="checkbox" data-set="autoFire"> Nişangah düşmana gelince ateş et</label>
+        <div style="font-size:12px;color:var(--dim)">Mobilde kolay oynanış için. Rekabetçi his için kapalı tutun.</div></div>
+    </div>
+    <div class="menuGrid tabc hidden" data-tab="ctrl">
+      <div class="field"><label>Dokunmatik Hassasiyet <span class="val" data-val="touchSens"></span></label><input type="range" min="0.2" max="3" step="0.05" data-set="touchSens"></div>
+      <div class="field"><label>Fare Hassasiyeti <span class="val" data-val="mouseSens"></span></label><input type="range" min="0.1" max="4" step="0.05" data-set="mouseSens"></div>
+      <div class="field"><label>Dürbün Hassasiyeti <span class="val" data-val="scopeSens"></span></label><input type="range" min="0.2" max="1.5" step="0.05" data-set="scopeSens"></div>
+      <div class="field"><label>Tuş Boyutu <span class="val" data-val="btnScale"></span></label><input type="range" min="0.7" max="1.5" step="0.05" data-set="btnScale"></div>
+      <div class="field"><label>Tuş Opaklığı <span class="val" data-val="btnOpacity"></span></label><input type="range" min="0.2" max="1" step="0.05" data-set="btnOpacity"></div>
+      <div class="field"><label>Seçenekler</label><label class="check"><input type="checkbox" data-set="leftFire"> Sol ateş tuşu</label><label class="check"><input type="checkbox" data-set="invertY"> Y eksenini ters çevir</label></div>
+    </div>
+    <div class="menuGrid tabc hidden" data-tab="cross">
+      <div class="field"><label>Renk</label><div class="seg" data-set="crossColor" data-opts='[["#3cff6e","Yeşil"],["#ffe14a","Sarı"],["#4ae6ff","Camgöbeği"],["#ffffff","Beyaz"],["#ff4a6e","Pembe"]]'></div></div>
+      <div class="field"><label>Uzunluk <span class="val" data-val="crossSize"></span></label><input type="range" min="2" max="16" step="1" data-set="crossSize"></div>
+      <div class="field"><label>Boşluk <span class="val" data-val="crossGap"></span></label><input type="range" min="0" max="12" step="1" data-set="crossGap"></div>
+      <div class="field"><label>Kalınlık <span class="val" data-val="crossThick"></span></label><input type="range" min="1" max="4" step="1" data-set="crossThick"></div>
+      <div class="field"><label>Seçenekler</label><label class="check"><input type="checkbox" data-set="crossDot"> Merkez nokta</label><label class="check"><input type="checkbox" data-set="crossDynamic"> Dinamik (harekette açılır)</label></div>
+    </div>
+    <div class="menuGrid tabc hidden" data-tab="gfx">
+      <div class="field"><label>Grafik Kalitesi</label><div class="seg" data-set="graphics" data-opts='[[0,"Düşük"],[1,"Orta"],[2,"Yüksek"]]' data-reload="1"></div><div style="font-size:12px;color:var(--dim)">Gölge/kalite değişiklikleri sonraki açılışta tam uygulanır.</div></div>
+      <div class="field"><label>Görüş Açısı (FOV) <span class="val" data-val="fov"></span></label><input type="range" min="60" max="95" step="1" data-set="fov"></div>
+      <div class="field"><label>Seçenekler</label><label class="check"><input type="checkbox" data-set="shadows" data-reload="1"> Gölgeler</label><label class="check"><input type="checkbox" data-set="showFps"> FPS göster</label></div>
+      <div class="field"><label>Ses <span class="val" data-val="volume"></span></label><input type="range" min="0" max="1" step="0.05" data-set="volume"></div>
+    </div>
+    <div class="menuGrid tabc hidden" data-tab="bot">
+      <div class="field"><label>Bot Zorluğu</label><div class="seg" data-set="botDifficulty" data-opts='[[0,"Kolay"],[1,"Normal"],[2,"Zor"],[3,"Uzman"]]'></div>
+        <div style="font-size:12px;color:var(--dim)">Tepki süresi, nişan hızı, sprey kontrolü, kafa vuruşu oranı, karşı-strafe ve el bombası kullanımı değişir.</div></div>
+      <div class="field"><label>Takım Boyutu</label><div class="seg" data-set="teamSize" data-opts='[[1,"1v1"],[2,"2v2"],[3,"3v3"],[4,"4v4"],[5,"5v5"]]'></div></div>
+      <div class="field"><label>Maç Uzunluğu</label><div class="seg" data-set="maxRounds" data-opts='[[8,"Kısa (8)"],[16,"Normal (16)"],[30,"Rekabetçi (30)"]]'></div></div>
+      <div class="field"><label>Dost Ateşi</label><label class="check"><input type="checkbox" data-set="friendlyFire"> Takım arkadaşlarına hasar</label></div>
+    </div>
+    <div class="row" style="margin-top:12px"><button class="btn sm" id="setReset">Varsayılanlara dön</button></div>
+  </div>
+</div>
+
+<!-- ============ YARDIM ============ -->
+<div id="help" class="screen hidden">
+  <div class="panel help">
+    <div class="row" style="justify-content:space-between"><b style="font-size:22px">NASIL OYNANIR</b><button class="btn sm" id="helpClose">KAPAT ✕</button></div>
+    <p><b>Amaç:</b> Saldırı timi bombayı A veya B bölgesine kurar ve patlatır; Savunma timi kurulumu engeller ya da bombayı imha eder. Karşı takımı tamamen yok etmek de rauntu kazandırır.</p>
+    <p><b>Ekonomi:</b> Her raunt kazanç/kayıp parası ve öldürme ödülleri alırsın. Raunt başında doğma bölgesindeyken <b>SATIN AL</b> ile silah, zırh, kit ve bomba al. Hayatta kalırsan eşyaların sonraki raunta geçer.</p>
+    <p><b>İsabet:</b> Koşarken atış isabetsizdir. Durarak (veya eğilerek) ateş et, uzun mesafede kısa seri at. Sprey deseni sabittir — aşağı çekerek kontrol edebilirsin. Kafa vuruşu 4x hasar.</p>
+    <p><b>Mobil:</b> Sol tarafa dokun = joystick. Sağ tarafı kaydır = bakış. Ateş tuşuna basılıyken parmağını kaydırarak nişan alabilirsin. Bomba bölgesinde <b>KUR</b>, bombanın yanında <b>İMHA</b> tuşuna basılı tut.</p>
+    <p><b>Masaüstü:</b> <kbd>WASD</kbd> hareket, <kbd>Fare</kbd> nişan/ateş, <kbd>Sağ tık</kbd> dürbün, <kbd>Boşluk</kbd> zıpla, <kbd>Ctrl</kbd>/<kbd>C</kbd> eğil, <kbd>Shift</kbd> yürü (sessiz), <kbd>R</kbd> doldur, <kbd>E</kbd> kur/imha/silah al, <kbd>G</kbd> bırak, <kbd>B</kbd> satın al, <kbd>1-5</kbd> silahlar, <kbd>Q</kbd> son silah, <kbd>Tab</kbd> skor, <kbd>Esc</kbd> menü.</p>
+    <p><b>Bombalar:</b> HE hasar verir, flaş kör eder (bakmayın!), sis görüşü keser ve yangını söndürür, molotof/yangın bölgeyi kapatır.</p>
+  </div>
+</div>
+
+<!-- ============ DURAKLAT ============ -->
+<div id="pause" class="screen hidden">
+  <div class="panel" style="max-width:420px;text-align:center">
+    <h2 style="margin:4px 0 14px">DURAKLATILDI</h2>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn pri" id="pResume">DEVAM ET</button>
+      <button class="btn" id="pSettings">AYARLAR</button>
+      <button class="btn" id="pQuit">ANA MENÜ</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MAÇ SONU ============ -->
+<div id="matchEnd" class="screen hidden">
+  <div class="panel" style="max-width:760px">
+    <h1 class="title" id="meTitle">ZAFER</h1>
+    <div class="sub" id="meSub"></div>
+    <div id="meBoard"></div>
+    <div class="row" style="margin-top:14px"><button class="btn pri" id="meAgain">TEKRAR OYNA</button><button class="btn" id="meMenu">ANA MENÜ</button></div>
+  </div>
+</div>
+
+<div id="rotate"><div style="font-size:54px">⟳</div><b>Telefonunu yatay çevir</b><div style="color:#9aa3ad;font-size:14px">Oyun yatay modda oynanır.</div></div>
+
+<script src="lib/three.min.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/weapons.js"></script>
+<script src="js/textures.js"></script>
+<script src="js/map.js"></script>
+<script src="js/physics.js"></script>
+<script src="js/models.js"></script>
+<script src="js/effects.js"></script>
+<script src="js/entity.js"></script>
+<script src="js/bot.js"></script>
+<script src="js/game.js"></script>
+<script src="js/input.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
