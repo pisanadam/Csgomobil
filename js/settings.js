@@ -30,6 +30,8 @@ const DEFAULT_SETTINGS = {
   maxRounds: 16,
   friendlyFire: false,
   playerTeam: 'auto',
+  mode: 'comp',          // 'comp' rekabetçi, 'dm' ölüm kalım
+  dmTime: 300,           // ölüm kalım süresi (sn)
   // Ses
   volume: 0.8,
 };

@@ -78,7 +78,8 @@ G.startMatch = function () {
   let pt = S.playerTeam; if (pt === 'auto') pt = Math.random() < 0.5 ? 'T' : 'CT';
   this.sideOfGroup = [pt, pt === 'T' ? 'CT' : 'T'];
   this.score = [0, 0]; this.lossStreak = { T: 0, CT: 0 };
-  this.FREEZE = 6; this.ROUND_TIME = 115;
+  this.dm = S.mode === 'dm';
+  this.FREEZE = this.dm ? 3 : 6; this.ROUND_TIME = this.dm ? S.dmTime : 115;
   const names = BOT_NAMES.slice().sort(() => Math.random() - 0.5);
   const n = Math.max(1, Math.min(5, S.teamSize));
   const pl = this.player = new Entity('Sen', pt, true); pl.group = 0;
@@ -136,6 +137,16 @@ G.startRound = function () {
     for (const s of ['primary', 'secondary']) { const w = e.inv[s]; if (w) { w.mag = w.def.mag; w.reserve = w.def.reserve; } }
     if (e.model) { e.model.root.rotation.set(0, e.yaw, 0); e.model.root.visible = !e.isPlayer; }
     e.slot = e.bestSlot(); e.deployT = 0; e.onEquip();
+  }
+  if (this.dm) {
+    this.bomb = { state: 'none', carrier: null, pos: { x: 0, y: -100, z: 0 }, timer: 0, defuser: null, beepT: 0, site: null };
+    this.bombMesh.visible = false; this.bombLight.intensity = 0;
+    for (const e of this.entities) { this.dmLoadout(e); e.respawnAt = 0; e.protectUntil = this.now + this.FREEZE + 1.5; }
+    for (const b of this.bots) b.roundStart({});
+    this.spec = null;
+    UI.onRoundStart(R.num, false);
+    Audio3.roundStart();
+    return;
   }
   // bomba
   const Ts = this.entities.filter(e => e.team === 'T');
@@ -195,7 +206,7 @@ G.update = function (dt) {
   for (const b of this.bots) b.update(dt, now);
   // varlıklar
   for (const e of this.entities) {
-    if (!e.alive) { this.animateDeath(e, dt); continue; }
+    if (!e.alive) { this.animateDeath(e, dt); if (this.dm && e.respawnAt && now >= e.respawnAt && R.phase !== 'end') this.respawn(e); continue; }
     if (frozen) { e.input.fwd = e.input.side = 0; e.input.jump = false; }
     e.updateMovement(dt);
     if (!frozen || e.def.type !== 'grenade') e.updateWeapon(dt, now);
@@ -219,6 +230,7 @@ G.nextRound = function () {
   const half = this.halfRounds();
   const played = this.round.num;
   const need = half + 1;
+  if (this.dm) { this.running = false; this.matchOver = true; UI.matchEnd(this.score[0], this.score[1]); return; }
   if (this.score[0] >= need || this.score[1] >= need || played >= S.maxRounds) {
     this.running = false; this.matchOver = true;
     UI.matchEnd(this.score[0], this.score[1]);
@@ -406,9 +418,14 @@ G.onKill = function (v, k, def, hs, wallbang) {
   if (k && k !== v) {
     if (k.team !== v.team) {
       k.stats.kills++; if (hs) k.stats.hs++;
-      const rew = def ? (def.reward || 300) : 300;
-      this.addMoney(k, rew);
-      if (k.isPlayer) UI.toast(`+$${rew}  ${v.name} öldürüldü`, 1.5, 'money');
+      if (this.dm) {
+        this.score[k.group]++;
+        if (k.isPlayer) UI.toast(`+1  ${v.name} öldürüldü`, 1.2, 'money');
+      } else {
+        const rew = def ? (def.reward || 300) : 300;
+        this.addMoney(k, rew);
+        if (k.isPlayer) UI.toast(`+$${rew}  ${v.name} öldürüldü`, 1.5, 'money');
+      }
     } else { k.stats.kills--; this.addMoney(k, -300); }
   }
   // asist
@@ -416,7 +433,10 @@ G.onKill = function (v, k, def, hs, wallbang) {
   UI.killfeed(k && k !== v ? k : null, v, def, hs, wallbang);
   // eşyaları düşür
   const drop = v.inv.primary || v.inv.secondary;
-  if (drop) this.spawnPickup(drop, v.pos);
+  if (this.dm) {
+    v.respawnAt = this.now + 2.5;
+    if (v.isPlayer) v.dmSaved = { primary: v.inv.primary ? v.inv.primary.def.id : (v.dmSaved && v.dmSaved.primary), secondary: v.inv.secondary ? v.inv.secondary.def.id : null };
+  } else if (drop) this.spawnPickup(drop, v.pos);
   if (v.inv.bomb) { v.inv.bomb = false; this.bomb.state = 'dropped'; this.bomb.carrier = null; this.bomb.pos = { x: v.pos.x, y: 0, z: v.pos.z }; this.bombMesh.visible = true; this.bombMesh.position.set(v.pos.x, 0.07, v.pos.z); if (v.team === this.player.team || true) UI.toast('Bomba düşürüldü!', 2); }
   v.resetForDeath();
   if (v.model) Models.setCharGun(v.model, null);
@@ -489,6 +509,7 @@ G.dropWeapon = function () {
 
 // ================= SATIN ALMA =================
 G.canBuy = function (e) {
+  if (this.dm) return e.alive && this.round.phase !== 'end';
   const z = MAP.zoneAt(e.pos.x, e.pos.z);
   return e.alive && this.round.buyLeft > 0 && this.round.phase !== 'end' && (z === (e.team === 'T' ? 'T' : 'C'));
 };
@@ -496,8 +517,8 @@ G.buy = function (e, id, bot) {
   const def = itemDef(id); if (!def) return false;
   if (!sideOk(def, e.team)) return false;
   if (!bot && !this.canBuy(e)) return false;
-  let price = def.price;
-  if (id === 'helmet') { if (e.helmet && e.armor >= 100) return false; if (e.armor >= 100) price = 350; }
+  let price = this.dm ? 0 : def.price;
+  if (id === 'helmet') { if (e.helmet && e.armor >= 100) return false; if (e.armor >= 100 && !this.dm) price = 350; }
   if (id === 'kevlar' && e.armor >= 100) return false;
   if (id === 'kit' && e.kit) return false;
   if (e.money < price) return false;
@@ -510,7 +531,7 @@ G.buy = function (e, id, bot) {
   } else {
     const cur = e.inv[def.slot];
     if (cur && cur.def.id === id) { if (cur.mag === def.mag && cur.reserve === def.reserve) return false; }
-    if (cur && !bot) this.spawnPickup(cur, e.pos);
+    if (cur && !bot && !this.dm) this.spawnPickup(cur, e.pos);
     e.giveWeapon(id);
     if (!bot) e.switchTo(def.slot, true);
   }
@@ -758,6 +779,16 @@ G.randomNear = function (p, rmin, rmax, zoneCh) {
 // ================= KAZANMA KOŞULLARI =================
 G.checkWin = function () {
   const R = this.round, B = this.bomb;
+  if (this.dm) {
+    if (R.timeLeft <= 0) {
+      R.phase = 'end'; R.timer = this.END_TIME; R.endReason = 'dmtime';
+      const pw = this.score[0] > this.score[1];
+      Audio3.roundEnd(pw);
+      UI.message(this.score[0] === this.score[1] ? 'BERABERE' : (pw ? '<span style="color:var(--ok)">TAKIMIN KAZANDI</span>' : '<span style="color:var(--danger)">TAKIMIN KAYBETTİ</span>'), 5, `Süre doldu • ${this.score[0]} - ${this.score[1]}`);
+      UI.toggleBuy(false);
+    }
+    return;
+  }
   const aliveT = this.entities.some(e => e.alive && e.team === 'T');
   const aliveC = this.entities.some(e => e.alive && e.team === 'CT');
   if (!aliveC) return this.endRound('T', 'elim');
@@ -950,4 +981,55 @@ G.sound = function (kind, e, f) {
   const pos = e && !e.isPlayer ? e.pos : null;
   if (kind === 'click') Audio3.click(pos, f);
   else if (kind === 'reload') Audio3.reload(pos);
+};
+
+// ================= ÖLÜM KALIM =================
+const DM_BOT_GUNS = ['ak47', 'ak47', 'm4a4', 'm4a1s', 'm4a1s', 'awp', 'galil', 'famas', 'sg553', 'aug', 'mp9', 'ump45', 'p90', 'mac10', 'ssg08', 'xm1014', 'mp7'];
+G.dmLoadout = function (e) {
+  e.resetForDeath();
+  e.armor = 100; e.helmet = true; e.money = 16000;
+  if (e.isPlayer) {
+    const sv = e.dmSaved || {};
+    e.giveWeapon(sv.secondary || (e.team === 'T' ? 'glock' : 'usp'));
+    e.giveWeapon(sv.primary || (e.team === 'T' ? 'ak47' : 'm4a4'));
+  } else {
+    let id = DM_BOT_GUNS[Math.floor(Math.random() * DM_BOT_GUNS.length)];
+    if (!sideOk(WEAPONS[id], e.team)) id = e.team === 'T' ? 'ak47' : 'm4a1s';
+    e.giveWeapon(Math.random() < 0.3 ? 'deagle' : (e.team === 'T' ? 'glock' : 'usp'));
+    e.giveWeapon(id);
+  }
+  e.slot = e.bestSlot(); e.deployT = 0; e.onEquip();
+};
+G.dmSpawnPoint = function (e) {
+  const enemies = this.entities.filter(o => o.alive && o.team !== e.team);
+  let best = null, bestScore = -1e9;
+  for (let i = 0; i < 40; i++) {
+    const c = Math.floor(Math.random() * MAP.W), r = Math.floor(Math.random() * MAP.H);
+    if (!MAP.isWalk(c, r)) continue;
+    const p = MAP.c2w(c, r);
+    let minD = 999, seen = false;
+    const pe = { x: p.x, y: 1.6, z: p.z };
+    for (const o of enemies) {
+      const d = dist2(o.pos, p); minD = Math.min(minD, d);
+      if (d < 50 && !Phys.blocked(o.eye(), pe)) seen = true;
+    }
+    const score = Math.min(minD, 35) - (seen ? 60 : 0) + Math.random() * 5;
+    if (score > bestScore) { bestScore = score; best = p; }
+  }
+  return best || MAP.POS.spawnT[0];
+};
+G.respawn = function (e) {
+  const p = this.dmSpawnPoint(e);
+  e.pos.x = p.x; e.pos.y = 0; e.pos.z = p.z;
+  e.vel.x = e.vel.y = e.vel.z = 0;
+  e.alive = true; e.hp = 100; e.deathT = 0; e.flashT = 0; e.crouch = 0; e.height = STAND_H; e.respawnAt = 0;
+  e.recoilIdx = 0; e.fireInacc = 0; e.punch.x = e.punch.y = 0; e.scoped = 0; e.reloadT = 0; e.trig = false;
+  e.dmgBy.clear(); e.protectUntil = this.now + 1.5;
+  let near = null, nd = 1e9;
+  for (const o of this.entities) if (o.alive && o.team !== e.team && o !== e) { const d = dist2(o.pos, e.pos); if (d < nd) { nd = d; near = o; } }
+  e.yaw = near ? Math.atan2(-(near.pos.x - e.pos.x), -(near.pos.z - e.pos.z)) : Math.random() * 6.28; e.pitch = 0;
+  if (e.model) { e.model.root.rotation.set(0, e.yaw, 0); }
+  this.dmLoadout(e);
+  if (e.bot) e.bot.roundStart({});
+  if (e.isPlayer) { this.spec = null; UI.message('', 0); }
 };

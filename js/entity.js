@@ -254,6 +254,7 @@ class Entity {
   // ----- Hasar -----
   takeDamage(dmg, attacker, def, group, dir, now) {
     if (!this.alive) return 0;
+    if (this.protectUntil && now < this.protectUntil) return 0;
     let d = dmg;
     const armored = this.armor > 0 && group !== 'legs' && (group !== 'head' || this.helmet) && group !== 'fire';
     if (armored && def && def.pen !== undefined) {

@@ -7,6 +7,7 @@ Mobilde ve masaüstünde tarayıcıda oynanan, 5v5 bomba kurma / imha modlu takt
 - GitHub Pages ile de yayınlanabilir.
 
 ## Özellikler
+- Modlar: Rekabetçi (bomba kurma/imha) ve Ölüm Kalım (yeniden doğma, ücretsiz satın alma, 3/5/10 dk)
 - Raunt sistemi: hazırlık süresi, satın alma süresi, 1:55 raunt, 40 sn bomba sayacı, devre arasında taraf değişimi
 - Ekonomi: başlangıç $800, öldürme ödülleri silaha göre, kazanma/kaybetme bonusları, kayıp serisi
 - 25+ silah: tabancalar, SMG'ler, pompalılar, makineli tüfekler, tüfekler, keskin nişancı tüfekleri (dürbünlü)

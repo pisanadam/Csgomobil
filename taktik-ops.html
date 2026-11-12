@@ -242,10 +242,12 @@ input[type=range]{width:100%;accent-color:#e9a83a}
     <h1 class="title">TAKTİK OPS</h1>
     <div class="sub">Kum Vadisi • 5v5 Bomba Kurma / İmha • Mobil & Masaüstü</div>
     <div class="menuGrid">
+      <div class="field" style="grid-column:1/-1"><label>Oyun Modu</label><div class="seg" data-set="mode" data-opts='[["comp","Rekabetçi (Bomba)"],["dm","Ölüm Kalım"]]'></div></div>
       <div class="field"><label>Takım</label><div class="seg" data-set="playerTeam" data-opts='[["auto","Otomatik"],["T","Saldırı"],["CT","Savunma"]]'></div></div>
       <div class="field"><label>Bot Zorluğu</label><div class="seg" data-set="botDifficulty" data-opts='[[0,"Kolay"],[1,"Normal"],[2,"Zor"],[3,"Uzman"]]'></div></div>
       <div class="field"><label>Takım Boyutu</label><div class="seg" data-set="teamSize" data-opts='[[1,"1v1"],[2,"2v2"],[3,"3v3"],[4,"4v4"],[5,"5v5"]]'></div></div>
       <div class="field"><label>Maç Uzunluğu</label><div class="seg" data-set="maxRounds" data-opts='[[8,"Kısa (8)"],[16,"Normal (16)"],[30,"Rekabetçi (30)"]]'></div></div>
+      <div class="field"><label>Ölüm Kalım Süresi</label><div class="seg" data-set="dmTime" data-opts='[[180,"3 dk"],[300,"5 dk"],[600,"10 dk"]]'></div></div>
       <div class="field"><label>Nişan Yardımı</label><div class="seg" data-set="aimAssist" data-opts='[[0,"Kapalı"],[1,"Düşük"],[2,"Orta"],[3,"Yüksek"]]'></div></div>
       <div class="field"><label>Grafik</label><div class="seg" data-set="graphics" data-opts='[[0,"Düşük"],[1,"Orta"],[2,"Yüksek"]]' data-reload="1"></div></div>
     </div>
@@ -308,6 +310,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
   <div class="panel help">
     <div class="row" style="justify-content:space-between"><b style="font-size:22px">NASIL OYNANIR</b><button class="btn sm" id="helpClose">KAPAT ✕</button></div>
     <p><b>Amaç:</b> Saldırı timi bombayı A veya B bölgesine kurar ve patlatır; Savunma timi kurulumu engeller ya da bombayı imha eder. Karşı takımı tamamen yok etmek de rauntu kazandırır.</p>
+    <p><b>Ölüm Kalım:</b> Öldükten 2,5 saniye sonra haritada rastgele, düşmanların görmediği bir yerde yeniden doğarsın. Satın alma ücretsiz ve her yerde açık; son seçtiğin silahla doğarsın. Doğunca 1,5 sn korumalısın. Süre bitince en çok öldürme yapan takım kazanır.</p>
     <p><b>Ekonomi:</b> Her raunt kazanç/kayıp parası ve öldürme ödülleri alırsın. Raunt başında doğma bölgesindeyken <b>SATIN AL</b> ile silah, zırh, kit ve bomba al. Hayatta kalırsan eşyaların sonraki raunta geçer.</p>
     <p><b>İsabet:</b> Koşarken atış isabetsizdir. Durarak (veya eğilerek) ateş et, uzun mesafede kısa seri at. Sprey deseni sabittir — aşağı çekerek kontrol edebilirsin. Kafa vuruşu 4x hasar.</p>
     <p><b>Mobil:</b> Sol tarafa dokun = joystick. Sağ tarafı kaydır = bakış. Ateş tuşuna basılıyken parmağını kaydırarak nişan alabilirsin. Bomba bölgesinde <b>KUR</b>, bombanın yanında <b>İMHA</b> tuşuna basılı tut.</p>
@@ -382,6 +385,8 @@ const DEFAULT_SETTINGS = {
   maxRounds: 16,
   friendlyFire: false,
   playerTeam: 'auto',
+  mode: 'comp',          // 'comp' rekabetçi, 'dm' ölüm kalım
+  dmTime: 300,           // ölüm kalım süresi (sn)
   // Ses
   volume: 0.8,
 };
@@ -2141,6 +2146,7 @@ class Entity {
   // ----- Hasar -----
   takeDamage(dmg, attacker, def, group, dir, now) {
     if (!this.alive) return 0;
+    if (this.protectUntil && now < this.protectUntil) return 0;
     let d = dmg;
     const armored = this.armor > 0 && group !== 'legs' && (group !== 'head' || this.helmet) && group !== 'fire';
     if (armored && def && def.pen !== undefined) {
@@ -2196,7 +2202,7 @@ class Bot {
     this.role = role; this.path = null; this.goal = null; this.goalKey = '';
     this.target = null; this.lastSeen = null; this.noise = null; this.pendingNade = null;
     this.guardSpot = null; this.executed = false; this.siteSpot = null; this.saving = false;
-    this.holdUntil = 0;
+    this.holdUntil = 0; this.roam = null;
   }
   // ----- Algı -----
   canSee(t, now) {
@@ -2263,6 +2269,16 @@ class Bot {
   decideGoal(now) {
     const e = this.e, B = G.bomb, R = G.round;
     const tLeft = R.timeLeft;
+    if (G.dm) {
+      if (this.lastSeen && now - this.lastSeenT < 4) return { key: 'hunt', p: this.lastSeen };
+      if (!this.roam || dist2(e.pos, this.roam) < 2 || now > this.roamUntil) {
+        let near = null, nd = 1e9;
+        for (const o of G.entities) if (o.alive && o.team !== e.team) { const d = dist2(o.pos, e.pos); if (d < nd) { nd = d; near = o; } }
+        this.roam = near && Math.random() < 0.6 ? G.randomNear(near.pos, 2, 10) : G.randomNear(e.pos, 15, 45);
+        this.roamUntil = now + 12 + Math.random() * 8;
+      }
+      return { key: 'roam', p: this.roam };
+    }
     if (e.team === 'T') {
       if (B.state === 'dropped') {
         let closest = null, cd = 1e9;
@@ -2651,7 +2667,8 @@ G.startMatch = function () {
   let pt = S.playerTeam; if (pt === 'auto') pt = Math.random() < 0.5 ? 'T' : 'CT';
   this.sideOfGroup = [pt, pt === 'T' ? 'CT' : 'T'];
   this.score = [0, 0]; this.lossStreak = { T: 0, CT: 0 };
-  this.FREEZE = 6; this.ROUND_TIME = 115;
+  this.dm = S.mode === 'dm';
+  this.FREEZE = this.dm ? 3 : 6; this.ROUND_TIME = this.dm ? S.dmTime : 115;
   const names = BOT_NAMES.slice().sort(() => Math.random() - 0.5);
   const n = Math.max(1, Math.min(5, S.teamSize));
   const pl = this.player = new Entity('Sen', pt, true); pl.group = 0;
@@ -2709,6 +2726,16 @@ G.startRound = function () {
     for (const s of ['primary', 'secondary']) { const w = e.inv[s]; if (w) { w.mag = w.def.mag; w.reserve = w.def.reserve; } }
     if (e.model) { e.model.root.rotation.set(0, e.yaw, 0); e.model.root.visible = !e.isPlayer; }
     e.slot = e.bestSlot(); e.deployT = 0; e.onEquip();
+  }
+  if (this.dm) {
+    this.bomb = { state: 'none', carrier: null, pos: { x: 0, y: -100, z: 0 }, timer: 0, defuser: null, beepT: 0, site: null };
+    this.bombMesh.visible = false; this.bombLight.intensity = 0;
+    for (const e of this.entities) { this.dmLoadout(e); e.respawnAt = 0; e.protectUntil = this.now + this.FREEZE + 1.5; }
+    for (const b of this.bots) b.roundStart({});
+    this.spec = null;
+    UI.onRoundStart(R.num, false);
+    Audio3.roundStart();
+    return;
   }
   // bomba
   const Ts = this.entities.filter(e => e.team === 'T');
@@ -2768,7 +2795,7 @@ G.update = function (dt) {
   for (const b of this.bots) b.update(dt, now);
   // varlıklar
   for (const e of this.entities) {
-    if (!e.alive) { this.animateDeath(e, dt); continue; }
+    if (!e.alive) { this.animateDeath(e, dt); if (this.dm && e.respawnAt && now >= e.respawnAt && R.phase !== 'end') this.respawn(e); continue; }
     if (frozen) { e.input.fwd = e.input.side = 0; e.input.jump = false; }
     e.updateMovement(dt);
     if (!frozen || e.def.type !== 'grenade') e.updateWeapon(dt, now);
@@ -2792,6 +2819,7 @@ G.nextRound = function () {
   const half = this.halfRounds();
   const played = this.round.num;
   const need = half + 1;
+  if (this.dm) { this.running = false; this.matchOver = true; UI.matchEnd(this.score[0], this.score[1]); return; }
   if (this.score[0] >= need || this.score[1] >= need || played >= S.maxRounds) {
     this.running = false; this.matchOver = true;
     UI.matchEnd(this.score[0], this.score[1]);
@@ -2979,9 +3007,14 @@ G.onKill = function (v, k, def, hs, wallbang) {
   if (k && k !== v) {
     if (k.team !== v.team) {
       k.stats.kills++; if (hs) k.stats.hs++;
-      const rew = def ? (def.reward || 300) : 300;
-      this.addMoney(k, rew);
-      if (k.isPlayer) UI.toast(`+$${rew}  ${v.name} öldürüldü`, 1.5, 'money');
+      if (this.dm) {
+        this.score[k.group]++;
+        if (k.isPlayer) UI.toast(`+1  ${v.name} öldürüldü`, 1.2, 'money');
+      } else {
+        const rew = def ? (def.reward || 300) : 300;
+        this.addMoney(k, rew);
+        if (k.isPlayer) UI.toast(`+$${rew}  ${v.name} öldürüldü`, 1.5, 'money');
+      }
     } else { k.stats.kills--; this.addMoney(k, -300); }
   }
   // asist
@@ -2989,7 +3022,10 @@ G.onKill = function (v, k, def, hs, wallbang) {
   UI.killfeed(k && k !== v ? k : null, v, def, hs, wallbang);
   // eşyaları düşür
   const drop = v.inv.primary || v.inv.secondary;
-  if (drop) this.spawnPickup(drop, v.pos);
+  if (this.dm) {
+    v.respawnAt = this.now + 2.5;
+    if (v.isPlayer) v.dmSaved = { primary: v.inv.primary ? v.inv.primary.def.id : (v.dmSaved && v.dmSaved.primary), secondary: v.inv.secondary ? v.inv.secondary.def.id : null };
+  } else if (drop) this.spawnPickup(drop, v.pos);
   if (v.inv.bomb) { v.inv.bomb = false; this.bomb.state = 'dropped'; this.bomb.carrier = null; this.bomb.pos = { x: v.pos.x, y: 0, z: v.pos.z }; this.bombMesh.visible = true; this.bombMesh.position.set(v.pos.x, 0.07, v.pos.z); if (v.team === this.player.team || true) UI.toast('Bomba düşürüldü!', 2); }
   v.resetForDeath();
   if (v.model) Models.setCharGun(v.model, null);
@@ -3062,6 +3098,7 @@ G.dropWeapon = function () {
 
 // ================= SATIN ALMA =================
 G.canBuy = function (e) {
+  if (this.dm) return e.alive && this.round.phase !== 'end';
   const z = MAP.zoneAt(e.pos.x, e.pos.z);
   return e.alive && this.round.buyLeft > 0 && this.round.phase !== 'end' && (z === (e.team === 'T' ? 'T' : 'C'));
 };
@@ -3069,8 +3106,8 @@ G.buy = function (e, id, bot) {
   const def = itemDef(id); if (!def) return false;
   if (!sideOk(def, e.team)) return false;
   if (!bot && !this.canBuy(e)) return false;
-  let price = def.price;
-  if (id === 'helmet') { if (e.helmet && e.armor >= 100) return false; if (e.armor >= 100) price = 350; }
+  let price = this.dm ? 0 : def.price;
+  if (id === 'helmet') { if (e.helmet && e.armor >= 100) return false; if (e.armor >= 100 && !this.dm) price = 350; }
   if (id === 'kevlar' && e.armor >= 100) return false;
   if (id === 'kit' && e.kit) return false;
   if (e.money < price) return false;
@@ -3083,7 +3120,7 @@ G.buy = function (e, id, bot) {
   } else {
     const cur = e.inv[def.slot];
     if (cur && cur.def.id === id) { if (cur.mag === def.mag && cur.reserve === def.reserve) return false; }
-    if (cur && !bot) this.spawnPickup(cur, e.pos);
+    if (cur && !bot && !this.dm) this.spawnPickup(cur, e.pos);
     e.giveWeapon(id);
     if (!bot) e.switchTo(def.slot, true);
   }
@@ -3331,6 +3368,16 @@ G.randomNear = function (p, rmin, rmax, zoneCh) {
 // ================= KAZANMA KOŞULLARI =================
 G.checkWin = function () {
   const R = this.round, B = this.bomb;
+  if (this.dm) {
+    if (R.timeLeft <= 0) {
+      R.phase = 'end'; R.timer = this.END_TIME; R.endReason = 'dmtime';
+      const pw = this.score[0] > this.score[1];
+      Audio3.roundEnd(pw);
+      UI.message(this.score[0] === this.score[1] ? 'BERABERE' : (pw ? '<span style="color:var(--ok)">TAKIMIN KAZANDI</span>' : '<span style="color:var(--danger)">TAKIMIN KAYBETTİ</span>'), 5, `Süre doldu • ${this.score[0]} - ${this.score[1]}`);
+      UI.toggleBuy(false);
+    }
+    return;
+  }
   const aliveT = this.entities.some(e => e.alive && e.team === 'T');
   const aliveC = this.entities.some(e => e.alive && e.team === 'CT');
   if (!aliveC) return this.endRound('T', 'elim');
@@ -3523,6 +3570,57 @@ G.sound = function (kind, e, f) {
   const pos = e && !e.isPlayer ? e.pos : null;
   if (kind === 'click') Audio3.click(pos, f);
   else if (kind === 'reload') Audio3.reload(pos);
+};
+
+// ================= ÖLÜM KALIM =================
+const DM_BOT_GUNS = ['ak47', 'ak47', 'm4a4', 'm4a1s', 'm4a1s', 'awp', 'galil', 'famas', 'sg553', 'aug', 'mp9', 'ump45', 'p90', 'mac10', 'ssg08', 'xm1014', 'mp7'];
+G.dmLoadout = function (e) {
+  e.resetForDeath();
+  e.armor = 100; e.helmet = true; e.money = 16000;
+  if (e.isPlayer) {
+    const sv = e.dmSaved || {};
+    e.giveWeapon(sv.secondary || (e.team === 'T' ? 'glock' : 'usp'));
+    e.giveWeapon(sv.primary || (e.team === 'T' ? 'ak47' : 'm4a4'));
+  } else {
+    let id = DM_BOT_GUNS[Math.floor(Math.random() * DM_BOT_GUNS.length)];
+    if (!sideOk(WEAPONS[id], e.team)) id = e.team === 'T' ? 'ak47' : 'm4a1s';
+    e.giveWeapon(Math.random() < 0.3 ? 'deagle' : (e.team === 'T' ? 'glock' : 'usp'));
+    e.giveWeapon(id);
+  }
+  e.slot = e.bestSlot(); e.deployT = 0; e.onEquip();
+};
+G.dmSpawnPoint = function (e) {
+  const enemies = this.entities.filter(o => o.alive && o.team !== e.team);
+  let best = null, bestScore = -1e9;
+  for (let i = 0; i < 40; i++) {
+    const c = Math.floor(Math.random() * MAP.W), r = Math.floor(Math.random() * MAP.H);
+    if (!MAP.isWalk(c, r)) continue;
+    const p = MAP.c2w(c, r);
+    let minD = 999, seen = false;
+    const pe = { x: p.x, y: 1.6, z: p.z };
+    for (const o of enemies) {
+      const d = dist2(o.pos, p); minD = Math.min(minD, d);
+      if (d < 50 && !Phys.blocked(o.eye(), pe)) seen = true;
+    }
+    const score = Math.min(minD, 35) - (seen ? 60 : 0) + Math.random() * 5;
+    if (score > bestScore) { bestScore = score; best = p; }
+  }
+  return best || MAP.POS.spawnT[0];
+};
+G.respawn = function (e) {
+  const p = this.dmSpawnPoint(e);
+  e.pos.x = p.x; e.pos.y = 0; e.pos.z = p.z;
+  e.vel.x = e.vel.y = e.vel.z = 0;
+  e.alive = true; e.hp = 100; e.deathT = 0; e.flashT = 0; e.crouch = 0; e.height = STAND_H; e.respawnAt = 0;
+  e.recoilIdx = 0; e.fireInacc = 0; e.punch.x = e.punch.y = 0; e.scoped = 0; e.reloadT = 0; e.trig = false;
+  e.dmgBy.clear(); e.protectUntil = this.now + 1.5;
+  let near = null, nd = 1e9;
+  for (const o of this.entities) if (o.alive && o.team !== e.team && o !== e) { const d = dist2(o.pos, e.pos); if (d < nd) { nd = d; near = o; } }
+  e.yaw = near ? Math.atan2(-(near.pos.x - e.pos.x), -(near.pos.z - e.pos.z)) : Math.random() * 6.28; e.pitch = 0;
+  if (e.model) { e.model.root.rotation.set(0, e.yaw, 0); }
+  this.dmLoadout(e);
+  if (e.bot) e.bot.roundStart({});
+  if (e.isPlayer) { this.spec = null; UI.message('', 0); }
 };
 
 </script>
@@ -3822,6 +3920,10 @@ const UI = {
     $('specInfo').classList.add('hidden');
   },
   onRoundStart(n, pistol) {
+    if (G.dm) {
+      this.message('ÖLÜM KALIM', 3, `${Math.round(S.dmTime / 60)} dakika • Takım öldürmeleri sayılır • Satın alma ücretsiz ve her zaman açık`);
+      $('specInfo').classList.add('hidden'); this.cache.slots = null; return;
+    }
     const half = G.halfRounds();
     const last = n === S.maxRounds ? ' • SON RAUNT' : n === half ? ' • DEVRE ÖNCESİ SON RAUNT' : '';
     this.message(`RAUNT ${n}${pistol ? ' • TABANCA RAUNDU' : ''}`, 3, `Sen ${G.player.team === 'T' ? 'SALDIRI' : 'SAVUNMA'} timindesin${last}`);
@@ -3842,8 +3944,9 @@ const UI = {
     $('hud').classList.add('hidden');
     if (document.exitPointerLock) document.exitPointerLock();
     const won = a > b, draw = a === b;
+    const top = G.entities.slice().sort((x, y) => y.stats.kills - x.stats.kills)[0];
     $('meTitle').textContent = draw ? 'BERABERE' : won ? 'ZAFER' : 'MAĞLUBİYET';
-    $('meSub').textContent = `Skor ${a} - ${b}`;
+    $('meSub').textContent = `Skor ${a} - ${b}` + (G.dm && top ? ` • En iyi: ${top.name} (${top.stats.kills} öldürme)` : '');
     $('meBoard').innerHTML = this.scoreTable();
     $('matchEnd').classList.remove('hidden');
   },
@@ -3920,6 +4023,7 @@ const UI = {
       if (!sideOk(def, p.team)) continue;
       const b = document.createElement('button'); b.className = 'bi';
       let price = def.price; if (id === 'helmet' && p.armor >= 100 && !p.helmet) price = 350;
+      if (G.dm) price = 0;
       const own = (def.slot && p.inv[def.slot] && p.inv[def.slot].def.id === id) || (def.slot === 'grenade' && p.inv.grenades.includes(id)) || (id === 'kit' && p.kit) || (id === 'helmet' && p.helmet) || (id === 'kevlar' && p.armor >= 100);
       if (p.money < price) b.classList.add('no');
       if (own) b.classList.add('own');
@@ -3929,7 +4033,7 @@ const UI = {
       else if (id === 'kit') info = 'İmha süresi 10s → 5s';
       else if (id === 'helmet') info = 'Kafa vuruşlarına karşı';
       else if (id === 'kevlar') info = 'Gövde hasarını azaltır';
-      b.innerHTML = `${def.name}<span>$${price}</span><em>${info}</em>`;
+      b.innerHTML = `${def.name}<span>${G.dm ? 'ÜCRETSİZ' : '$' + price}</span><em>${info}</em>`;
       b.onclick = () => { if (G.buy(p, id)) { this.renderBuy(); } else { Audio3.ui(220); } };
       box.appendChild(b);
     }
@@ -3980,7 +4084,7 @@ const UI = {
     this.set('hp', String(Math.ceil(view.hp))); this.set('ar', String(Math.ceil(view.armor)) + (view.helmet ? '+' : ''));
     const lowCls = view.hp <= 25 ? 'hudbox low' : 'hudbox';
     if (this.cache.hpCls !== lowCls) { this.cache.hpCls = lowCls; $('hpBox').className = lowCls; }
-    this.set('money', '$' + p.money);
+    this.set('money', G.dm ? `Öldürme: ${p.stats.kills}` : '$' + p.money);
     const inBuy = G.canBuy(p);
     if (this.cache.buyz !== inBuy) { this.cache.buyz = inBuy; $('money').className = 'hudbox' + (inBuy ? ' buyzone' : ''); $('bBuy').classList.toggle('hidden', !inBuy); if (!inBuy && this.buyOpen) this.toggleBuy(false); }
     const w = view.weapon();
@@ -4041,7 +4145,8 @@ const UI = {
       });
     }
     // izleyici
-    if (!p.alive && G.spec) { this.set('specInfo', `İZLENİYOR: ${G.spec.name}  •  ${Math.ceil(G.spec.hp)} CP  •  ${G.spec.def.name}`); $('specInfo').classList.remove('hidden'); }
+    if (!p.alive && G.dm && p.respawnAt) { this.set('specInfo', `Yeniden doğuluyor… ${Math.max(0, p.respawnAt - G.now).toFixed(1)}s`); $('specInfo').classList.remove('hidden'); }
+    else if (!p.alive && G.spec) { this.set('specInfo', `İZLENİYOR: ${G.spec.name}  •  ${Math.ceil(G.spec.hp)} CP  •  ${G.spec.def.name}`); $('specInfo').classList.remove('hidden'); }
     else $('specInfo').classList.add('hidden');
     // zamanlayıcılar
     if (this.msgT > 0) { this.msgT -= dt; if (this.msgT <= 0) $('centerMsg').innerHTML = ''; }

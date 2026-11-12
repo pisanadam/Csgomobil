@@ -104,6 +104,10 @@ const UI = {
     $('specInfo').classList.add('hidden');
   },
   onRoundStart(n, pistol) {
+    if (G.dm) {
+      this.message('ÖLÜM KALIM', 3, `${Math.round(S.dmTime / 60)} dakika • Takım öldürmeleri sayılır • Satın alma ücretsiz ve her zaman açık`);
+      $('specInfo').classList.add('hidden'); this.cache.slots = null; return;
+    }
     const half = G.halfRounds();
     const last = n === S.maxRounds ? ' • SON RAUNT' : n === half ? ' • DEVRE ÖNCESİ SON RAUNT' : '';
     this.message(`RAUNT ${n}${pistol ? ' • TABANCA RAUNDU' : ''}`, 3, `Sen ${G.player.team === 'T' ? 'SALDIRI' : 'SAVUNMA'} timindesin${last}`);
@@ -124,8 +128,9 @@ const UI = {
     $('hud').classList.add('hidden');
     if (document.exitPointerLock) document.exitPointerLock();
     const won = a > b, draw = a === b;
+    const top = G.entities.slice().sort((x, y) => y.stats.kills - x.stats.kills)[0];
     $('meTitle').textContent = draw ? 'BERABERE' : won ? 'ZAFER' : 'MAĞLUBİYET';
-    $('meSub').textContent = `Skor ${a} - ${b}`;
+    $('meSub').textContent = `Skor ${a} - ${b}` + (G.dm && top ? ` • En iyi: ${top.name} (${top.stats.kills} öldürme)` : '');
     $('meBoard').innerHTML = this.scoreTable();
     $('matchEnd').classList.remove('hidden');
   },
@@ -202,6 +207,7 @@ const UI = {
       if (!sideOk(def, p.team)) continue;
       const b = document.createElement('button'); b.className = 'bi';
       let price = def.price; if (id === 'helmet' && p.armor >= 100 && !p.helmet) price = 350;
+      if (G.dm) price = 0;
       const own = (def.slot && p.inv[def.slot] && p.inv[def.slot].def.id === id) || (def.slot === 'grenade' && p.inv.grenades.includes(id)) || (id === 'kit' && p.kit) || (id === 'helmet' && p.helmet) || (id === 'kevlar' && p.armor >= 100);
       if (p.money < price) b.classList.add('no');
       if (own) b.classList.add('own');
@@ -211,7 +217,7 @@ const UI = {
       else if (id === 'kit') info = 'İmha süresi 10s → 5s';
       else if (id === 'helmet') info = 'Kafa vuruşlarına karşı';
       else if (id === 'kevlar') info = 'Gövde hasarını azaltır';
-      b.innerHTML = `${def.name}<span>$${price}</span><em>${info}</em>`;
+      b.innerHTML = `${def.name}<span>${G.dm ? 'ÜCRETSİZ' : '$' + price}</span><em>${info}</em>`;
       b.onclick = () => { if (G.buy(p, id)) { this.renderBuy(); } else { Audio3.ui(220); } };
       box.appendChild(b);
     }
@@ -262,7 +268,7 @@ const UI = {
     this.set('hp', String(Math.ceil(view.hp))); this.set('ar', String(Math.ceil(view.armor)) + (view.helmet ? '+' : ''));
     const lowCls = view.hp <= 25 ? 'hudbox low' : 'hudbox';
     if (this.cache.hpCls !== lowCls) { this.cache.hpCls = lowCls; $('hpBox').className = lowCls; }
-    this.set('money', '$' + p.money);
+    this.set('money', G.dm ? `Öldürme: ${p.stats.kills}` : '$' + p.money);
     const inBuy = G.canBuy(p);
     if (this.cache.buyz !== inBuy) { this.cache.buyz = inBuy; $('money').className = 'hudbox' + (inBuy ? ' buyzone' : ''); $('bBuy').classList.toggle('hidden', !inBuy); if (!inBuy && this.buyOpen) this.toggleBuy(false); }
     const w = view.weapon();
@@ -323,7 +329,8 @@ const UI = {
       });
     }
     // izleyici
-    if (!p.alive && G.spec) { this.set('specInfo', `İZLENİYOR: ${G.spec.name}  •  ${Math.ceil(G.spec.hp)} CP  •  ${G.spec.def.name}`); $('specInfo').classList.remove('hidden'); }
+    if (!p.alive && G.dm && p.respawnAt) { this.set('specInfo', `Yeniden doğuluyor… ${Math.max(0, p.respawnAt - G.now).toFixed(1)}s`); $('specInfo').classList.remove('hidden'); }
+    else if (!p.alive && G.spec) { this.set('specInfo', `İZLENİYOR: ${G.spec.name}  •  ${Math.ceil(G.spec.hp)} CP  •  ${G.spec.def.name}`); $('specInfo').classList.remove('hidden'); }
     else $('specInfo').classList.add('hidden');
     // zamanlayıcılar
     if (this.msgT > 0) { this.msgT -= dt; if (this.msgT <= 0) $('centerMsg').innerHTML = ''; }

@@ -30,7 +30,7 @@ class Bot {
     this.role = role; this.path = null; this.goal = null; this.goalKey = '';
     this.target = null; this.lastSeen = null; this.noise = null; this.pendingNade = null;
     this.guardSpot = null; this.executed = false; this.siteSpot = null; this.saving = false;
-    this.holdUntil = 0;
+    this.holdUntil = 0; this.roam = null;
   }
   // ----- Algı -----
   canSee(t, now) {
@@ -97,6 +97,16 @@ class Bot {
   decideGoal(now) {
     const e = this.e, B = G.bomb, R = G.round;
     const tLeft = R.timeLeft;
+    if (G.dm) {
+      if (this.lastSeen && now - this.lastSeenT < 4) return { key: 'hunt', p: this.lastSeen };
+      if (!this.roam || dist2(e.pos, this.roam) < 2 || now > this.roamUntil) {
+        let near = null, nd = 1e9;
+        for (const o of G.entities) if (o.alive && o.team !== e.team) { const d = dist2(o.pos, e.pos); if (d < nd) { nd = d; near = o; } }
+        this.roam = near && Math.random() < 0.6 ? G.randomNear(near.pos, 2, 10) : G.randomNear(e.pos, 15, 45);
+        this.roamUntil = now + 12 + Math.random() * 8;
+      }
+      return { key: 'roam', p: this.roam };
+    }
     if (e.team === 'T') {
       if (B.state === 'dropped') {
         let closest = null, cd = 1e9;
