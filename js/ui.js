@@ -63,6 +63,7 @@ const UI = {
     Audio3.setVolume(S.volume);
     $('fps').classList.toggle('hidden', !S.showFps);
     if ((key === 'graphics' || key === 'sharp') && G.renderer) G.applyGraphics();
+    if (key === 'map' && G.renderer && !G.running) G.loadMap(S.map === 'random' ? 'dust' : S.map);
     if (key === 'fov' && G.camera) { G.camera.fov = S.fov; G.camera.updateProjectionMatrix(); }
   },
   openSettings() { this.refreshSettings(); $('settings').classList.remove('hidden'); },

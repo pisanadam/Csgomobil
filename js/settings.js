@@ -33,6 +33,7 @@ const DEFAULT_SETTINGS = {
   maxRounds: 16,
   friendlyFire: false,
   playerTeam: 'auto',
+  map: 'dust',            // dust, harbor, snow, town, random
   mode: 'comp',          // 'comp' rekabetçi, 'dm' ölüm kalım
   dmTime: 300,           // ölüm kalım süresi (sn)
   // Ses

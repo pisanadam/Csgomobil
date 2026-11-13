@@ -176,6 +176,25 @@ const Tex = (function () {
     noise(x, S, S, 20, r);
     return toTex(c);
   }
+  // Tuğla duvar
+  function brick(seed, base) {
+    const S = 512, c = canvas(S), x = c.getContext('2d'), r = rng(seed);
+    x.fillStyle = '#7d736a'; x.fillRect(0, 0, S, S);
+    const rows = 16, bh = S / rows, bw = bh * 2.1;
+    const hex = base || '#a5553e';
+    const br = parseInt(hex.slice(1, 3), 16), bg = parseInt(hex.slice(3, 5), 16), bb = parseInt(hex.slice(5, 7), 16);
+    for (let row = 0; row < rows; row++) {
+      for (let cx = (row % 2 ? -bw / 2 : 0); cx < S; cx += bw) {
+        const t = (r() - 0.5) * 40;
+        x.fillStyle = `rgb(${br + t},${bg + t * 0.6},${bb + t * 0.5})`;
+        x.fillRect(cx + 2, row * bh + 2, bw - 4, bh - 4);
+        x.fillStyle = 'rgba(255,230,210,0.12)'; x.fillRect(cx + 2, row * bh + 2, bw - 4, 3);
+      }
+    }
+    blotches(x, S, S, r, 30, ['60,40,30', '200,180,160'], 15, 70, 0.15);
+    noise(x, S, S, 24, r);
+    return toTex(c);
+  }
   function concrete(seed, base) {
     const S = 256, c = canvas(S), x = c.getContext('2d'), r = rng(seed);
     x.fillStyle = base || '#8e8a82'; x.fillRect(0, 0, S, S);
@@ -193,10 +212,11 @@ const Tex = (function () {
     for (let i = 0; i < 300; i++) { x.fillStyle = 'rgba(200,40,20,0.25)'; x.fillRect(S / 2 + (r() - 0.5) * 180, S / 2 + (r() - 0.5) * 200, 2, 2); }
     const t = new THREE.CanvasTexture(RETRO ? retroize(c, 64, true) : c); t.encoding = THREE.sRGBEncoding; if (RETRO) pixelate(t); return t;
   }
-  function sky() {
+  function sky(cols) {
     const c = canvas(16, 256), x = c.getContext('2d');
     const g = x.createLinearGradient(0, 0, 0, 256);
-    if (RETRO) { g.addColorStop(0, '#2f63b8'); g.addColorStop(0.42, '#7fb0e6'); g.addColorStop(0.5, '#d9c08a'); g.addColorStop(1, '#b8955a'); }
+    if (cols) { g.addColorStop(0, cols[0]); g.addColorStop(RETRO ? 0.42 : 0.45, cols[1]); g.addColorStop(0.5, cols[2]); g.addColorStop(1, cols[3]); }
+    else if (RETRO) { g.addColorStop(0, '#2f63b8'); g.addColorStop(0.42, '#7fb0e6'); g.addColorStop(0.5, '#d9c08a'); g.addColorStop(1, '#b8955a'); }
     else { g.addColorStop(0, '#3f7cc7'); g.addColorStop(0.45, '#8fbde8'); g.addColorStop(0.5, '#e9dcc3'); g.addColorStop(1, '#c9b48e'); }
     x.fillStyle = g; x.fillRect(0, 0, 16, 256);
     const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; return t;
@@ -251,5 +271,5 @@ const Tex = (function () {
     noise(x, S, S, 14, r);
     return toTex(c);
   }
-  return { RETRO, sandstone, plaster, ground, tiles, crate, metal, concrete, siteLetter, sky, soft, smokePuff, muzzle, bulletHole, camo };
+  return { RETRO, brick, sandstone, plaster, ground, tiles, crate, metal, concrete, siteLetter, sky, soft, smokePuff, muzzle, bulletHole, camo };
 })();

@@ -72,7 +72,7 @@ const Cheats = {
         if (!this.trigSince) this.trigSince = G.now;
         if ((G.now - this.trigSince) * 1000 >= c.trigDelay) {
           this.flip = !this.flip;
-          if (d.auto || d.type === 'knife' || this.flip) G.autoFiring = true;
+          if (d.auto || d.type === 'knife' || this.flip) G.cheatFire = true;
         }
       } else this.trigSince = 0;
     }

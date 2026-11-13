@@ -7,6 +7,7 @@ Mobilde ve masaüstünde tarayıcıda oynanan, 5v5 bomba kurma / imha modlu takt
 - GitHub Pages ile de yayınlanabilir.
 
 ## Özellikler
+- 4 harita: Kum Vadisi, Liman, Karlı Üs, Eski Kasaba (+ rastgele)
 - Modlar: Rekabetçi (bomba kurma/imha) ve Ölüm Kalım (herkes herkese karşı, yeniden doğma, ücretsiz satın alma, 3/5/10 dk)
 - Raunt sistemi: hazırlık süresi, satın alma süresi, 1:55 raunt, 40 sn bomba sayacı, devre arasında taraf değişimi
 - Ekonomi: başlangıç $800, öldürme ödülleri silaha göre, kazanma/kaybetme bonusları, kayıp serisi

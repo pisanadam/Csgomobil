@@ -188,7 +188,10 @@ const Input = {
     p.input.crouch = !!(K.ControlLeft || K.KeyC) || this.crouchToggle;
     p.input.use = !!K.KeyE || this.useHeld;
     if (UI.buyOpen) { p.trig = false; return; }
-    p.trig = this.fireHeld || G.autoFiring;
+    p.trig = this.fireHeld || G.autoFiring || G.cheatFire;
+    // hile atışı (triggerbot / aimbot kilitliyken): mermi tam nişangaha gider
+    p.cheatShot = !!G.cheatFire || !!(Cheats.aimTarget && Cheats.c.aimbot);
+    G.cheatFire = false;
     G.autoFiring = false;
     this.lookActive = performance.now() - this.lastLookT < 120;
   }

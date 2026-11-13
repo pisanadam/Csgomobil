@@ -229,7 +229,7 @@ class Entity {
     if (w.mag <= 0) { G.sound('click', this, 900); this.nextFire = now + 0.25; this.reload(); return; }
     if (!(this.isPlayer && Cheats.c.ammo)) w.mag--;
     this.nextFire = now + d.interval;
-    const inacc = this.inaccuracy();
+    const inacc = (this.isPlayer && this.cheatShot) ? 0 : this.inaccuracy();
     const eye = this.eye();
     const pellets = d.pellets || 1;
     for (let i = 0; i < pellets; i++) {

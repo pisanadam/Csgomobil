@@ -28,7 +28,8 @@ G.init = function () {
   this.camera = new THREE.PerspectiveCamera(S.fov, window.innerWidth / window.innerHeight, 0.05, 900);
   this.camera.rotation.order = 'YXZ';
   // ışıklar
-  sc.add(Tex.RETRO ? new THREE.HemisphereLight(0xfff2d8, 0x8a7050, 0.72) : new THREE.HemisphereLight(0xcfe2ff, 0x8a6a45, 0.62));
+  this.hemi = Tex.RETRO ? new THREE.HemisphereLight(0xfff2d8, 0x8a7050, 0.72) : new THREE.HemisphereLight(0xcfe2ff, 0x8a6a45, 0.62);
+  sc.add(this.hemi);
   const sun = this.sun = new THREE.DirectionalLight(Tex.RETRO ? 0xffe6b8 : 0xfff0d0, Tex.RETRO ? 0.95 : 1.25);
   sun.position.set(45, 90, 25); sun.target.position.set(0, 0, 0);
   sun.castShadow = r.shadowMap.enabled;
@@ -39,6 +40,7 @@ G.init = function () {
   sc.add(sun); sc.add(sun.target);
   sc.add(new THREE.AmbientLight(0xffffff, 0.08));
   MAP.build(sc, q);
+  this.applyMapEnv();
   FX.init(sc);
   // birinci şahıs sahnesi
   this.vmScene = new THREE.Scene();
@@ -56,6 +58,23 @@ G.init = function () {
   this.bombLight = new THREE.PointLight(0xff2020, 0, 4); sc.add(this.bombLight);
   window.addEventListener('resize', () => this.resize());
   this.resize();
+};
+// Harita ortamı: sis, gökyüzü rengi, ışık tonları
+G.applyMapEnv = function () {
+  const env = MAP.env(), R = Tex.RETRO;
+  this.scene.fog.color.setHex(R ? env.fogR : env.fog);
+  this.scene.background.setHex(env.bg);
+  this.hemi.color.setHex(R && MAP.info.theme === 'desert' ? 0xfff2d8 : env.hemiSky);
+  this.hemi.groundColor.setHex(env.hemiGround);
+  this.sun.color.setHex(R && MAP.info.theme === 'desert' ? 0xffe6b8 : env.sun);
+};
+G.loadMap = function (id) {
+  if (id === 'random') id = MAP_LIST[Math.floor(Math.random() * MAP_LIST.length)].id;
+  if (MAP.current === id) return;
+  MAP.load(id);
+  MAP.build(this.scene);
+  this.applyMapEnv();
+  if (typeof UI !== 'undefined' && UI.radarCtx) UI.radarImg = MAP.radarImage(8);
 };
 G.resize = function () {
   const w = window.innerWidth, h = window.innerHeight;
@@ -75,6 +94,7 @@ G.startMatch = function () {
   for (const e of this.entities) if (e.model) this.disposeModel(e.model);
   for (const p of this.pickups) this.scene.remove(p.mesh);
   this.entities = []; this.bots = []; this.pickups = []; this.nades.forEach(n => this.scene.remove(n.mesh)); this.nades = [];
+  this.loadMap(S.map === 'random' ? 'random' : (S.map || 'dust'));
   let pt = S.playerTeam; if (pt === 'auto') pt = Math.random() < 0.5 ? 'T' : 'CT';
   this.sideOfGroup = [pt, pt === 'T' ? 'CT' : 'T'];
   this.score = [0, 0]; this.lossStreak = { T: 0, CT: 0 };
