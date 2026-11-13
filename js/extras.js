@@ -205,8 +205,91 @@ const Music = {
     } catch (e) {}
     this.refreshUI();
   },
+  isVideo(f) { return /^video\//.test(f.type) || /\.(mp4|m4v|mov|3gp|mkv|avi)$/i.test(f.name); },
+  status(t) { const el = document.getElementById('mvpName'); if (el) el.textContent = t; },
+  // Videonun (MP4 vb.) ses kanalını çöz, MP3'e çevir (tarayıcı içinde, internet gerekmez)
+  async toMp3(file) {
+    if (typeof lamejs === 'undefined' || !lamejs.Mp3Encoder) throw new Error('MP3 kodlayıcı yok');
+    this.status('⏳ MP4 okunuyor…');
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AC();
+    let buf;
+    try { buf = await ctx.decodeAudioData(await file.arrayBuffer()); }
+    finally { if (ctx.close) ctx.close(); }
+    const MAXS = 6 * 60;                                    // en fazla 6 dakika (dosya boyutu / hız için)
+    const rate = buf.sampleRate, ch = Math.min(2, buf.numberOfChannels), n = Math.min(buf.length, Math.floor(rate * MAXS));
+    const enc = new lamejs.Mp3Encoder(ch, rate, 128);
+    const L = buf.getChannelData(0), R = ch > 1 ? buf.getChannelData(1) : L;
+    const toI16 = (src, a, b) => { const o = new Int16Array(b - a); for (let i = a; i < b; i++) { const v = Math.max(-1, Math.min(1, src[i])); o[i - a] = v < 0 ? v * 32768 : v * 32767; } return o; };
+    const parts = []; const BLK = 1152 * 20; let t0 = performance.now();
+    for (let i = 0; i < n; i += BLK) {
+      const e = Math.min(n, i + BLK);
+      const l = toI16(L, i, e), r = ch > 1 ? toI16(R, i, e) : null;
+      const out = ch > 1 ? enc.encodeBuffer(l, r) : enc.encodeBuffer(l);
+      if (out.length) parts.push(new Uint8Array(out));
+      if (performance.now() - t0 > 40) { this.status(`⏳ MP3'e çevriliyor… %${Math.round(i / n * 100)}`); await new Promise(r2 => setTimeout(r2, 0)); t0 = performance.now(); }
+    }
+    const end = enc.flush(); if (end.length) parts.push(new Uint8Array(end));
+    return new Blob(parts, { type: 'audio/mpeg' });
+  },
+  // ---- Apple Music (iTunes Search API): şarkı ara, 30 sn'lik önizlemeyi seç ----
+  prev: null,
+  async search(q) {
+    q = (q || '').trim(); if (!q) return;
+    const box = document.getElementById('amResults'); box.innerHTML = '<div class="amMsg">Aranıyor…</div>';
+    try {
+      const r = await fetch('https://itunes.apple.com/search?media=music&entity=song&limit=12&country=TR&term=' + encodeURIComponent(q));
+      if (!r.ok) throw new Error('http ' + r.status);
+      const j = await r.json();
+      const list = (j.results || []).filter(x => x.previewUrl);
+      if (!list.length) { box.innerHTML = '<div class="amMsg">Sonuç bulunamadı</div>'; return; }
+      box.innerHTML = '';
+      const esc = t => String(t || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      list.forEach(x => {
+        const row = document.createElement('div'); row.className = 'amRow';
+        row.innerHTML = `<img src="${esc(x.artworkUrl60 || x.artworkUrl100)}" alt=""><div class="amT"><b>${esc(x.trackName)}</b><span>${esc(x.artistName)} • ${esc(x.collectionName)}</span></div><button class="btn sm amP">▶</button><button class="btn sm pri amS">Seç (30 sn)</button>`;
+        row.querySelector('.amP').onclick = ev => { ev.stopPropagation(); this.previewToggle(x.previewUrl, row.querySelector('.amP')); };
+        row.querySelector('.amS').onclick = ev => { ev.stopPropagation(); this.pickApple(x); };
+        box.appendChild(row);
+      });
+    } catch (e) { box.innerHTML = '<div class="amMsg">Arama yapılamadı (internet bağlantısını kontrol et)</div>'; }
+  },
+  previewToggle(url, btn) {
+    if (this.prev) { this.prev.pause(); this.prev = null; document.querySelectorAll('.amP').forEach(b => b.textContent = '▶'); if (btn.dataset.on === url) { btn.dataset.on = ''; return; } }
+    document.querySelectorAll('.amP').forEach(b => b.dataset.on = '');
+    const a = this.prev = new Audio(url); a.volume = Math.min(1, S.volume * 0.9);
+    btn.textContent = '■'; btn.dataset.on = url;
+    a.onended = () => { btn.textContent = '▶'; btn.dataset.on = ''; this.prev = null; };
+    const p = a.play(); if (p && p.catch) p.catch(() => { btn.textContent = '▶'; });
+  },
+  async pickApple(x) {
+    if (this.prev) { this.prev.pause(); this.prev = null; }
+    document.querySelectorAll('.amP').forEach(b => b.textContent = '▶');
+    this.status('⏳ 30 saniyelik önizleme indiriliyor…');
+    try {
+      const r = await fetch(x.previewUrl); if (!r.ok) throw new Error('http');
+      const blob = await r.blob();
+      const safe = (x.artistName + ' - ' + x.trackName).replace(/[\\/:*?"<>|]/g, '').slice(0, 60);
+      let file = new File([blob], safe + '.m4a', { type: 'audio/mp4' });
+      try { const mp3 = await this.toMp3(file); file = new File([mp3], safe + ' (30sn).mp3', { type: 'audio/mpeg' }); } catch (e) { /* çevrilemezse m4a olarak kalır */ }
+      await this.set(file);
+    } catch (e) { this.status('✗ Önizleme indirilemedi'); }
+  },
   async set(file) {
     if (!file) return;
+    if (this.isVideo(file)) {
+      try {
+        const mp3 = await this.toMp3(file);
+        const base = file.name.replace(/\.[^.]+$/, '');
+        file = new File([mp3], base + '.mp3', { type: 'audio/mpeg' });
+        this.converted = true;
+      } catch (e) {
+        // çözülemezse videoyu olduğu gibi sakla (tarayıcı sesini çalabilir)
+        this.converted = false;
+        this.status('⚠ MP3\'e çevrilemedi, dosya olduğu gibi kullanılacak');
+        await new Promise(r => setTimeout(r, 1200));
+      }
+    }
     if (this.url) URL.revokeObjectURL(this.url);
     this.url = URL.createObjectURL(file); this.name = file.name;
     this.refreshUI();
@@ -238,6 +321,11 @@ const Music = {
   bind() {
     const f = document.getElementById('mvpFile');
     f.onchange = () => { if (f.files && f.files[0]) this.set(f.files[0]); f.value = ''; };
+    const q = document.getElementById('amQuery'), go = () => this.search(q.value);
+    document.getElementById('amGo').onclick = go; q.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); go(); } e.stopPropagation(); };
+    q.onkeyup = q.onkeypress = e => e.stopPropagation();
+    const dl = document.getElementById('mvpSave');
+    if (dl) dl.onclick = () => { if (!this.url) return; const a = document.createElement('a'); a.href = this.url; a.download = this.name || 'muzik.mp3'; document.body.appendChild(a); a.click(); a.remove(); };
     document.getElementById('mvpPick').onclick = () => f.click();
     document.getElementById('mvpTest').onclick = () => { Audio3.init(); if (!this.play(8)) UI.toast && (document.getElementById('mvpName').textContent = 'Önce bir müzik dosyası seç'); };
     document.getElementById('mvpStop').onclick = () => this.stop();

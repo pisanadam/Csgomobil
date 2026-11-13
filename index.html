@@ -48,6 +48,13 @@ html,body{margin:0;height:100%;overflow:hidden;background:#000;color:var(--txt);
 #mvp b{display:block;font-size:24px;font-weight:900}#mvp b.T{color:var(--t)}#mvp b.CT{color:var(--ct)}
 #mvp span{font-size:13px;color:#ddd;font-weight:600}
 body.mobile #mvp{top:48%;padding:6px 14px 6px 10px}body.mobile #mvp .mvS{font-size:30px}body.mobile #mvp b{font-size:18px}
+.amBox{display:flex;flex-direction:column;gap:6px;padding:8px;border:1px dashed rgba(255,255,255,.18);border-radius:8px}
+#amQuery{flex:1;min-width:0;background:#1f232a;color:#fff;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:14px;user-select:text;-webkit-user-select:text}
+#amResults{display:flex;flex-direction:column;gap:4px;max-height:210px;overflow:auto}
+.amRow{display:flex;align-items:center;gap:8px;padding:4px;border-radius:6px;background:rgba(255,255,255,.04)}
+.amRow img{width:40px;height:40px;border-radius:5px;flex:none;background:#222}
+.amT{flex:1;min-width:0;display:flex;flex-direction:column}.amT b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.amT span{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.amMsg{font-size:12px;color:var(--dim);padding:6px}
 #skinEditor{position:fixed;inset:0;z-index:25}
 body.skinning #touch,body.skinning #hud{display:none!important}
 body.mobile #skTop>b{display:none}
@@ -387,11 +394,15 @@ input[type=range]{width:100%;accent-color:#e9a83a}
       <div class="field"><label>Ses <span class="val" data-val="volume"></span></label><input type="range" min="0" max="1" step="0.05" data-set="volume"></div>
       <div class="field" style="grid-column:1/-1"><label>★ Raundun Oyuncusu Müziği</label>
         <div id="mvpName" style="font-weight:700;font-size:13px">Yüklü müzik yok</div>
-        <input type="file" id="mvpFile" accept="audio/*,.mp3,.ogg,.wav,.m4a,.aac,.flac,.opus,.webm" style="display:none">
-        <div class="row"><button class="btn sm pri" id="mvpPick">🎵 Müzik yükle</button><button class="btn sm" id="mvpTest">▶ Dene</button><button class="btn sm" id="mvpStop">■ Durdur</button><button class="btn sm" id="mvpClear">Kaldır</button></div>
+        <input type="file" id="mvpFile" accept="audio/*,video/mp4,video/*,.mp3,.mp4,.m4v,.mov,.ogg,.wav,.m4a,.aac,.flac,.opus,.webm" style="display:none">
+        <div class="row"><button class="btn sm pri" id="mvpPick">🎵 Müzik / MP4 yükle</button><button class="btn sm" id="mvpTest">▶ Dene</button><button class="btn sm" id="mvpStop">■ Durdur</button><button class="btn sm" id="mvpSave">⬇ MP3 indir</button><button class="btn sm" id="mvpClear">Kaldır</button></div>
+        <div class="amBox"><label style="font-size:12px;color:var(--dim);font-weight:700">🍎 APPLE MUSIC'TEN ŞARKI SEÇ (30 SANİYELİK ÖNİZLEME)</label>
+          <div class="row" style="flex-wrap:nowrap"><input id="amQuery" type="search" placeholder="Şarkı ya da sanatçı ara…" autocomplete="off"><button class="btn sm pri" id="amGo">Ara</button></div>
+          <div id="amResults"></div>
+          <div style="font-size:11px;color:var(--dim)">Apple'ın herkese açık arama servisi kullanılır; her şarkının Apple'ın sunduğu ilk 30 saniyelik önizlemesi seçilir ve cihazında MP3 olarak saklanır. Sadece kişisel kullanım içindir.</div></div>
         <div class="seg" data-set="mvpWhen" data-opts='[["me","Ben olunca çal"],["always","Her raunt sonunda çal"],["off","Kapalı"]]'></div>
         <div class="rgm"><span style="font-size:12px;color:var(--dim)">Müzik sesi <span class="val" data-val="musicVol"></span></span><input type="range" min="0" max="1" step="0.05" data-set="musicVol"></div>
-        <div style="font-size:12px;color:var(--dim)">MP3, OGG, WAV, M4A gibi tarayıcının çalabildiği dosyalar. Dosya bu cihazda saklanır; raunt sonunda ~9 saniye çalar.</div></div>
+        <div style="font-size:12px;color:var(--dim)">MP3, OGG, WAV, M4A gibi sesler ya da <b>MP4</b> video seçebilirsin: MP4'ün sesi otomatik olarak MP3'e çevrilip kaydedilir (en fazla ilk 6 dakika). Dosya bu cihazda saklanır; raunt sonunda ~9 saniye çalar.</div></div>
     </div>
     <div class="menuGrid tabc hidden" data-tab="bot">
       <div class="field"><label>Kendi Takımının Zorluğu</label><div class="seg" data-set="botDiffAlly" data-opts='[[0,"Kolay"],[1,"Normal"],[2,"Zor"],[3,"Uzman"]]'></div><div style="font-size:12px;color:var(--dim)">Takım arkadaşı botların seviyesi. Ölüm Kalım'da herkes rakip sayılır.</div></div>
@@ -504,6 +515,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
 <script src="js/game.js"></script>
 <script src="js/input.js"></script>
 <script src="js/ui.js"></script>
+<script src="lib/lame.min.js"></script>
 <script src="js/extras.js"></script>
 <script src="js/cheats.js"></script>
 <script src="js/main.js"></script>
