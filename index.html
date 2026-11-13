@@ -42,6 +42,33 @@ html,body{margin:0;height:100%;overflow:hidden;background:#000;color:var(--txt);
 .kf.me{border-color:#d33}
 .kf .w{color:#ddd;font-weight:500;margin:0 6px;font-size:12px}
 .kf .T{color:var(--t)}.kf .CT{color:var(--ct)}
+#mvp{position:absolute;left:50%;top:44%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:10px 20px 10px 14px;border-radius:10px;background:linear-gradient(90deg,rgba(60,45,5,.92),rgba(20,18,12,.88));border:1px solid #e9b23a;box-shadow:0 0 24px rgba(255,190,60,.35)}
+#mvp .mvS{font-size:44px;color:#ffcf4a;text-shadow:0 0 14px rgba(255,200,60,.8);line-height:1}
+#mvp small{display:block;font-size:11px;letter-spacing:2px;color:#e9c46a;font-weight:800}
+#mvp b{display:block;font-size:24px;font-weight:900}#mvp b.T{color:var(--t)}#mvp b.CT{color:var(--ct)}
+#mvp span{font-size:13px;color:#ddd;font-weight:600}
+body.mobile #mvp{top:48%;padding:6px 14px 6px 10px}body.mobile #mvp .mvS{font-size:30px}body.mobile #mvp b{font-size:18px}
+#skinEditor{position:fixed;inset:0;z-index:25}
+body.skinning #touch,body.skinning #hud{display:none!important}
+body.mobile #skTop>b{display:none}
+body.mobile #skTop{padding-top:5px;padding-bottom:5px;gap:5px}
+body.mobile #skTop select{padding:5px;font-size:12px;max-width:26vw}
+body.mobile #skTop .btn.sm{padding:6px 8px;font-size:11px}
+body.mobile #skTools{top:48px;bottom:26px;width:104px}
+body.mobile #skTools button{padding:5px 4px;font-size:11px}
+body.mobile #skHint{font-size:10px;bottom:3px}
+#skView{position:absolute;inset:0;touch-action:none;cursor:crosshair}
+#skTop{position:absolute;left:0;right:0;top:0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px max(10px,env(safe-area-inset-right)) 8px max(10px,env(safe-area-inset-left));background:rgba(12,14,18,.85);border-bottom:1px solid var(--line);font-size:14px}
+#skTop select{background:#1f232a;color:#fff;border:1px solid var(--line);border-radius:6px;padding:7px;font-weight:700;max-width:38vw}
+#skMsg{color:#7fe08a;font-weight:700;font-size:13px}
+#skTools{position:absolute;left:max(8px,env(safe-area-inset-left));top:58px;bottom:34px;width:118px;display:flex;flex-direction:column;gap:5px;overflow:auto;padding:6px;background:rgba(12,14,18,.82);border:1px solid var(--line);border-radius:10px}
+#skTools button{padding:8px 6px;border-radius:6px;border:1px solid rgba(255,255,255,.16);background:#1f232a;color:#fff;font-weight:700;font-size:12px}
+#skTools button.sel{background:#e9a83a;color:#1a1206;border-color:#ffd27a}
+#skTools input[type=color]{width:100%;height:34px;border:0;background:none;padding:0}
+#skSwatches{display:grid;grid-template-columns:repeat(5,1fr);gap:3px}#skSwatches i{display:block;aspect-ratio:1;border-radius:4px;border:1px solid rgba(255,255,255,.4)}
+#skTools label{font-size:11px;color:var(--dim);font-weight:700;display:flex;flex-direction:column}
+#skHint{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:12px;color:#cfd5dc;text-shadow:0 1px 2px #000;pointer-events:none}
+.rgm{display:flex;flex-direction:column}
 #chat{position:absolute;left:max(8px,env(safe-area-inset-left));bottom:calc(max(8px,env(safe-area-inset-bottom)) + 60px);display:flex;flex-direction:column;gap:2px;max-width:46vw}
 #chat .cm{background:rgba(0,0,0,.45);padding:2px 7px;border-radius:4px;font-size:13px;font-weight:600;transition:opacity 1s;text-shadow:0 1px 2px #000}
 #chat .cm span{font-weight:800}#chat .T{color:var(--t)}#chat .CT{color:var(--ct)}
@@ -227,6 +254,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
   <div id="fps" class="hidden"></div>
   <div id="killfeed"></div>
   <div id="chat"></div>
+  <div id="mvp" class="hidden"></div>
   <div id="scope"></div>
   <div id="crosshair"></div>
   <div id="hitmarker"></div>
@@ -297,7 +325,8 @@ input[type=range]{width:100%;accent-color:#e9a83a}
       <div class="field" style="grid-column:1/-1"><label>Harita</label><div class="seg" data-set="map" data-opts='[["dust","🏜 Kum Vadisi"],["harbor","⚓ Liman"],["snow","❄ Karlı Üs"],["town","🏘 Eski Kasaba"],["random","🎲 Rastgele"]]'></div></div>
       <div class="field" style="grid-column:1/-1"><label>Oyun Modu</label><div class="seg" data-set="mode" data-opts='[["comp","Rekabetçi (Bomba)"],["dm","Ölüm Kalım"]]'></div></div>
       <div class="field"><label>Takım</label><div class="seg" data-set="playerTeam" data-opts='[["auto","Otomatik"],["T","Saldırı"],["CT","Savunma"]]'></div></div>
-      <div class="field"><label>Bot Zorluğu</label><div class="seg" data-set="botDifficulty" data-opts='[[0,"Kolay"],[1,"Normal"],[2,"Zor"],[3,"Uzman"]]'></div></div>
+      <div class="field"><label>Rakip Takım Zorluğu</label><div class="seg" data-set="botDifficulty" data-opts='[[0,"Kolay"],[1,"Normal"],[2,"Zor"],[3,"Uzman"]]'></div></div>
+      <div class="field"><label>Kendi Takımının Zorluğu</label><div class="seg" data-set="botDiffAlly" data-opts='[[0,"Kolay"],[1,"Normal"],[2,"Zor"],[3,"Uzman"]]'></div></div>
       <div class="field"><label>Takım Boyutu</label><div class="seg" data-set="teamSize" data-opts='[[1,"1v1"],[2,"2v2"],[3,"3v3"],[4,"4v4"],[5,"5v5"]]'></div></div>
       <div class="field"><label>Maç Uzunluğu</label><div class="seg" data-set="maxRounds" data-opts='[[8,"Kısa (8)"],[16,"Normal (16)"],[30,"Rekabetçi (30)"]]'></div></div>
       <div class="field"><label>Ölüm Kalım Süresi</label><div class="seg" data-set="dmTime" data-opts='[[180,"3 dk"],[300,"5 dk"],[600,"10 dk"]]'></div></div>
@@ -311,6 +340,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
       <button class="btn pri" id="btnPlay" style="flex:1;min-width:180px;font-size:18px;padding:16px">▶ OYNA</button>
       <button class="btn" id="btnSettings">⚙ AYARLAR</button>
       <button class="btn" id="btnHelp">? NASIL OYNANIR</button>
+      <button class="btn" id="btnSkins" style="background:#2a2440;border-color:#7a5ad0">🎨 SKİNLER</button>
       <button class="btn" id="btnCheats" style="background:#3a1f22;border-color:#a33">🧪 HİLE SİMÜLASYONU</button>
     </div>
     <div class="legal">Özgün hayran yapımı taktik nişancı. Harita, karakterler ve isimler özgündür.</div>
@@ -355,9 +385,17 @@ input[type=range]{width:100%;accent-color:#e9a83a}
       <div class="field"><label>Görüş Açısı (FOV) <span class="val" data-val="fov"></span> <small style="text-transform:none">— küçük = uzaktaki rakip daha büyük</small></label><input type="range" min="60" max="95" step="1" data-set="fov"></div>
       <div class="field"><label>Seçenekler</label><label class="check"><input type="checkbox" data-set="shadows" data-reload="1"> Gölgeler</label><label class="check"><input type="checkbox" data-set="showFps"> FPS göster</label><label class="check"><input type="checkbox" data-set="enemyGlow"> Düşmanları vurgula (kırmızı ton)</label></div>
       <div class="field"><label>Ses <span class="val" data-val="volume"></span></label><input type="range" min="0" max="1" step="0.05" data-set="volume"></div>
+      <div class="field" style="grid-column:1/-1"><label>★ Raundun Oyuncusu Müziği</label>
+        <div id="mvpName" style="font-weight:700;font-size:13px">Yüklü müzik yok</div>
+        <input type="file" id="mvpFile" accept="audio/*,.mp3,.ogg,.wav,.m4a,.aac,.flac,.opus,.webm" style="display:none">
+        <div class="row"><button class="btn sm pri" id="mvpPick">🎵 Müzik yükle</button><button class="btn sm" id="mvpTest">▶ Dene</button><button class="btn sm" id="mvpStop">■ Durdur</button><button class="btn sm" id="mvpClear">Kaldır</button></div>
+        <div class="seg" data-set="mvpWhen" data-opts='[["me","Ben olunca çal"],["always","Her raunt sonunda çal"],["off","Kapalı"]]'></div>
+        <div class="rgm"><span style="font-size:12px;color:var(--dim)">Müzik sesi <span class="val" data-val="musicVol"></span></span><input type="range" min="0" max="1" step="0.05" data-set="musicVol"></div>
+        <div style="font-size:12px;color:var(--dim)">MP3, OGG, WAV, M4A gibi tarayıcının çalabildiği dosyalar. Dosya bu cihazda saklanır; raunt sonunda ~9 saniye çalar.</div></div>
     </div>
     <div class="menuGrid tabc hidden" data-tab="bot">
-      <div class="field"><label>Bot Zorluğu</label><div class="seg" data-set="botDifficulty" data-opts='[[0,"Kolay"],[1,"Normal"],[2,"Zor"],[3,"Uzman"]]'></div>
+      <div class="field"><label>Kendi Takımının Zorluğu</label><div class="seg" data-set="botDiffAlly" data-opts='[[0,"Kolay"],[1,"Normal"],[2,"Zor"],[3,"Uzman"]]'></div><div style="font-size:12px;color:var(--dim)">Takım arkadaşı botların seviyesi. Ölüm Kalım'da herkes rakip sayılır.</div></div>
+      <div class="field"><label>Rakip Takım Zorluğu</label><div class="seg" data-set="botDifficulty" data-opts='[[0,"Kolay"],[1,"Normal"],[2,"Zor"],[3,"Uzman"]]'></div>
         <div style="font-size:12px;color:var(--dim)">Tepki süresi, nişan hızı, sprey kontrolü, kafa vuruşu oranı, karşı-strafe ve el bombası kullanımı değişir.</div></div>
       <div class="field"><label>Takım Boyutu</label><div class="seg" data-set="teamSize" data-opts='[[1,"1v1"],[2,"2v2"],[3,"3v3"],[4,"4v4"],[5,"5v5"]]'></div></div>
       <div class="field"><label>Maç Uzunluğu</label><div class="seg" data-set="maxRounds" data-opts='[[8,"Kısa (8)"],[16,"Normal (16)"],[30,"Rekabetçi (30)"]]'></div></div>
@@ -412,6 +450,33 @@ input[type=range]{width:100%;accent-color:#e9a83a}
   </div>
 </div>
 
+<!-- ============ SKİN EDİTÖRÜ ============ -->
+<div id="skinEditor" class="hidden">
+  <div id="skView"></div>
+  <div id="skTop">
+    <b>🎨 SKİN ATÖLYESİ</b>
+    <select id="skWeapon"></select>
+    <select id="skPreset"><option value="">Hazır desen uygula…</option></select>
+    <span id="skMsg"></span>
+    <span style="flex:1"></span>
+    <button class="btn sm" id="skRemove">Skini kaldır</button>
+    <button class="btn sm pri" id="skSave">💾 Kaydet &amp; Kuşan</button>
+    <button class="btn sm" id="skClose">Kapat ✕</button>
+  </div>
+  <div id="skTools">
+    <button id="skPaint" class="sel">🖌 Boya</button>
+    <button id="skErase">🧽 Silgi</button>
+    <button id="skRotate">🔄 Döndür</button>
+    <input type="color" id="skColor" value="#e23a3a">
+    <div id="skSwatches"><i data-c="#e23a3a" style="background:#e23a3a"></i><i data-c="#ff9a1a" style="background:#ff9a1a"></i><i data-c="#ffe14a" style="background:#ffe14a"></i><i data-c="#3cd66a" style="background:#3cd66a"></i><i data-c="#3aa8ff" style="background:#3aa8ff"></i><i data-c="#8a4ae0" style="background:#8a4ae0"></i><i data-c="#ff5ac8" style="background:#ff5ac8"></i><i data-c="#ffffff" style="background:#fff"></i><i data-c="#8a8d92" style="background:#8a8d92"></i><i data-c="#111111" style="background:#111"></i></div>
+    <label>Fırça<input type="range" id="skSize" min="3" max="60" value="14"></label>
+    <button id="skFill">🪣 Doldur</button>
+    <button id="skUndo">↶ Geri al</button>
+    <button id="skClear">Temizle</button>
+  </div>
+  <div id="skHint">Modelin üstüne parmağınla/fareyle çiz • Döndür modunda sürükle • İki parmak / tekerlek: yakınlaştır</div>
+</div>
+
 <!-- ============ HİLE SİMÜLASYONU ============ -->
 <div id="cheatMenu" class="screen hidden">
   <div class="panel">
@@ -432,12 +497,14 @@ input[type=range]{width:100%;accent-color:#e9a83a}
 <script src="js/map.js"></script>
 <script src="js/physics.js"></script>
 <script src="js/models.js"></script>
+<script src="js/gunmodels.js"></script>
 <script src="js/effects.js"></script>
 <script src="js/entity.js"></script>
 <script src="js/bot.js"></script>
 <script src="js/game.js"></script>
 <script src="js/input.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/extras.js"></script>
 <script src="js/cheats.js"></script>
 <script src="js/main.js"></script>
 </body>

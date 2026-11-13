@@ -28,6 +28,7 @@ const DEFAULT_SETTINGS = {
   crossDot: false,
   crossDynamic: true,
   // Botlar & maç
+  botDiffAlly: 1,        // kendi takımındaki botların zorluğu
   botDifficulty: 1,      // 0 kolay, 1 normal, 2 zor, 3 uzman
   teamSize: 5,
   maxRounds: 16,
@@ -35,6 +36,8 @@ const DEFAULT_SETTINGS = {
   playerTeam: 'auto',
   startMoney: 800, roundTime: 115, c4Time: 40, freezeTime: 6,
   hudStyle: 'modern',    // 'modern' | 'classic'
+  mvpWhen: 'me',         // MVP müziği: 'me' (ben olunca) | 'always' | 'off'
+  musicVol: 0.8,
   map: 'dust',            // dust, harbor, snow, town, random
   mode: 'comp',          // 'comp' rekabetçi, 'dm' ölüm kalım
   dmTime: 300,           // ölüm kalım süresi (sn)

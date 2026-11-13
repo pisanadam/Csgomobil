@@ -5,6 +5,7 @@
   Input.init();
   UI.init();
   Cheats.init();
+  Skins.loadAll(); Music.bind(); Music.init();
   UI.applySettings();
   let last = performance.now(), fpsAcc = 0, fpsN = 0;
   function frame(t) {
@@ -26,6 +27,7 @@
   G.menuCam = true;
   const origRender = G.render.bind(G);
   G.render = function (dt) {
+    if (Skins.editing) { Skins.render(); return; }
     if (!this.running && !this.matchOver || !this.player) {
       const tt = performance.now() / 1000;
       this.camera.position.set(Math.sin(tt * 0.05) * 25, 14, Math.cos(tt * 0.05) * 25);

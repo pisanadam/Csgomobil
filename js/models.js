@@ -22,7 +22,7 @@ const Models = (function () {
   const gunCache = {};
   function gun(def) {
     const key = def.id || 'x';
-    if (!gunCache[key]) gunCache[key] = buildGun(def);
+    if (!gunCache[key]) gunCache[key] = (typeof GunModels !== 'undefined' && GunModels.build(def)) || buildGun(def);
     const g = gunCache[key].clone();
     g.userData = {}; g.userData.muzzle = g.getObjectByName('muzzle');
     return g;

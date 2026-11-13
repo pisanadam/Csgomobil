@@ -22,6 +22,7 @@ const UI = {
     $('meAgain').onclick = () => { $('matchEnd').classList.add('hidden'); this.play(); };
     $('meMenu').onclick = () => { $('matchEnd').classList.add('hidden'); this.quit(); };
     $('buyClose').onclick = () => this.toggleBuy(false);
+    $('btnSkins').onclick = () => { Audio3.init(); Skins.open(); };
     document.querySelectorAll('#radio button').forEach(b => { const go = ev => { ev.preventDefault(); ev.stopPropagation(); G.radio(parseInt(b.dataset.r)); this.toggleRadio(false); }; b.addEventListener('touchstart', go, { passive: false }); b.addEventListener('click', go); });
     $('buyMenu').addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
     this.buildCrosshair();
@@ -113,7 +114,7 @@ const UI = {
     p.nvgOn = !p.nvgOn; Audio3.ui(p.nvgOn ? 1500 : 900);
   },
   onMatchStart() {
-    this.cache = {}; $('killfeed').innerHTML = ''; $('chat').innerHTML = ''; $('toast').textContent = ''; $('centerMsg').innerHTML = ''; this.toastT = 0; this.msgT = 0;
+    this.cache = {}; $('killfeed').innerHTML = ''; $('chat').innerHTML = ''; $('mvp').classList.add('hidden'); Music.stop(); $('toast').textContent = ''; $('centerMsg').innerHTML = ''; this.toastT = 0; this.msgT = 0;
     this.toggleRadio(false);
     $('specInfo').classList.add('hidden');
   },
@@ -128,10 +129,15 @@ const UI = {
     $('specInfo').classList.add('hidden');
     if (Input.isMobile || true) this.cache.slots = null;
   },
-  roundEnd(win, reason, pw) {
+  roundEnd(win, reason, pw, mvp, why) {
     const names = { T: 'SALDIRI TİMİ KAZANDI', CT: 'SAVUNMA TİMİ KAZANDI' };
     const rs = { elim: 'Karşı takım yok edildi', bomb: 'Bomba patladı', defuse: 'Bomba imha edildi', time: 'Süre doldu' }[reason];
     this.message(`<span style="color:${win === 'T' ? 'var(--t)' : 'var(--ct)'}">${names[win]}</span>`, 4.5, rs);
+    const mv = $('mvp');
+    if (mvp) {
+      mv.innerHTML = `<div class="mvS">★</div><div><small>RAUNDUN OYUNCUSU</small><b class="${mvp.team}">${mvp.isPlayer ? 'SEN' : mvp.name}</b><span>${why}${Music.url && S.mvpWhen !== 'off' && (S.mvpWhen === 'always' || mvp.isPlayer) ? ' • ♪ ' + Music.name.replace(/</g, '&lt;').slice(0, 28) : ''}</span></div>`;
+      mv.classList.remove('hidden'); clearTimeout(this.mvpT); this.mvpT = setTimeout(() => mv.classList.add('hidden'), 4800);
+    }
     this.toggleBuy(false);
   },
   onPlayerDeath(k) {
@@ -273,11 +279,11 @@ const UI = {
       const g = G.sideOfGroup.indexOf(team);
       const list = G.entities.filter(e => e.team === team).sort((a, b) => b.stats.kills - a.stats.kills || b.stats.dmg - a.stats.dmg);
       h += `<div class="sbHead ${team}"><span>${team === 'T' ? 'SALDIRI TİMİ' : 'SAVUNMA TİMİ'}</span><span>${G.score[g]}</span></div>`;
-      h += '<table><tr><th>Oyuncu</th><th>$</th><th>Ö</th><th>A</th><th>Ö/K</th><th>HS%</th><th>HASAR</th></tr>';
+      h += '<table><tr><th>Oyuncu</th><th>$</th><th>Ö</th><th>A</th><th>Ö/K</th><th>HS%</th><th>HASAR</th><th>★</th></tr>';
       for (const e of list) {
         const hs = e.stats.kills ? Math.round(e.stats.hs / Math.max(1, e.stats.kills) * 100) : 0;
         const showMoney = e.team === G.player.team;
-        h += `<tr class="${e.alive ? '' : 'dead'} ${e.isPlayer ? 'me' : ''}"><td>${e.isPlayer ? '★ ' : ''}${e.name}${e.inv.bomb && showMoney ? ' 💣' : ''}</td><td>${showMoney ? '$' + e.money : '-'}</td><td>${e.stats.kills}</td><td>${e.stats.assists}</td><td>${e.stats.deaths}</td><td>${hs}</td><td>${e.stats.dmg}</td></tr>`;
+        h += `<tr class="${e.alive ? '' : 'dead'} ${e.isPlayer ? 'me' : ''}"><td>${e.isPlayer ? '★ ' : ''}${e.name}${e.inv.bomb && showMoney ? ' 💣' : ''}</td><td>${showMoney ? '$' + e.money : '-'}</td><td>${e.stats.kills}</td><td>${e.stats.assists}</td><td>${e.stats.deaths}</td><td>${hs}</td><td>${e.stats.dmg}</td><td>${e.stats.mvp || ''}</td></tr>`;
       }
       h += '</table>';
     }

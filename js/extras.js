@@ -1,0 +1,246 @@
+// Ekstralar: silah skinleri (hazır desenler + 3D model üzerinde çizim) ve Raundun Oyuncusu müziği
+'use strict';
+// ====================== SKİNLER ======================
+const Skins = {
+  W: 512, H: 256,
+  canvases: {}, textures: {}, mats: {}, editing: false,
+  key: id => 'taktikops_skin_' + id,
+  has(id) { return !!this.canvases[id]; },
+  ensure(id) {
+    if (!this.canvases[id]) {
+      const c = document.createElement('canvas'); c.width = this.W; c.height = this.H;
+      this.canvases[id] = c;
+      const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4;
+      this.textures[id] = t;
+    }
+    return this.canvases[id];
+  },
+  loadAll() {
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i); if (!k || k.indexOf('taktikops_skin_') !== 0) continue;
+        const id = k.slice(15); if (!WEAPONS[id]) continue;
+        const img = new Image();
+        img.onload = () => { const c = this.ensure(id); c.getContext('2d').drawImage(img, 0, 0, this.W, this.H); this.textures[id].needsUpdate = true; };
+        img.src = localStorage.getItem(k);
+      }
+    } catch (e) {}
+  },
+  save(id) {
+    try { localStorage.setItem(this.key(id), this.canvases[id].toDataURL('image/png')); return true; }
+    catch (e) { return false; }
+  },
+  remove(id) {
+    try { localStorage.removeItem(this.key(id)); } catch (e) {}
+    delete this.canvases[id]; if (this.textures[id]) { this.textures[id].dispose(); delete this.textures[id]; }
+  },
+  // temel malzeme + skin dokusu: boyanan yerde skin, boyanmayan yerde silahın kendi rengi
+  matFor(base, id) {
+    const k = base.uuid + ':' + id; if (this.mats[k]) return this.mats[k];
+    const m = base.clone();
+    if (base.map) { m.color = new THREE.Color(0x8a5a2c).convertSRGBToLinear(); } // ahşap: düz kahverengi zemin
+    m.map = this.textures[id];
+    m.onBeforeCompile = sh => {
+      sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>',
+        '#ifdef USE_MAP\n vec4 skT = texture2D( map, vUv ); skT = mapTexelToLinear( skT ); diffuseColor.rgb = mix( diffuseColor.rgb, skT.rgb, skT.a );\n#endif');
+    };
+    m.customProgramCacheKey = () => 'skinmix';
+    this.mats[k] = m; return m;
+  },
+  apply(group, id) {
+    if (!group || !this.has(id)) return;
+    group.traverse(o => { if (o.isMesh && o.material && o.material.isMeshBasicMaterial !== true && !o.material.transparent) o.material = this.matFor(o.material, id); });
+  },
+  // ---------- hazır desenler ----------
+  presets: {
+    camo: { name: 'Kamuflaj', fn(x, W, H) { x.fillStyle = '#5b6b3a'; x.fillRect(0, 0, W, H); const cols = ['#3d4a26', '#7a7648', '#2a2f1c', '#8a9a5a']; for (let i = 0; i < 90; i++) { x.fillStyle = cols[i % 4]; x.beginPath(); x.ellipse(Math.random() * W, Math.random() * H, 12 + Math.random() * 40, 8 + Math.random() * 22, Math.random() * 3, 0, 7); x.fill(); } } },
+    tiger: { name: 'Kaplan', fn(x, W, H) { x.fillStyle = '#e08a1e'; x.fillRect(0, 0, W, H); x.fillStyle = '#16120c'; for (let i = 0; i < 26; i++) { const px = i * W / 24 + (Math.random() - 0.5) * 14; x.beginPath(); x.moveTo(px, 0); x.bezierCurveTo(px + 22, H * 0.3, px - 26, H * 0.6, px + 8, H); x.lineTo(px + 14 + Math.random() * 12, H); x.bezierCurveTo(px - 12, H * 0.6, px + 34, H * 0.3, px + 8 + Math.random() * 8, 0); x.fill(); } } },
+    fade: { name: 'Gökkuşağı', fn(x, W, H) { const g = x.createLinearGradient(0, 0, W, H * 0.4); ['#7a2bd6', '#e23aa8', '#ff8a3a', '#ffe14a', '#3ad6c8'].forEach((c, i) => g.addColorStop(i / 4, c)); x.fillStyle = g; x.fillRect(0, 0, W, H); } },
+    carbon: { name: 'Karbon', fn(x, W, H) { x.fillStyle = '#16171a'; x.fillRect(0, 0, W, H); for (let j = 0; j < H; j += 8) for (let i = 0; i < W; i += 8) { x.fillStyle = ((i + j) / 8) % 2 ? '#2a2c31' : '#0e0f11'; x.fillRect(i, j, 8, 4); x.fillStyle = ((i + j) / 8) % 2 ? '#0e0f11' : '#24262b'; x.fillRect(i, j + 4, 8, 4); } } },
+    gold: { name: 'Altın', fn(x, W, H) { const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#fff0a0'); g.addColorStop(0.45, '#e0a820'); g.addColorStop(0.55, '#b07a10'); g.addColorStop(1, '#f2c94c'); x.fillStyle = g; x.fillRect(0, 0, W, H); for (let i = 0; i < 500; i++) { x.fillStyle = `rgba(255,255,230,${Math.random() * 0.5})`; x.fillRect(Math.random() * W, Math.random() * H, 2, 2); } } },
+    digital: { name: 'Dijital', fn(x, W, H) { const cols = ['#3a4654', '#5a6a7c', '#1f2730', '#8a98a8']; for (let j = 0; j < H; j += 12) for (let i = 0; i < W; i += 12) { x.fillStyle = cols[Math.floor(Math.random() * 4)]; x.fillRect(i, j, 12, 12); } } },
+    lava: { name: 'Lav', fn(x, W, H) { x.fillStyle = '#1a0a06'; x.fillRect(0, 0, W, H); for (let i = 0; i < 60; i++) { const px = Math.random() * W, py = Math.random() * H, r = 10 + Math.random() * 40; const g = x.createRadialGradient(px, py, 0, px, py, r); g.addColorStop(0, 'rgba(255,220,80,.9)'); g.addColorStop(0.4, 'rgba(255,90,10,.7)'); g.addColorStop(1, 'rgba(120,10,0,0)'); x.fillStyle = g; x.fillRect(px - r, py - r, r * 2, r * 2); } } },
+    ice: { name: 'Buz', fn(x, W, H) { const g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#e8f6ff'); g.addColorStop(0.5, '#6ec0f2'); g.addColorStop(1, '#1f5fa8'); x.fillStyle = g; x.fillRect(0, 0, W, H); x.strokeStyle = 'rgba(255,255,255,.6)'; for (let i = 0; i < 40; i++) { x.lineWidth = 1 + Math.random() * 2; x.beginPath(); let px = Math.random() * W, py = Math.random() * H; x.moveTo(px, py); for (let k = 0; k < 4; k++) { px += (Math.random() - 0.5) * 80; py += (Math.random() - 0.5) * 60; x.lineTo(px, py); } x.stroke(); } } },
+  },
+  applyPreset(id, key) {
+    const c = this.ensure(id), x = c.getContext('2d');
+    x.globalCompositeOperation = 'source-over'; this.presets[key].fn(x, this.W, this.H);
+    this.textures[id].needsUpdate = true;
+  },
+  // ====================== EDİTÖR ======================
+  ed: { id: 'ak47', mode: 'paint', color: '#e23a3a', size: 14, erase: false, undo: [], rotY: -Math.PI / 2 + 0.3, rotX: 0.1, dist: 1.4, ptr: new Map(), last: null },
+  open() {
+    if (G.running) return;
+    const E = this.ed;
+    if (!this.scene) {
+      this.scene = new THREE.Scene(); this.scene.background = new THREE.Color(0x2b3038);
+      this.scene.add(new THREE.HemisphereLight(0xffffff, 0x445066, 0.75));
+      const d = new THREE.DirectionalLight(0xffffff, 0.8); d.position.set(2, 3, 4); this.scene.add(d);
+      this.cam = new THREE.PerspectiveCamera(35, 1, 0.01, 20);
+      this.pivot = new THREE.Group(); this.scene.add(this.pivot);
+      this.ray = new THREE.Raycaster();
+      this.bindUI();
+    }
+    this.editing = true; document.body.classList.add('skinning');
+    document.getElementById('mainMenu').classList.add('hidden');
+    document.getElementById('skinEditor').classList.remove('hidden');
+    this.setWeapon(E.id);
+  },
+  close() {
+    this.editing = false; document.body.classList.remove('skinning');
+    document.getElementById('skinEditor').classList.add('hidden');
+    document.getElementById('mainMenu').classList.remove('hidden');
+    G.resize();
+  },
+  setWeapon(id) {
+    const E = this.ed; E.id = id; E.undo = [];
+    while (this.pivot.children.length) this.pivot.remove(this.pivot.children[0]);
+    this.hadSkin = this.has(id);
+    this.ensure(id);
+    const g = Models.gun(WEAPONS[id]);
+    // editörde her zaman skin malzemesi
+    g.traverse(o => { if (o.isMesh && o.material && o.material.isMeshBasicMaterial !== true && !o.material.transparent) o.material = this.matFor(o.material, id); });
+    const box = new THREE.Box3().setFromObject(g), c = box.getCenter(new THREE.Vector3()), s = box.getSize(new THREE.Vector3());
+    g.position.sub(c); this.pivot.add(g); this.gun = g;
+    E.dist = Math.max(0.5, Math.max(s.z, s.y * 2.2) * 1.9);
+    E.rotY = -Math.PI / 2 + 0.3; E.rotX = 0.1;
+    document.getElementById('skWeapon').value = id;
+  },
+  render() {
+    const r = G.renderer, E = this.ed;
+    const w = window.innerWidth, h = window.innerHeight;
+    this.cam.aspect = w / h; this.cam.updateProjectionMatrix();
+    this.cam.position.set(0, 0, E.dist); this.cam.lookAt(0, 0, 0);
+    this.pivot.rotation.set(E.rotX, E.rotY, 0);
+    r.clear(); r.render(this.scene, this.cam);
+  },
+  pushUndo() {
+    const E = this.ed, c = this.canvases[E.id];
+    E.undo.push(c.getContext('2d').getImageData(0, 0, this.W, this.H)); if (E.undo.length > 12) E.undo.shift();
+  },
+  undo() {
+    const E = this.ed; const d = E.undo.pop(); if (!d) return;
+    this.canvases[E.id].getContext('2d').putImageData(d, 0, 0); this.textures[E.id].needsUpdate = true;
+  },
+  uvAt(cx, cy) {
+    const v = document.getElementById('skView').getBoundingClientRect();
+    const nx = ((cx - v.left) / v.width) * 2 - 1, ny = -(((cy - v.top) / v.height) * 2 - 1);
+    // görünüm tüm ekranı kaplar; kamera da tüm ekran
+    this.ray.setFromCamera({ x: (cx / window.innerWidth) * 2 - 1, y: -((cy / window.innerHeight) * 2 - 1) }, this.cam);
+    this.pivot.updateMatrixWorld(true);
+    const hit = this.ray.intersectObject(this.gun, true)[0];
+    return hit && hit.uv ? { u: hit.uv.x, v: hit.uv.y } : null;
+  },
+  stroke(a, b) {
+    const E = this.ed, c = this.canvases[E.id], x = c.getContext('2d');
+    x.globalCompositeOperation = E.erase ? 'destination-out' : 'source-over';
+    x.strokeStyle = x.fillStyle = E.color; x.lineWidth = E.size; x.lineCap = 'round'; x.lineJoin = 'round';
+    const ax = a.u * this.W, ay = (1 - a.v) * this.H, bx2 = b.u * this.W, by = (1 - b.v) * this.H;
+    if (Math.hypot(bx2 - ax, by - ay) > 90) { x.beginPath(); x.arc(bx2, by, E.size / 2, 0, 7); x.fill(); }   // farklı parçaya atlama: çizgi çekme
+    else { x.beginPath(); x.moveTo(ax, ay); x.lineTo(bx2, by); x.stroke(); }
+    x.globalCompositeOperation = 'source-over';
+    this.textures[E.id].needsUpdate = true;
+  },
+  bindUI() {
+    const E = this.ed, $$ = id => document.getElementById(id);
+    const sel = $$('skWeapon');
+    for (const id in WEAPONS) { const d = WEAPONS[id]; if (d.type === 'bomb') continue; const o = document.createElement('option'); o.value = id; o.textContent = d.name; sel.appendChild(o); }
+    sel.onchange = () => this.setWeapon(sel.value);
+    const ps = $$('skPreset');
+    for (const k in this.presets) { const o = document.createElement('option'); o.value = k; o.textContent = this.presets[k].name; ps.appendChild(o); }
+    ps.onchange = () => { if (!ps.value) return; this.pushUndo(); this.applyPreset(E.id, ps.value); ps.value = ''; };
+    const setMode = m => { E.mode = m; $$('skPaint').classList.toggle('sel', m === 'paint' && !E.erase); $$('skErase').classList.toggle('sel', m === 'paint' && E.erase); $$('skRotate').classList.toggle('sel', m === 'rotate'); };
+    $$('skPaint').onclick = () => { E.erase = false; setMode('paint'); };
+    $$('skErase').onclick = () => { E.erase = true; setMode('paint'); };
+    $$('skRotate').onclick = () => setMode('rotate');
+    $$('skColor').oninput = e => { E.color = e.target.value; E.erase = false; setMode('paint'); };
+    document.querySelectorAll('#skSwatches i').forEach(s => s.onclick = () => { E.color = s.dataset.c; $$('skColor').value = E.color; E.erase = false; setMode('paint'); });
+    $$('skSize').oninput = e => { E.size = +e.target.value; };
+    $$('skFill').onclick = () => { this.pushUndo(); const x = this.canvases[E.id].getContext('2d'); x.globalCompositeOperation = 'source-over'; x.fillStyle = E.color; x.fillRect(0, 0, this.W, this.H); this.textures[E.id].needsUpdate = true; };
+    $$('skClear').onclick = () => { this.pushUndo(); this.canvases[E.id].getContext('2d').clearRect(0, 0, this.W, this.H); this.textures[E.id].needsUpdate = true; };
+    $$('skUndo').onclick = () => this.undo();
+    $$('skSave').onclick = () => { const ok = this.save(E.id); this.hadSkin = true; $$('skMsg').textContent = ok ? `✓ ${WEAPONS[E.id].name} skini kaydedildi ve kuşanıldı` : '✗ Kaydedilemedi (depolama dolu olabilir)'; setTimeout(() => $$('skMsg').textContent = '', 2500); };
+    $$('skRemove').onclick = () => { this.remove(E.id); this.setWeapon(E.id); this.hadSkin = false; $$('skMsg').textContent = 'Skin kaldırıldı'; setTimeout(() => $$('skMsg').textContent = '', 2000); };
+    $$('skClose').onclick = () => { if (!this.hadSkin) { delete this.canvases[E.id]; } this.close(); };
+    // 3D görünüm: boya / döndür / yakınlaştır
+    const view = $$('skView');
+    view.addEventListener('pointerdown', ev => {
+      ev.preventDefault(); view.setPointerCapture && view.setPointerCapture(ev.pointerId);
+      E.ptr.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+      if (E.ptr.size === 1 && E.mode === 'paint') { const p = this.uvAt(ev.clientX, ev.clientY); if (p) { this.pushUndo(); this.stroke(p, p); E.last = p; } else E.last = null; }
+    });
+    view.addEventListener('pointermove', ev => {
+      const prev = E.ptr.get(ev.pointerId); if (!prev) return;
+      ev.preventDefault();
+      if (E.ptr.size >= 2) { // iki parmak: yakınlaştır + döndür
+        const others = [...E.ptr.entries()].filter(([k]) => k !== ev.pointerId)[0][1];
+        const d0 = Math.hypot(prev.x - others.x, prev.y - others.y), d1 = Math.hypot(ev.clientX - others.x, ev.clientY - others.y);
+        if (d0 > 5) E.dist = Math.max(0.25, Math.min(4, E.dist * d0 / d1));
+        E.rotY += (ev.clientX - prev.x) * 0.004; E.rotX += (ev.clientY - prev.y) * 0.004;
+        E.last = null;
+      } else if (E.mode === 'rotate') { E.rotY += (ev.clientX - prev.x) * 0.008; E.rotX = Math.max(-1.4, Math.min(1.4, E.rotX + (ev.clientY - prev.y) * 0.008)); }
+      else { const p = this.uvAt(ev.clientX, ev.clientY); if (p) { if (!E.last) this.pushUndo(); this.stroke(E.last || p, p); } E.last = p; }
+      prev.x = ev.clientX; prev.y = ev.clientY;
+    });
+    const up = ev => { E.ptr.delete(ev.pointerId); E.last = null; };
+    view.addEventListener('pointerup', up); view.addEventListener('pointercancel', up);
+    view.addEventListener('wheel', ev => { ev.preventDefault(); E.dist = Math.max(0.25, Math.min(4, E.dist * (ev.deltaY > 0 ? 1.1 : 0.9))); }, { passive: false });
+  },
+};
+
+// ====================== RAUNDUN OYUNCUSU MÜZİĞİ ======================
+const Music = {
+  url: null, name: '', audio: null, fadeT: null,
+  db() {
+    return new Promise((res, rej) => {
+      try { const r = indexedDB.open('taktikops', 1); r.onupgradeneeded = () => r.result.createObjectStore('files'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }
+      catch (e) { rej(e); }
+    });
+  },
+  async init() {
+    try {
+      const db = await this.db();
+      const rec = await new Promise((res, rej) => { const q = db.transaction('files').objectStore('files').get('mvp'); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
+      if (rec && rec.blob) { this.url = URL.createObjectURL(rec.blob); this.name = rec.name || 'müzik'; }
+    } catch (e) {}
+    this.refreshUI();
+  },
+  async set(file) {
+    if (!file) return;
+    if (this.url) URL.revokeObjectURL(this.url);
+    this.url = URL.createObjectURL(file); this.name = file.name;
+    this.refreshUI();
+    try { const db = await this.db(); db.transaction('files', 'readwrite').objectStore('files').put({ blob: file, name: file.name }, 'mvp'); } catch (e) { /* kalıcı olmaz, bu oturumda çalışır */ }
+  },
+  async clear() {
+    this.stop(); if (this.url) URL.revokeObjectURL(this.url); this.url = null; this.name = '';
+    this.refreshUI();
+    try { const db = await this.db(); db.transaction('files', 'readwrite').objectStore('files').delete('mvp'); } catch (e) {}
+  },
+  play(seconds) {
+    if (!this.url) return false;
+    this.stop();
+    const a = this.audio = new Audio(this.url);
+    const vol = Math.max(0, Math.min(1, S.volume * (S.musicVol === undefined ? 0.8 : S.musicVol)));
+    a.volume = vol;
+    const p = a.play(); if (p && p.catch) p.catch(() => {});
+    const dur = seconds || 9;
+    const t0 = performance.now();
+    this.fadeT = setInterval(() => {
+      const t = (performance.now() - t0) / 1000;
+      if (t > dur - 2) a.volume = Math.max(0, vol * (dur - t) / 2);
+      if (t >= dur) this.stop();
+    }, 100);
+    return true;
+  },
+  stop() { if (this.fadeT) { clearInterval(this.fadeT); this.fadeT = null; } if (this.audio) { try { this.audio.pause(); } catch (e) {} this.audio = null; } },
+  refreshUI() { const el = document.getElementById('mvpName'); if (el) el.textContent = this.url ? '♪ ' + this.name : 'Yüklü müzik yok'; },
+  bind() {
+    const f = document.getElementById('mvpFile');
+    f.onchange = () => { if (f.files && f.files[0]) this.set(f.files[0]); f.value = ''; };
+    document.getElementById('mvpPick').onclick = () => f.click();
+    document.getElementById('mvpTest').onclick = () => { Audio3.init(); if (!this.play(8)) UI.toast && (document.getElementById('mvpName').textContent = 'Önce bir müzik dosyası seç'); };
+    document.getElementById('mvpStop').onclick = () => this.stop();
+    document.getElementById('mvpClear').onclick = () => this.clear();
+  },
+};

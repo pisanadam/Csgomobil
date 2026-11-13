@@ -158,7 +158,7 @@ G.startRound = function () {
     e.yaw = e.team === 'T' ? 0 : Math.PI; e.pitch = 0;
     e.alive = true; e.hp = 100; e.deathT = 0; e.flashT = 0; e.crouch = 0; e.height = STAND_H;
     e.plantT = 0; e.defuseT = 0; e.recoilIdx = 0; e.fireInacc = 0; e.punch.x = e.punch.y = 0; e.scoped = 0; e.reloadT = 0;
-    e.zoomed = false; e.burstLeft = 0; e.order = null; e.nextFire = 0;
+    e.zoomed = false; e.burstLeft = 0; e.order = null; e.nextFire = 0; e.roundKills = 0;
     e.dmgBy.clear(); e.inv.bomb = false; e.trig = false;
     if (!e.inv.secondary) e.giveWeapon(e.team === 'T' ? 'glock' : 'usp');
     // eldeki silahların şarjörleri dolsun (CS: kalan cephane korunur, bu sürümde dolduruyoruz)
@@ -484,7 +484,7 @@ G.onKill = function (v, k, def, hs, wallbang) {
   if (this.bomb.defuser === v) this.bomb.defuser = null;
   if (k && k !== v) {
     if (!this.ally(k, v)) {
-      k.stats.kills++; if (hs) k.stats.hs++;
+      k.stats.kills++; if (hs) k.stats.hs++; k.roundKills = (k.roundKills || 0) + 1;
       if (this.dm) {
         this.score[k.group]++;
         if (k.isPlayer) UI.toast(`+1  ${v.name} öldürüldü`, 1.2, 'money');
@@ -682,7 +682,7 @@ G.updatePlantDefuse = function (e, dt) {
     e.defuseT += dt;
     if (e.defuseT >= (e.kit ? 5 : 10)) {
       B.state = 'defused'; B.defuser = null; e.defuseT = 0;
-      this.addMoney(e, ECON.defuseReward);
+      this.addMoney(e, ECON.defuseReward); B.defusedBy = e;
       this.endRound('CT', 'defuse');
     }
   } else {
@@ -694,7 +694,7 @@ G.plantBomb = function (e) {
   const B = this.bomb;
   e.inv.bomb = false; e.plantT = 0;
   B.state = 'planted'; B.carrier = null; B.pos = { x: e.pos.x, y: e.pos.y, z: e.pos.z }; B.timer = this.BOMB_TIME; B.beepT = 0;
-  B.site = this.inBombZone(e.pos);
+  B.site = this.inBombZone(e.pos); B.planter = e;
   this.bombMesh.visible = true; this.bombMesh.position.set(B.pos.x, B.pos.y + 0.07, B.pos.z); this.bombMesh.rotation.set(0, e.yaw, 0);
   this.round.phase = 'planted';
   this.addMoney(e, ECON.plantReward);
@@ -947,12 +947,20 @@ G.endRound = function (win, reason) {
   this.lossStreak[lose] = Math.min(4, this.lossStreak[lose] + 1);
   this.lossStreak[win] = Math.max(0, this.lossStreak[win] - 1);
   // MVP
-  let mvp = null, mk = -1;
-  const kills = this.roundKills || new Map();
-  for (const e of this.entities) if (e.team === win && e.stats.kills > mk) { mk = e.stats.kills; mvp = e; }
+  // Raundun oyuncusu: bombayı patlatan/imha eden, yoksa kazanan takımda en çok öldüren
+  let mvp = null, why = '';
+  const B2 = this.bomb;
+  if (reason === 'bomb' && B2.planter && B2.planter.team === win) { mvp = B2.planter; why = 'bombayı kurdu'; }
+  else if (reason === 'defuse' && B2.defusedBy) { mvp = B2.defusedBy; why = 'bombayı imha etti'; }
+  else {
+    let best = -1;
+    for (const e of this.entities) { if (e.team !== win) continue; const sc = (e.roundKills || 0) * 1000 + Math.min(999, e.stats.dmg % 1000); if (sc > best) { best = sc; mvp = e; } }
+    if (mvp) why = (mvp.roundKills || 0) > 0 ? `${mvp.roundKills} öldürme` : 'takımını zafere taşıdı';
+  }
+  if (mvp) mvp.stats.mvp = (mvp.stats.mvp || 0) + 1;
   const pw = win === this.player.team;
-  Audio3.roundEnd(pw);
-  UI.roundEnd(win, reason, pw);
+  if (mvp && Music.url && S.mvpWhen !== 'off' && (S.mvpWhen === 'always' || mvp.isPlayer)) Music.play(9); else Audio3.roundEnd(pw);
+  UI.roundEnd(win, reason, pw, mvp, why);
   BotChat.roundEnd(win);
   // hayatta kalan T bombayı tutar mı? (sonraki raunt yeni dağıtılır)
 };
@@ -1030,6 +1038,7 @@ G.buildViewmodel = function () {
   }
   const def = p.def;
   const g = Models.gun(def);
+  Skins.apply(g, def.id);
   const t = def.type;
   // konum: sağ alt
   if (t === 'knife') { g.position.set(0.17, -0.19, -0.36); g.rotation.set(0.2, 0.25, -0.3); }

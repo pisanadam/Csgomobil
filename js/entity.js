@@ -75,7 +75,7 @@ class Entity {
   }
   bestSlot() { return this.inv.primary ? 'primary' : this.inv.secondary ? 'secondary' : 'knife'; }
   onEquip() {
-    if (this.model) Models.setCharGun(this.model, this.def);
+    if (this.model) { Models.setCharGun(this.model, this.def); if (this.isPlayer && typeof Skins !== 'undefined') Skins.apply(this.model.parts.gun.userData.model, this.def.id); }
     if (this.isPlayer && typeof G !== 'undefined' && G.onPlayerEquip) G.onPlayerEquip(this);
   }
   resetForDeath() {
