@@ -374,7 +374,7 @@ const UI = {
     for (const e of G.entities) {
       if (!e.alive) continue;
       const mate = e === view || (!G.ffa && e.team === G.player.team);
-      if (!mate && e.spottedUntil < now) continue;
+      if (!mate && e.spottedUntil < now && !Cheats.c.radar) continue;
       const [x, y] = toR(e.pos);
       c.fillStyle = mate ? (e.team === 'T' ? '#f0b43c' : '#6aa8ff') : '#ff3b30';
       c.beginPath(); c.arc(x, y, e === view ? 5 : 4, 0, 7); c.fill();

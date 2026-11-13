@@ -4,6 +4,7 @@
   G.init();
   Input.init();
   UI.init();
+  Cheats.init();
   UI.applySettings();
   let last = performance.now(), fpsAcc = 0, fpsN = 0;
   function frame(t) {

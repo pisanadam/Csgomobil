@@ -160,6 +160,7 @@ const Input = {
       case 'Digit3': p.switchTo('knife'); break;
       case 'Digit4': p.switchTo('grenade'); break;
       case 'Digit5': p.switchTo('bomb'); break;
+      case 'Insert': case 'F2': Cheats.open(); break;
     }
     if (UI.buyOpen && /^Digit|Numpad/.test(k)) {}
   },

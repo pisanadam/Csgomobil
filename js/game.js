@@ -106,7 +106,7 @@ G.makeModel = function (e) {
   const gh = e.model.parts.gun;
   const cl = o => { if (o === gh) return; if (o.isMesh && o.material && o.material.emissive) o.material = o.material.clone(); o.children.forEach(cl); };
   cl(e.model.root);
-  e._glow = null;
+  e._glow = null; e._chams = null;
   this.scene.add(e.model.root);
   Models.setCharGun(e.model, e.def);
   e.model.root.visible = !e.isPlayer;
@@ -219,6 +219,7 @@ G.update = function (dt) {
     this.updateModel(e, dt);
   }
   this.updatePlayerAssist(dt);
+  Cheats.update(dt);
   this.updateNades(dt);
   this.updateBomb(dt);
   this.updatePickups();
@@ -280,6 +281,7 @@ G.updateModel = function (e, dt) {
   p.gun.position.z = -0.38 + kick * 0.4;
   // planting/defusing pozu
   if (e.plantT > 0 || e.defuseT > 0) { p.upper.rotation.x = -0.6; }
+  Cheats.animate(e, p);
 };
 G.animateDeath = function (e, dt) {
   if (!e.model) return;
@@ -965,12 +967,15 @@ G.render = function (dt) {
       walk(e.model.root);
     }
   }
-  for (const e of this.entities) if (e.model) e.model.root.visible = !(e === viewE && e.alive) && !(e.isPlayer && e.alive) && (e.alive || e.deathT < 15);
+  Cheats.applyChams();
+  const tp = Cheats.camera(cam, viewE);
+  for (const e of this.entities) if (e.model) e.model.root.visible = (tp && e.isPlayer) || (!(e === viewE && e.alive) && !(e.isPlayer && e.alive) && (e.alive || e.deathT < 15));
   FX.update(dt, eye);
   r.clear();
   r.render(this.scene, cam);
   // viewmodel
-  const showVm = p.alive && !(sc && viewE.def.type === 'sniper');
+  Cheats.drawESP(cam);
+  const showVm = p.alive && !tp && !(sc && viewE.def.type === 'sniper');
   if (showVm && this.vm.gun) {
     this.animateViewmodel(dt);
     r.clearDepth();

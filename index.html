@@ -173,6 +173,13 @@ input[type=range]{width:100%;accent-color:#e9a83a}
 #scoreboard tr.me td{background:rgba(240,180,60,.12)}
 .sbHead{font-weight:900;font-size:16px;padding:8px 4px 4px;display:flex;justify-content:space-between}
 .sbHead.T{color:var(--t)}.sbHead.CT{color:var(--ct)}
+#esp{pointer-events:none}
+#cheatTag{position:absolute;top:calc(max(6px,env(safe-area-inset-top)) + 46px);left:50%;transform:translateX(-50%);color:#ff4a3a;font-weight:900;font-size:12px;letter-spacing:1px;text-shadow:0 1px 3px #000}
+#cheatBody .check{font-size:13px;margin:3px 0}
+#cheatBody .hint{font-size:11px;color:var(--dim);margin:-2px 0 4px 28px}
+#cheatBody .rg{display:flex;flex-direction:column;font-size:12px;margin-top:6px;color:#cfd5dc}
+#cheatBody .rg b{color:#fff}
+#cheatBody .seg{margin-top:6px}
 #rotate{position:fixed;inset:0;z-index:50;background:#0c0d10;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;text-align:center;padding:20px}
 @media (orientation:portrait){body.mobile.ingame #rotate{display:flex}}
 .help p{margin:6px 0;color:#cdd3da;font-size:14px;line-height:1.45}
@@ -209,6 +216,8 @@ input[type=range]{width:100%;accent-color:#e9a83a}
   <div id="nadeList" class="hudbox hidden"></div>
   <div id="ammoBox" class="hudbox"><div id="wname">USP-S</div><span id="ammo">12</span> <small id="reserve">/ 24</small></div>
   <div id="specInfo" class="hudbox hidden"></div>
+  <canvas id="esp" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+  <div id="cheatTag" class="hidden">⚠ HİLE AKTİF</div>
   <div id="flash"></div>
 </div>
 
@@ -270,6 +279,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
       <button class="btn pri" id="btnPlay" style="flex:1;min-width:180px;font-size:18px;padding:16px">▶ OYNA</button>
       <button class="btn" id="btnSettings">⚙ AYARLAR</button>
       <button class="btn" id="btnHelp">? NASIL OYNANIR</button>
+      <button class="btn" id="btnCheats" style="background:#3a1f22;border-color:#a33">🧪 HİLE SİMÜLASYONU</button>
     </div>
     <div class="legal">Özgün hayran yapımı taktik nişancı. Harita, karakterler ve isimler özgündür.</div>
   </div>
@@ -344,6 +354,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
     <h2 style="margin:4px 0 14px">DURAKLATILDI</h2>
     <div style="display:flex;flex-direction:column;gap:10px">
       <button class="btn pri" id="pResume">DEVAM ET</button>
+      <button class="btn" id="pCheats" style="background:#3a1f22;border-color:#a33">🧪 HİLE SİMÜLASYONU</button>
       <button class="btn" id="pSettings">AYARLAR</button>
       <button class="btn" id="pScore">SKOR TABLOSU</button>
       <button class="btn" id="pQuit">ANA MENÜ</button>
@@ -358,6 +369,16 @@ input[type=range]{width:100%;accent-color:#e9a83a}
     <div class="sub" id="meSub"></div>
     <div id="meBoard"></div>
     <div class="row" style="margin-top:14px"><button class="btn pri" id="meAgain">TEKRAR OYNA</button><button class="btn" id="meMenu">ANA MENÜ</button></div>
+  </div>
+</div>
+
+<!-- ============ HİLE SİMÜLASYONU ============ -->
+<div id="cheatMenu" class="screen hidden">
+  <div class="panel">
+    <div class="row" style="justify-content:space-between;margin-bottom:6px"><b style="font-size:22px;color:#ff6a5a">🧪 HİLE SİMÜLASYONU <small style="font-size:12px;color:var(--dim)">(deneysel)</small></b>
+      <div class="row"><button class="btn sm" id="chOff">Hepsini kapat</button><button class="btn sm pri" id="chClose">TAMAM ✓</button></div></div>
+    <div style="font-size:12px;color:var(--dim);margin-bottom:8px">Sadece bu çevrimdışı oyunda botlara karşı çalışır. Masaüstünde <kbd>Insert</kbd> / <kbd>F2</kbd> ile açılır.</div>
+    <div class="menuGrid" id="cheatBody"></div>
   </div>
 </div>
 
@@ -377,6 +398,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
 <script src="js/game.js"></script>
 <script src="js/input.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/cheats.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

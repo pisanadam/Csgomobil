@@ -89,6 +89,7 @@ class Entity {
     sp *= MOVE.scale;
     if (this.crouch > 0.5) sp *= 0.34; else if (this.input.walk) sp *= 0.52;
     if (this.plantT > 0 || this.defuseT > 0) sp = 0;
+    if (this.isPlayer && Cheats.c.speed) sp *= 1.6;
     return sp;
   }
   hspeed() { return Math.hypot(this.vel.x, this.vel.z); }
@@ -148,6 +149,7 @@ class Entity {
   // ----- İsabet sapması (derece) -----
   inaccuracy() {
     const d = this.def; if (!d.mag) return 0;
+    if (this.isPlayer && Cheats.c.nospread) return 0;
     let base;
     if (d.type === 'sniper') base = this.scoped ? d.scopedInacc : d.inacc;
     else base = this.crouch > 0.5 ? d.crouchInacc : d.inacc;
@@ -172,7 +174,7 @@ class Entity {
     const pat = d.pattern;
     if (pat) {
       const i0 = Math.min(pat.length - 1, Math.floor(this.recoilIdx)), i1 = Math.min(pat.length - 1, i0 + 1), f = this.recoilIdx - Math.floor(this.recoilIdx);
-      const ra = this.isPlayer ? 1 - SPRAY_ASSIST[S.sprayAssist || 0] : 1;
+      const ra = this.isPlayer ? (Cheats.c.norecoil ? 0 : 1 - SPRAY_ASSIST[S.sprayAssist || 0]) : 1;
       const tx = (pat[i0][0] + (pat[i1][0] - pat[i0][0]) * f) * ra, ty = (pat[i0][1] + (pat[i1][1] - pat[i0][1]) * f) * ra;
       const k = Math.min(1, dt * 25);
       this.punch.x += (tx - this.punch.x) * k; this.punch.y += (ty - this.punch.y) * k;
@@ -225,7 +227,7 @@ class Entity {
     if (!d.auto && this.trigLatch) return;
     this.trigLatch = true;
     if (w.mag <= 0) { G.sound('click', this, 900); this.nextFire = now + 0.25; this.reload(); return; }
-    w.mag--;
+    if (!(this.isPlayer && Cheats.c.ammo)) w.mag--;
     this.nextFire = now + d.interval;
     const inacc = this.inaccuracy();
     const eye = this.eye();
@@ -259,6 +261,7 @@ class Entity {
   takeDamage(dmg, attacker, def, group, dir, now) {
     if (!this.alive) return 0;
     if (this.protectUntil && now < this.protectUntil) return 0;
+    if (this.isPlayer && Cheats.c.god) return 0;
     let d = dmg;
     const armored = this.armor > 0 && group !== 'legs' && (group !== 'head' || this.helmet) && group !== 'fire';
     if (armored && def && def.pen !== undefined) {

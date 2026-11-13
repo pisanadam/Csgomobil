@@ -173,6 +173,13 @@ input[type=range]{width:100%;accent-color:#e9a83a}
 #scoreboard tr.me td{background:rgba(240,180,60,.12)}
 .sbHead{font-weight:900;font-size:16px;padding:8px 4px 4px;display:flex;justify-content:space-between}
 .sbHead.T{color:var(--t)}.sbHead.CT{color:var(--ct)}
+#esp{pointer-events:none}
+#cheatTag{position:absolute;top:calc(max(6px,env(safe-area-inset-top)) + 46px);left:50%;transform:translateX(-50%);color:#ff4a3a;font-weight:900;font-size:12px;letter-spacing:1px;text-shadow:0 1px 3px #000}
+#cheatBody .check{font-size:13px;margin:3px 0}
+#cheatBody .hint{font-size:11px;color:var(--dim);margin:-2px 0 4px 28px}
+#cheatBody .rg{display:flex;flex-direction:column;font-size:12px;margin-top:6px;color:#cfd5dc}
+#cheatBody .rg b{color:#fff}
+#cheatBody .seg{margin-top:6px}
 #rotate{position:fixed;inset:0;z-index:50;background:#0c0d10;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;text-align:center;padding:20px}
 @media (orientation:portrait){body.mobile.ingame #rotate{display:flex}}
 .help p{margin:6px 0;color:#cdd3da;font-size:14px;line-height:1.45}
@@ -209,6 +216,8 @@ input[type=range]{width:100%;accent-color:#e9a83a}
   <div id="nadeList" class="hudbox hidden"></div>
   <div id="ammoBox" class="hudbox"><div id="wname">USP-S</div><span id="ammo">12</span> <small id="reserve">/ 24</small></div>
   <div id="specInfo" class="hudbox hidden"></div>
+  <canvas id="esp" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+  <div id="cheatTag" class="hidden">⚠ HİLE AKTİF</div>
   <div id="flash"></div>
 </div>
 
@@ -270,6 +279,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
       <button class="btn pri" id="btnPlay" style="flex:1;min-width:180px;font-size:18px;padding:16px">▶ OYNA</button>
       <button class="btn" id="btnSettings">⚙ AYARLAR</button>
       <button class="btn" id="btnHelp">? NASIL OYNANIR</button>
+      <button class="btn" id="btnCheats" style="background:#3a1f22;border-color:#a33">🧪 HİLE SİMÜLASYONU</button>
     </div>
     <div class="legal">Özgün hayran yapımı taktik nişancı. Harita, karakterler ve isimler özgündür.</div>
   </div>
@@ -344,6 +354,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
     <h2 style="margin:4px 0 14px">DURAKLATILDI</h2>
     <div style="display:flex;flex-direction:column;gap:10px">
       <button class="btn pri" id="pResume">DEVAM ET</button>
+      <button class="btn" id="pCheats" style="background:#3a1f22;border-color:#a33">🧪 HİLE SİMÜLASYONU</button>
       <button class="btn" id="pSettings">AYARLAR</button>
       <button class="btn" id="pScore">SKOR TABLOSU</button>
       <button class="btn" id="pQuit">ANA MENÜ</button>
@@ -358,6 +369,16 @@ input[type=range]{width:100%;accent-color:#e9a83a}
     <div class="sub" id="meSub"></div>
     <div id="meBoard"></div>
     <div class="row" style="margin-top:14px"><button class="btn pri" id="meAgain">TEKRAR OYNA</button><button class="btn" id="meMenu">ANA MENÜ</button></div>
+  </div>
+</div>
+
+<!-- ============ HİLE SİMÜLASYONU ============ -->
+<div id="cheatMenu" class="screen hidden">
+  <div class="panel">
+    <div class="row" style="justify-content:space-between;margin-bottom:6px"><b style="font-size:22px;color:#ff6a5a">🧪 HİLE SİMÜLASYONU <small style="font-size:12px;color:var(--dim)">(deneysel)</small></b>
+      <div class="row"><button class="btn sm" id="chOff">Hepsini kapat</button><button class="btn sm pri" id="chClose">TAMAM ✓</button></div></div>
+    <div style="font-size:12px;color:var(--dim);margin-bottom:8px">Sadece bu çevrimdışı oyunda botlara karşı çalışır. Masaüstünde <kbd>Insert</kbd> / <kbd>F2</kbd> ile açılır.</div>
+    <div class="menuGrid" id="cheatBody"></div>
   </div>
 </div>
 
@@ -2053,6 +2074,7 @@ class Entity {
     sp *= MOVE.scale;
     if (this.crouch > 0.5) sp *= 0.34; else if (this.input.walk) sp *= 0.52;
     if (this.plantT > 0 || this.defuseT > 0) sp = 0;
+    if (this.isPlayer && Cheats.c.speed) sp *= 1.6;
     return sp;
   }
   hspeed() { return Math.hypot(this.vel.x, this.vel.z); }
@@ -2112,6 +2134,7 @@ class Entity {
   // ----- İsabet sapması (derece) -----
   inaccuracy() {
     const d = this.def; if (!d.mag) return 0;
+    if (this.isPlayer && Cheats.c.nospread) return 0;
     let base;
     if (d.type === 'sniper') base = this.scoped ? d.scopedInacc : d.inacc;
     else base = this.crouch > 0.5 ? d.crouchInacc : d.inacc;
@@ -2136,7 +2159,7 @@ class Entity {
     const pat = d.pattern;
     if (pat) {
       const i0 = Math.min(pat.length - 1, Math.floor(this.recoilIdx)), i1 = Math.min(pat.length - 1, i0 + 1), f = this.recoilIdx - Math.floor(this.recoilIdx);
-      const ra = this.isPlayer ? 1 - SPRAY_ASSIST[S.sprayAssist || 0] : 1;
+      const ra = this.isPlayer ? (Cheats.c.norecoil ? 0 : 1 - SPRAY_ASSIST[S.sprayAssist || 0]) : 1;
       const tx = (pat[i0][0] + (pat[i1][0] - pat[i0][0]) * f) * ra, ty = (pat[i0][1] + (pat[i1][1] - pat[i0][1]) * f) * ra;
       const k = Math.min(1, dt * 25);
       this.punch.x += (tx - this.punch.x) * k; this.punch.y += (ty - this.punch.y) * k;
@@ -2189,7 +2212,7 @@ class Entity {
     if (!d.auto && this.trigLatch) return;
     this.trigLatch = true;
     if (w.mag <= 0) { G.sound('click', this, 900); this.nextFire = now + 0.25; this.reload(); return; }
-    w.mag--;
+    if (!(this.isPlayer && Cheats.c.ammo)) w.mag--;
     this.nextFire = now + d.interval;
     const inacc = this.inaccuracy();
     const eye = this.eye();
@@ -2223,6 +2246,7 @@ class Entity {
   takeDamage(dmg, attacker, def, group, dir, now) {
     if (!this.alive) return 0;
     if (this.protectUntil && now < this.protectUntil) return 0;
+    if (this.isPlayer && Cheats.c.god) return 0;
     let d = dmg;
     const armored = this.armor > 0 && group !== 'legs' && (group !== 'head' || this.helmet) && group !== 'fire';
     if (armored && def && def.pen !== undefined) {
@@ -2771,7 +2795,7 @@ G.makeModel = function (e) {
   const gh = e.model.parts.gun;
   const cl = o => { if (o === gh) return; if (o.isMesh && o.material && o.material.emissive) o.material = o.material.clone(); o.children.forEach(cl); };
   cl(e.model.root);
-  e._glow = null;
+  e._glow = null; e._chams = null;
   this.scene.add(e.model.root);
   Models.setCharGun(e.model, e.def);
   e.model.root.visible = !e.isPlayer;
@@ -2884,6 +2908,7 @@ G.update = function (dt) {
     this.updateModel(e, dt);
   }
   this.updatePlayerAssist(dt);
+  Cheats.update(dt);
   this.updateNades(dt);
   this.updateBomb(dt);
   this.updatePickups();
@@ -2945,6 +2970,7 @@ G.updateModel = function (e, dt) {
   p.gun.position.z = -0.38 + kick * 0.4;
   // planting/defusing pozu
   if (e.plantT > 0 || e.defuseT > 0) { p.upper.rotation.x = -0.6; }
+  Cheats.animate(e, p);
 };
 G.animateDeath = function (e, dt) {
   if (!e.model) return;
@@ -3630,12 +3656,15 @@ G.render = function (dt) {
       walk(e.model.root);
     }
   }
-  for (const e of this.entities) if (e.model) e.model.root.visible = !(e === viewE && e.alive) && !(e.isPlayer && e.alive) && (e.alive || e.deathT < 15);
+  Cheats.applyChams();
+  const tp = Cheats.camera(cam, viewE);
+  for (const e of this.entities) if (e.model) e.model.root.visible = (tp && e.isPlayer) || (!(e === viewE && e.alive) && !(e.isPlayer && e.alive) && (e.alive || e.deathT < 15));
   FX.update(dt, eye);
   r.clear();
   r.render(this.scene, cam);
   // viewmodel
-  const showVm = p.alive && !(sc && viewE.def.type === 'sniper');
+  Cheats.drawESP(cam);
+  const showVm = p.alive && !tp && !(sc && viewE.def.type === 'sniper');
   if (showVm && this.vm.gun) {
     this.animateViewmodel(dt);
     r.clearDepth();
@@ -3889,6 +3918,7 @@ const Input = {
       case 'Digit3': p.switchTo('knife'); break;
       case 'Digit4': p.switchTo('grenade'); break;
       case 'Digit5': p.switchTo('bomb'); break;
+      case 'Insert': case 'F2': Cheats.open(); break;
     }
     if (UI.buyOpen && /^Digit|Numpad/.test(k)) {}
   },
@@ -4295,7 +4325,7 @@ const UI = {
     for (const e of G.entities) {
       if (!e.alive) continue;
       const mate = e === view || (!G.ffa && e.team === G.player.team);
-      if (!mate && e.spottedUntil < now) continue;
+      if (!mate && e.spottedUntil < now && !Cheats.c.radar) continue;
       const [x, y] = toR(e.pos);
       c.fillStyle = mate ? (e.team === 'T' ? '#f0b43c' : '#6aa8ff') : '#ff3b30';
       c.beginPath(); c.arc(x, y, e === view ? 5 : 4, 0, 7); c.fill();
@@ -4316,12 +4346,248 @@ const UI = {
 
 </script>
 <script>
+// Hile Simülasyonu (deneysel) — yalnızca bu çevrimdışı oyunda botlara karşı, eğlence/deneme amaçlı
+'use strict';
+const Cheats = {
+  c: {
+    aimbot: false, aimKey: 'fire', aimFov: 15, aimSmooth: 0.4, aimBone: 'head', aimWalls: false,
+    trigger: false, trigDelay: 60,
+    esp: false, espBox: true, espName: true, espHp: true, espDist: true, espWeapon: true, espLines: false, espTeam: false, espBomb: true,
+    chams: false, radar: false,
+    norecoil: false, nospread: false,
+    god: false, ammo: false, speed: false,
+    spin: false, third: false,
+  },
+  trigSince: 0, flip: false, aimTarget: null,
+  load() {
+    try { const r = localStorage.getItem('taktikops_cheats'); if (r) Object.assign(this.c, JSON.parse(r)); } catch (e) {}
+  },
+  save() { try { localStorage.setItem('taktikops_cheats', JSON.stringify(this.c)); } catch (e) {} },
+  any() {
+    const c = this.c;
+    return c.aimbot || c.trigger || c.esp || c.chams || c.radar || c.norecoil || c.nospread || c.god || c.ammo || c.speed || c.spin || c.third;
+  },
+  enemy(e) { const p = G.player; return e !== p && e.alive && !G.ally(e, p); },
+  aimPoint(e) {
+    const h = e.height;
+    if (this.c.aimBone === 'head') return { x: e.pos.x, y: e.pos.y + h - 0.12, z: e.pos.z };
+    return { x: e.pos.x, y: e.pos.y + h * 0.62, z: e.pos.z };
+  },
+  // ---------- her kare (oyun mantığı) ----------
+  update(dt) {
+    const p = G.player, c = this.c;
+    this.aimTarget = null;
+    if (!p || !p.alive || G.round.phase === 'end') { this.trigSince = 0; return; }
+    if (c.ammo) { const w = p.weapon(); if (w && w.def.mag && w.reserve < w.def.reserve) w.reserve = w.def.reserve; }
+    const eye = p.eye();
+    // --- Aimbot ---
+    if (c.aimbot && (c.aimKey === 'always' || p.trig || Input.fireHeld)) {
+      const f = dirFromAngles(p.yaw - p.punch.x * DEG, p.pitch + p.punch.y * DEG);
+      let best = null, bestA = c.aimFov * DEG / 2, bestPt = null;
+      for (const e of G.entities) {
+        if (!this.enemy(e)) continue;
+        const pt = this.aimPoint(e);
+        if (!c.aimWalls && (Phys.blocked(eye, pt) || FX.smokeBlocks(eye, pt))) continue;
+        const dx = pt.x - eye.x, dy = pt.y - eye.y, dz = pt.z - eye.z, d = Math.hypot(dx, dy, dz);
+        const a = Math.acos(Math.max(-1, Math.min(1, (dx * f.x + dy * f.y + dz * f.z) / d)));
+        if (a < bestA) { bestA = a; best = e; bestPt = pt; }
+      }
+      if (best) {
+        this.aimTarget = best;
+        const dx = bestPt.x - eye.x, dy = bestPt.y - eye.y, dz = bestPt.z - eye.z;
+        const wy = Math.atan2(-dx, -dz) + p.punch.x * DEG;
+        const wp = Math.atan2(dy, Math.hypot(dx, dz)) - p.punch.y * DEG;
+        const k = c.aimSmooth <= 0.01 ? 1 : Math.min(1, dt * (1 - c.aimSmooth) * 28);
+        p.yaw += angDiff(p.yaw, wy) * k;
+        p.pitch += (wp - p.pitch) * k;
+      }
+    }
+    // --- Triggerbot ---
+    if (c.trigger) {
+      const d = p.def;
+      const ok = d.mag || d.type === 'knife';
+      let onTarget = false;
+      if (ok) {
+        const dir = dirFromAngles(p.yaw - p.punch.x * DEG, p.pitch + p.punch.y * DEG);
+        const wall = Phys.raycast(eye, dir, 200);
+        const maxT = d.type === 'knife' ? 1.6 : (wall ? wall.t : 200);
+        for (const e of G.entities) {
+          if (!this.enemy(e)) continue;
+          if (G.hitTestEntity(e, eye, dir, maxT)) { onTarget = true; break; }
+        }
+      }
+      if (onTarget) {
+        if (!this.trigSince) this.trigSince = G.now;
+        if ((G.now - this.trigSince) * 1000 >= c.trigDelay) {
+          this.flip = !this.flip;
+          if (d.auto || d.type === 'knife' || this.flip) G.autoFiring = true;
+        }
+      } else this.trigSince = 0;
+    }
+  },
+  // ---------- görsel ----------
+  camera(cam, viewE) {
+    const p = G.player;
+    if (!this.c.third || viewE !== p || !p.alive) return false;
+    const eye = p.eye();
+    const f = dirFromAngles(p.yaw, p.pitch);
+    const back = { x: -f.x, y: -f.y, z: -f.z };
+    const hit = Phys.raycast(eye, back, 3.2);
+    const dist = hit ? Math.max(0.4, hit.t - 0.25) : 3.0;
+    const rx = Math.cos(p.yaw) * 0.45, rz = -Math.sin(p.yaw) * 0.45;
+    cam.position.set(eye.x + back.x * dist + rx, eye.y + back.y * dist + 0.35, eye.z + back.z * dist + rz);
+    return true;
+  },
+  animate(e, parts) {
+    if (!e.isPlayer || !this.c.spin || !e.alive) return;
+    e.model.root.rotation.y = G.now * 22;
+    parts.upper.rotation.x = -0.9 + Math.sin(G.now * 9) * 0.3;
+    parts.head.rotation.x = -0.6;
+    parts.armL.rotation.z = 1.6; parts.armR.rotation.z = -1.6;
+  },
+  applyChams() {
+    const on = this.c.chams;
+    for (const e of G.entities) {
+      if (!e.model) continue;
+      const want = on && e !== G.player && !G.ally(e, G.player);
+      if (e._chams === want) continue;
+      e._chams = want;
+      const gunH = e.model.parts.gun;
+      const walk = o => {
+        if (o === gunH) return;
+        if (o.isMesh && o.material && o.material.emissive) {
+          o.material.depthTest = !want; o.renderOrder = want ? 999 : 0;
+          o.material.emissive.setHex(want ? 0xff2a10 : 0x000000);
+          o.material.needsUpdate = true;
+        }
+        o.children.forEach(walk);
+      };
+      walk(e.model.root);
+      if (!want) e._glow = null; // normal vurguyu geri yükle
+    }
+  },
+  // ---------- ESP katmanı ----------
+  drawESP(cam) {
+    const cv = this.cv || (this.cv = document.getElementById('esp'));
+    const W = window.innerWidth, H = window.innerHeight;
+    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+    const x = this.ctx || (this.ctx = cv.getContext('2d'));
+    x.clearRect(0, 0, W, H);
+    const c = this.c, p = G.player;
+    if (!c.esp || !G.running || !p) return;
+    const v = this.v || (this.v = new THREE.Vector3());
+    const proj = (px, py, pz) => { v.set(px, py, pz).project(cam); if (v.z > 1 || v.z < -1) return null; return [(v.x + 1) / 2 * W, (1 - v.y) / 2 * H]; };
+    const eye = cam.position;
+    x.font = 'bold 11px Arial'; x.textAlign = 'center'; x.lineWidth = 1.5;
+    for (const e of G.entities) {
+      if (!e.alive || e === p) continue;
+      const ally = G.ally(e, p);
+      if (ally && !c.espTeam) continue;
+      const top = proj(e.pos.x, e.pos.y + e.height + 0.1, e.pos.z), bot = proj(e.pos.x, e.pos.y, e.pos.z);
+      if (!top || !bot) continue;
+      const h = bot[1] - top[1]; if (h < 4) continue;
+      const w = h * 0.45, cx = (top[0] + bot[0]) / 2;
+      const head = { x: e.pos.x, y: e.pos.y + e.height - 0.12, z: e.pos.z };
+      const vis = !Phys.blocked({ x: eye.x, y: eye.y, z: eye.z }, head);
+      const col = ally ? '#4aa8ff' : (vis ? '#ff3b30' : '#ffd23a');
+      if (c.espLines) { x.strokeStyle = col; x.globalAlpha = 0.6; x.beginPath(); x.moveTo(W / 2, H); x.lineTo(cx, bot[1]); x.stroke(); x.globalAlpha = 1; }
+      if (c.espBox) {
+        x.strokeStyle = '#000'; x.lineWidth = 3; x.strokeRect(cx - w / 2, top[1], w, h);
+        x.strokeStyle = col; x.lineWidth = 1.5; x.strokeRect(cx - w / 2, top[1], w, h);
+        if (this.aimTarget === e) { x.fillStyle = 'rgba(255,60,40,.18)'; x.fillRect(cx - w / 2, top[1], w, h); }
+      }
+      if (c.espHp) {
+        const f = Math.max(0, e.hp) / 100;
+        x.fillStyle = '#000'; x.fillRect(cx - w / 2 - 6, top[1] - 1, 4, h + 2);
+        x.fillStyle = f > 0.6 ? '#3ce06a' : f > 0.3 ? '#f0c040' : '#ff4030';
+        x.fillRect(cx - w / 2 - 5, top[1] + h * (1 - f), 2, h * f);
+        if (e.armor > 0) { x.fillStyle = '#5aa0ff'; x.fillRect(cx - w / 2 - 9, top[1] + h * (1 - e.armor / 100), 2, h * e.armor / 100); }
+      }
+      x.fillStyle = '#fff'; x.strokeStyle = '#000'; x.lineWidth = 3;
+      if (c.espName) { const t = e.name + (e.inv.bomb ? ' 💣' : ''); x.strokeText(t, cx, top[1] - 4); x.fillText(t, cx, top[1] - 4); }
+      let line = [];
+      if (c.espWeapon) line.push(e.def.name);
+      if (c.espDist) line.push(Math.round(Math.hypot(e.pos.x - eye.x, e.pos.z - eye.z)) + 'm');
+      if (line.length) { const t = line.join(' • '); x.strokeText(t, cx, bot[1] + 12); x.fillText(t, cx, bot[1] + 12); }
+    }
+    // bomba
+    const B = G.bomb;
+    if (c.espBomb && (B.state === 'planted' || B.state === 'dropped')) {
+      const s = proj(B.pos.x, B.pos.y + 0.2, B.pos.z);
+      if (s) {
+        const t = B.state === 'planted' ? `C4 ${B.timer.toFixed(1)}s` : 'C4 (yerde)';
+        x.fillStyle = '#ff9a1a'; x.strokeStyle = '#000'; x.lineWidth = 3; x.font = 'bold 13px Arial';
+        x.strokeText(t, s[0], s[1]); x.fillText(t, s[0], s[1]);
+      }
+    }
+  },
+  // ---------- menü ----------
+  buildMenu() {
+    const box = document.getElementById('cheatBody');
+    const c = this.c;
+    const chk = (k, label, hint) => `<label class="check"><input type="checkbox" data-ck="${k}" ${c[k] ? 'checked' : ''}> ${label}</label>${hint ? `<div class="hint">${hint}</div>` : ''}`;
+    const rng = (k, label, min, max, step, unit) => `<div class="rg"><span>${label} <b data-cv="${k}">${c[k]}${unit || ''}</b></span><input type="range" min="${min}" max="${max}" step="${step}" value="${c[k]}" data-cr="${k}" data-unit="${unit || ''}"></div>`;
+    const seg = (k, opts) => `<div class="seg">${opts.map(([v, l]) => `<button data-cs="${k}" data-v="${v}" class="${c[k] === v ? 'sel' : ''}">${l}</button>`).join('')}</div>`;
+    box.innerHTML = `
+      <div class="field"><label>🎯 Aimbot</label>${chk('aimbot', 'Aimbot açık', 'Görüş alanındaki en yakın düşmana nişanı kilitler (geri tepmeyi de telafi eder).')}
+        ${seg('aimKey', [['fire', 'Ateş ederken'], ['always', 'Her zaman']])}
+        ${seg('aimBone', [['head', 'Kafa'], ['chest', 'Gövde']])}
+        ${rng('aimFov', 'Alan (FOV)', 2, 180, 1, '°')}
+        ${rng('aimSmooth', 'Yumuşaklık', 0, 0.95, 0.05, '')}
+        ${chk('aimWalls', 'Duvar arkasındakine de kilitlen')}</div>
+      <div class="field"><label>🔫 Triggerbot</label>${chk('trigger', 'Triggerbot açık', 'Nişangah düşmanın üstüne gelince kendiliğinden ateş eder.')}
+        ${rng('trigDelay', 'Gecikme', 0, 400, 10, 'ms')}</div>
+      <div class="field"><label>👁 ESP (duvar arkası bilgi)</label>${chk('esp', 'ESP açık')}
+        ${chk('espBox', 'Kutu')}${chk('espName', 'İsim')}${chk('espHp', 'Can / zırh çubuğu')}${chk('espWeapon', 'Silah')}${chk('espDist', 'Mesafe')}${chk('espLines', 'Çizgiler (snapline)')}${chk('espBomb', 'Bomba')}${chk('espTeam', 'Takım arkadaşlarını da göster')}
+        <div class="hint">Kırmızı = görünür, sarı = duvar arkasında.</div></div>
+      <div class="field"><label>🧱 Görsel</label>${chk('chams', 'Wallhack (chams) — düşmanlar duvarların içinden parlak görünür')}${chk('radar', 'Radar hilesi — tüm düşmanlar radarda')}${chk('third', 'Üçüncü şahıs kamera')}${chk('spin', 'Mevlana (spinbot) — karakterin döner durur 🌀', 'Görmek için üçüncü şahıs kamerayı aç.')}</div>
+      <div class="field"><label>⚙ Silah</label>${chk('norecoil', 'Geri tepme yok (no recoil)')}${chk('nospread', 'Dağılma yok (no spread)')}${chk('ammo', 'Sonsuz mermi')}</div>
+      <div class="field"><label>🛡 Oyuncu</label>${chk('god', 'Ölümsüzlük (god mode)')}${chk('speed', 'Hız hilesi (x1.6)')}
+        <button class="btn sm" id="chMoney" style="margin-top:6px">💰 +$16000</button></div>`;
+    box.querySelectorAll('[data-ck]').forEach(el => el.onchange = () => { c[el.dataset.ck] = el.checked; this.save(); this.refreshTag(); });
+    box.querySelectorAll('[data-cr]').forEach(el => el.oninput = () => {
+      c[el.dataset.cr] = parseFloat(el.value); this.save();
+      box.querySelector(`[data-cv="${el.dataset.cr}"]`).textContent = el.value + el.dataset.unit;
+    });
+    box.querySelectorAll('[data-cs]').forEach(el => el.onclick = () => {
+      c[el.dataset.cs] = el.dataset.v; this.save();
+      box.querySelectorAll(`[data-cs="${el.dataset.cs}"]`).forEach(b => b.classList.toggle('sel', b === el));
+    });
+    document.getElementById('chMoney').onclick = () => { if (G.player) { G.player.money = ECON.max; Audio3.ui(1200); } };
+  },
+  open() {
+    this.buildMenu();
+    this.wasRunning = G.running && !G.paused;
+    if (G.running) { G.paused = true; Input.fireHeld = false; if (document.exitPointerLock) document.exitPointerLock(); }
+    document.getElementById('pause').classList.add('hidden');
+    document.getElementById('cheatMenu').classList.remove('hidden');
+  },
+  close() {
+    document.getElementById('cheatMenu').classList.add('hidden');
+    this.refreshTag();
+    if (G.running) UI.pause(false);
+  },
+  refreshTag() { const t = document.getElementById('cheatTag'); if (t) t.classList.toggle('hidden', !this.any()); },
+  init() {
+    this.load();
+    document.getElementById('chClose').onclick = () => this.close();
+    document.getElementById('chOff').onclick = () => { for (const k in this.c) if (typeof this.c[k] === 'boolean' && !k.startsWith('esp')) this.c[k] = false; this.c.esp = false; this.save(); this.buildMenu(); this.refreshTag(); };
+    document.getElementById('btnCheats').onclick = () => this.open();
+    document.getElementById('pCheats').onclick = () => this.open();
+    document.getElementById('cheatMenu').addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
+    this.refreshTag();
+  }
+};
+
+</script>
+<script>
 // Başlatıcı & ana döngü
 'use strict';
 (function () {
   G.init();
   Input.init();
   UI.init();
+  Cheats.init();
   UI.applySettings();
   let last = performance.now(), fpsAcc = 0, fpsN = 0;
   function frame(t) {
