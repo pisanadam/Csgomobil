@@ -538,6 +538,23 @@ const MAP = (function () {
     M.GRID = GRID; M.W = W; M.H = H; M.OX = OX; M.OZ = OZ; M.current = info.id; M.info = info;
     buildBoxes();
     M.POS = info.id === 'dust' ? dustPOS() : autoPOS();
+    M.danger = computeDanger();
+  }
+  // Köşe ve girişler: düşmanın çıkabileceği yerler (botların önceden nişan aldığı noktalar)
+  function computeDanger() {
+    const out = [], seen = new Set();
+    const add = (x, z) => { const k = Math.round(x / 1.5) + ',' + Math.round(z / 1.5); if (seen.has(k)) return; seen.add(k); out.push({ x, z, key: k }); };
+    for (let r = 1; r < H - 1; r++) for (let c = 1; c < W - 1; c++) {
+      if (!isWalk(c, r)) continue;
+      for (const [dx, dy] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+        if (cell(c + dx, r + dy) === '#' && isWalk(c + dx, r) && isWalk(c, r + dy)) {
+          const p = c2w(c, r);
+          add(p.x + dx * 1.5 - dx * 0.6, p.z + dy * 1.5 - dy * 0.6);
+        }
+      }
+    }
+    for (const s of ['A', 'B']) for (const e of M.POS.entries[s]) add(e.x, e.z);
+    return out;
   }
   function radarImage(px) {
     const cv = document.createElement('canvas'); cv.width = W * px; cv.height = H * px;

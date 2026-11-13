@@ -23,6 +23,11 @@ class Bot {
     this.look = null; this.role = null;
     this.stuckT = 0; this.lastPos = { x: 0, z: 0 };
     this.pendingNade = null; this.semiToggle = false;
+    // insan benzeri kişilik
+    this.pers = { aggr: Math.random(), chatty: 0.35 + Math.random() * 0.65, knifeRun: Math.random() < 0.75, patience: Math.random() };
+    this.checked = new Map(); this.lookPt = null; this.lookUntil = 0; this.dangerAt = 0;
+    this.swayPh = Math.random() * 10; this.retreatUntil = 0; this.dodge = null; this.trade = null; this.tradeUntil = 0;
+    this.knifeRunning = false; this.rotSince = 0; this.rotSiteSeen = null; this.lastChat = -10; this.hpCalled = false;
   }
   get D() { return BOT_DIFF[S.botDifficulty] || BOT_DIFF[1]; }
   // ----- Tur başı -----
@@ -31,6 +36,58 @@ class Bot {
     this.target = null; this.lastSeen = null; this.noise = null; this.pendingNade = null;
     this.guardSpot = null; this.executed = false; this.siteSpot = null; this.saving = false;
     this.holdUntil = 0; this.roam = null;
+    this.checked.clear(); this.lookPt = null; this.retreatUntil = 0; this.dodge = null; this.trade = null;
+    this.knifeRunning = false; this.rotSince = 0; this.rotSiteSeen = null; this.hpCalled = false;
+  }
+  // ----- İnsan benzeri yardımcılar -----
+  pathRemaining() {
+    const e = this.e; if (!this.path || this.pi >= this.path.length) return 0;
+    let L = dist2(e.pos, this.path[this.pi]);
+    for (let i = this.pi + 1; i < this.path.length; i++) L += dist2(this.path[i - 1], this.path[i]);
+    return L;
+  }
+  threatNear(now, r) {
+    const e = this.e;
+    if (this.noise && now - this.noiseT < 5 && dist2(e.pos, this.noise) < r) return true;
+    if (this.lastSeen && now - this.lastSeenT < 8 && dist2(e.pos, this.lastSeen) < r) return true;
+    const kn = G.know[e.team];
+    if (kn && !G.ffa) for (const [t, k] of kn) if (t.alive && now - k.time < 6 && dist2(e.pos, k.pos) < r) return true;
+    return false;
+  }
+  knownEnemyPoint(now) {
+    const e = this.e; const kn = G.know[e.team]; if (!kn || G.ffa) return null;
+    let best = null, bd = 30;
+    for (const [t, k] of kn) if (t.alive && now - k.time < 4) { const d = dist2(e.pos, k.pos); if (d < bd) { bd = d; best = k.pos; } }
+    return best;
+  }
+  // Köşe/giriş kontrolü: hareket yönünde, görünen, yakın zamanda bakılmamış tehlike noktası
+  pickDanger(now) {
+    const e = this.e, eye = e.eye(); const pts = MAP.danger || [];
+    let mx = 0, mz = 0;
+    if (this.path && this.pi < this.path.length) { const p = this.path[this.pi]; mx = p.x - e.pos.x; mz = p.z - e.pos.z; }
+    const ml = Math.hypot(mx, mz);
+    const cands = [];
+    for (const p of pts) {
+      const d = dist2(eye, p); if (d < 3 || d > 32) continue;
+      const ck = this.checked.get(p.key); if (ck && now - ck < 6) continue;
+      if (ml > 0.5) { const dot = ((p.x - e.pos.x) * mx + (p.z - e.pos.z) * mz) / (d * ml); if (dot < 0.25) continue; }
+      cands.push({ p, s: d * (0.7 + Math.random() * 0.6) });
+    }
+    cands.sort((a, b) => a.s - b.s);
+    for (let i = 0; i < Math.min(4, cands.length); i++) {
+      const p = cands[i].p; const tp = { x: p.x, y: 1.55, z: p.z };
+      if (!Phys.blocked(eye, tp)) { this.lookPt = p; this.lookUntil = now + rnd(0.45, 1.1) * (1.3 - S.botDifficulty * 0.12); return; }
+      this.checked.set(p.key, now - 3); // görünmüyor: kısa süre atla
+    }
+    this.lookPt = null;
+  }
+  isLastAlive() { const e = this.e; return !G.ffa && !G.entities.some(o => o !== e && o.alive && o.team === e.team); }
+  onTeammateDeath(v, k, now) {
+    const e = this.e; if (!e.alive || this.target || v === e) return;
+    if (dist2(e.pos, v.pos) < 22 && Math.random() < 0.55 + this.pers.aggr * 0.4) {
+      this.trade = { x: v.pos.x, z: v.pos.z }; this.tradeUntil = now + rnd(3, 6);
+      if (k && k.alive) { this.noise = { x: k.pos.x, y: k.pos.y, z: k.pos.z }; this.noiseT = now; }
+    }
   }
   // ----- Algı -----
   canSee(t, now) {
@@ -76,13 +133,31 @@ class Bot {
         const dd = dist2(e.pos, best.pos);
         const err = D.err * (1 + Math.min(1.5, ang / (60 * DEG)));
         const a = Math.random() * Math.PI * 2;
-        this.errX = Math.cos(a) * err; this.errY = Math.sin(a) * err * 0.6;
+        // insan "flick": hedefin biraz ötesine savrulup geri düzeltme
+        const eye0 = e.eye(), hx = best.pos.x - eye0.x, hz = best.pos.z - eye0.z;
+        const dyawDeg = angDiff(e.yaw, Math.atan2(-hx, -hz)) / DEG;
+        const dpDeg = (Math.atan2(best.pos.y + 1.5 - eye0.y, Math.hypot(hx, hz)) - e.pitch) / DEG;
+        const over = rnd(0.06, 0.2) * (1.25 - S.botDifficulty * 0.2);
+        const cap = v => Math.max(-9, Math.min(9, v));
+        this.errX = cap(-dyawDeg * over) + Math.cos(a) * err * 0.6; this.errY = cap(dpDeg * over * 0.6) + Math.sin(a) * err * 0.4;
+        if (!this.target && Math.random() < this.pers.chatty * 0.5) BotChat.spotted(e, best, now);
         this.aimHead = Math.random() < D.hs;
         this.burst = 0; this.crouchSpray = Math.random() < 0.35 && dd > 12;
       }
       this.target = best; this.tVis = bestVis; this.lastSeen = { x: best.pos.x, y: best.pos.y, z: best.pos.z }; this.lastSeenT = now;
     } else if (this.target) {
-      if (!this.target.alive || now - this.lastSeenT > 0.35) this.target = null;
+      const killed = !this.target.alive;
+      if (killed || now - this.lastSeenT > 0.35) {
+        if (killed) {
+          if (Math.random() < this.pers.chatty * 0.3) BotChat.say(e, pick(['bir gitti!', 'tamamdır', `biri düştü, ${G.entities.filter(o => o.alive && !G.ally(o, e) && o !== e).length} kaldı`, 'aldım onu']), now);
+          // başka tehdit varsa yer değiştir
+          if (this.threatNear(now, 25) && Math.random() < 0.4 + S.botDifficulty * 0.15) {
+            const back = this.lastSeen || e.pos;
+            this.dodge = { fwd: rnd(-1, -0.3), side: Math.random() < 0.5 ? -1 : 1, until: now + rnd(0.5, 1.0), look: { x: back.x, z: back.z } };
+          }
+        }
+        this.target = null;
+      }
     }
   }
   hear(pos, now, kind) {
@@ -91,6 +166,7 @@ class Bot {
   }
   onDamaged(att, now) {
     if (!att || att === this.e || G.ally(att, this.e)) return;
+    if (this.e.alive && this.e.hp < 35 && !this.hpCalled && Math.random() < this.pers.chatty) { this.hpCalled = true; BotChat.say(this.e, pick([`canım ${Math.ceil(this.e.hp)}, destek!`, `vuruldum, ${Math.ceil(this.e.hp)} kaldı`, 'az canım var, geri çekiliyorum']), now); }
     if (!this.target) { this.noise = { x: att.pos.x, y: att.pos.y, z: att.pos.z }; this.noiseT = now + 0.5; }
   }
   // ----- Hedef seçimi (strateji) -----
@@ -107,6 +183,7 @@ class Bot {
       }
       return { key: 'roam', p: this.roam };
     }
+    if (this.trade && now < this.tradeUntil && B.state !== 'planted') return { key: 'trade', p: this.trade };
     if (e.team === 'T') {
       if (B.state === 'dropped') {
         let closest = null, cd = 1e9;
@@ -139,7 +216,9 @@ class Bot {
       }
       // takım bilgisine göre rotasyon
       const k = G.knownSiteThreat('CT', now);
-      if (k && k.site !== this.role.site && (this.role.rotate || k.count >= 2)) {
+      // bilgiye tepki gecikmeli (insan gibi): önce duyar, 1-3 sn sonra döner
+      if (k && k.site !== this.rotSiteSeen) { this.rotSiteSeen = k.site; this.rotSince = now + rnd(1, 3); }
+      if (k && k.site !== this.role.site && now > this.rotSince && (this.role.rotate || k.count >= 2)) {
         if (!this.rotSpot || this.rotSite !== k.site) { this.rotSite = k.site; this.rotSpot = pick(MAP.POS.ctHold[k.site]); }
         return { key: 'rot' + k.site, p: this.rotSpot.p, look: this.rotSpot.look, hold: true };
       }
@@ -163,7 +242,7 @@ class Bot {
     const inp = e.input;
     inp.fwd = 0; inp.side = 0; inp.walk = false; inp.crouch = false; inp.use = false;
     e.trig = false;
-    if (G.round.phase === 'freeze') { this.idleLook(dt, now); return; }
+    if (G.round.phase === 'freeze') { this.freezeFidget(dt, now); return; }
     this.nextThink -= dt;
     if (this.nextThink <= 0) {
       this.nextThink = 0.1 + Math.random() * 0.05;
@@ -177,6 +256,16 @@ class Bot {
       // silah durumu
       this.manageWeapon(now);
       this.tryNade(now);
+      if (!this.target && (now > this.lookUntil || !this.lookPt)) {
+        if (this.lookPt) this.checked.set(this.lookPt.key, now);
+        this.pickDanger(now);
+      }
+    }
+    // çatışma sonrası kaçış/yer değiştirme
+    if (this.dodge && now < this.dodge.until && !this.target) {
+      inp.fwd = this.dodge.fwd; inp.side = this.dodge.side; inp.walk = false;
+      this.lookAt(this.dodge.look.x, 1.5, this.dodge.look.z, dt, 1);
+      return;
     }
     if (this.target) { this.engage(dt, now); return; }
     // hedef yoksa: görev
@@ -196,10 +285,20 @@ class Bot {
       return;
     }
     if (!atGoal) this.followPath(dt, now);
-    // bakış
-    if (this.noise && now - this.noiseT < 3) this.lookAt(this.noise.x, this.noise.y + 1.4, this.noise.z, dt, 1);
+    // sessiz yürüme: tehlike yakınsa ya da son kalan oyuncuysa
+    if (!atGoal && !this.knifeRunning && S.botDifficulty >= 1 && (this.threatNear(now, 16) || (this.isLastAlive() && this.pers.patience > 0.3)) && !(g.defuse && G.bomb.timer < 15)) inp.walk = true;
+    // bakış (nişangah yerleşimi: kafa hizası)
+    const kp = this.knownEnemyPoint(now);
+    if (this.noise && now - this.noiseT < 3) this.lookAt(this.noise.x, this.noise.y + 1.5, this.noise.z, dt, 1);
     else if (this.lastSeen && now - this.lastSeenT < 3) this.lookAt(this.lastSeen.x, this.lastSeen.y + 1.5, this.lastSeen.z, dt, 1);
-    else if (atGoal && g.look) this.lookAt(g.look.x, 1.5, g.look.z, dt, 0.6);
+    else if (kp) this.lookAt(kp.x, 1.55, kp.z, dt, 0.8);
+    else if (atGoal && g.look) {
+      // tutuşta: ana açı ağırlıklı, ara sıra diğer köşelere göz at
+      if (this.lookPt && now < this.lookUntil && Math.random() < 0.985 && this.scanMode) this.lookAt(this.lookPt.x, 1.55, this.lookPt.z, dt, 0.5);
+      else { this.scanMode = Math.random() < 0.012; this.lookAt(g.look.x, 1.55, g.look.z, dt, 0.6); }
+      this.sway(dt, now);
+    }
+    else if (!atGoal && this.lookPt && now < this.lookUntil && !this.knifeRunning) this.lookAt(this.lookPt.x, 1.55, this.lookPt.z, dt, 0.75);
     else if (!atGoal) this.lookAlongPath(dt);
     else this.idleLook(dt, now);
     // ateş edilmiyorsa ve şarjör azsa doldur
@@ -208,7 +307,13 @@ class Bot {
     const e = this.e;
     if (e.slot === 'bomb' && !(this.goal && this.goal.plant)) e.switchTo(e.bestSlot());
     if (e.slot === 'grenade' && !this.pendingNade) e.switchTo(e.bestSlot());
-    if (e.slot === 'knife' && e.bestSlot() !== 'knife') e.switchTo(e.bestSlot());
+    // bıçakla koşma (daha hızlı): uzun, güvenli yolda
+    const longRun = this.pathRemaining() > 22 && !(this.goal && (this.goal.plant || this.goal.hold && dist2(e.pos, this.goal.p) < 18));
+    const safe = !this.target && !this.threatNear(now, 32) && now - this.lastSeenT > 6 && G.round.phase === 'live';
+    if (this.pers.knifeRun && S.botDifficulty >= 1 && safe && longRun && !this.pendingNade && e.reloadT <= 0 && !G.dm) {
+      if (e.slot !== 'knife') { e.switchTo('knife'); this.knifeRunning = true; }
+    } else if (this.knifeRunning) { this.knifeRunning = false; e.switchTo(e.bestSlot()); }
+    if (e.slot === 'knife' && e.bestSlot() !== 'knife' && !this.knifeRunning) e.switchTo(e.bestSlot());
     const w = e.weapon();
     if (w && w.def.mag) {
       if (!this.target && w.mag < w.def.mag * 0.5 && w.reserve > 0 && now - this.lastSeenT > 1.5) e.reload();
@@ -255,6 +360,7 @@ class Bot {
   engage(dt, now) {
     const e = this.e, t = this.target, D = this.D, inp = e.input;
     const eye = e.eye();
+    if (this.knifeRunning) { this.knifeRunning = false; e.switchTo(e.bestSlot()); }
     const dist = Math.hypot(t.pos.x - eye.x, t.pos.z - eye.z);
     const headVis = this.tVis === 'head';
     const ay = (this.aimHead && headVis) ? t.pos.y + t.height - 0.12 : (this.tVis === 'chest' ? t.pos.y + t.height * 0.55 : t.pos.y + t.height * 0.62);
@@ -283,12 +389,29 @@ class Bot {
       this.followPath(dt, now);
       return;
     }
+    // geri çekilme: canı az ya da şarjör boşken kapağa çekil (ateş etmeye devam ederek)
+    const w0 = e.weapon();
+    const emptyMag = w0 && w0.def.mag && w0.mag === 0 && w0.reserve > 0;
+    if (!this.retreatUntil || now > this.retreatUntil + 2) {
+      const lowHp = e.hp < 35 && dist > 8 && !this.isLastAlive() && Math.random() < 0.02 * (0.5 + S.botDifficulty * 0.5) * (1.2 - this.pers.aggr);
+      if (lowHp || (emptyMag && dist > 6)) {
+        this.retreatUntil = now + rnd(0.9, 1.6);
+        if (emptyMag) { e.reload(); if (Math.random() < this.pers.chatty * 0.4) BotChat.say(e, pick(['dolduruyorum!', 'şarjör boş, kapat beni', 'reload!']), now); }
+      }
+    }
+    if (now < this.retreatUntil) {
+      const fx = -Math.sin(e.yaw), fz = -Math.cos(e.yaw);
+      inp.fwd = -1; inp.side = this.strafeDir * 0.5;
+      // geri çekilirken arkada duvar varsa yana kay
+      if (Phys.blocked(eye, { x: eye.x - fx * 1.2, y: eye.y, z: eye.z - fz * 1.2 })) { inp.fwd = 0; inp.side = this.strafeDir; }
+    }
     // hareket: counter-strafe & ADAD
     const wantShoot = now >= this.reactAt && now >= this.pauseUntil && e.flashT < 0.6;
     const stopForShot = Math.random() < D.counter || def.type === 'sniper';
     this.strafeT -= dt;
     if (this.strafeT <= 0) { this.strafeDir = -this.strafeDir; this.strafeT = rnd(0.35, 0.8); }
-    if (wantShoot && stopForShot && def.type !== 'smg' && def.type !== 'shotgun') {
+    if (now < this.retreatUntil) { /* geri çekilme hareketi yukarıda */ }
+    else if (wantShoot && stopForShot && def.type !== 'smg' && def.type !== 'shotgun') {
       // karşı yöne basarak dur
       const fx = -Math.sin(e.yaw), fz = -Math.cos(e.yaw), rx = Math.cos(e.yaw), rz = -Math.sin(e.yaw);
       const vf = e.vel.x * fx + e.vel.z * fz, vr = e.vel.x * rx + e.vel.z * rz;
@@ -351,7 +474,25 @@ class Bot {
   }
   idleLook(dt, now) {
     const e = this.e;
-    e.pitch *= 0.95;
+    e.pitch += (0 - e.pitch) * Math.min(1, dt * 2);
+    this.sway(dt, now);
+  }
+  sway(dt, now) {
+    const e = this.e;
+    this.swayPh += dt;
+    e.yaw += Math.sin(this.swayPh * 0.9) * 0.12 * dt + Math.sin(this.swayPh * 2.3) * 0.05 * dt;
+    e.pitch += Math.sin(this.swayPh * 1.3) * 0.03 * dt;
+  }
+  freezeFidget(dt, now) {
+    // raunt başında: etrafa bakınma, takım arkadaşına dönme
+    const e = this.e;
+    if (!this.fidgetT || now > this.fidgetT) {
+      this.fidgetT = now + rnd(0.6, 2.2);
+      const mates = G.entities.filter(o => o !== e && o.alive && G.ally(o, e));
+      if (mates.length && Math.random() < 0.4) { const m = pick(mates); this.fidgetLook = { x: m.pos.x, y: 1.5, z: m.pos.z }; }
+      else { const a = e.yaw + rnd(-1.2, 1.2); this.fidgetLook = { x: e.pos.x - Math.sin(a) * 10, y: rnd(0.5, 2.5), z: e.pos.z - Math.cos(a) * 10 }; }
+    }
+    if (this.fidgetLook) this.lookAt(this.fidgetLook.x, this.fidgetLook.y, this.fidgetLook.z, dt, 0.4);
   }
   followPath(dt, now) {
     const e = this.e, inp = e.input;
@@ -361,6 +502,10 @@ class Bot {
     if (dist2(e.pos, wp) < (last ? 0.6 : 1.1)) { this.pi++; if (this.pi >= this.path.length) return; wp = this.path[this.pi]; }
     let dx = wp.x - e.pos.x, dz = wp.z - e.pos.z;
     const L = Math.hypot(dx, dz) || 1; dx /= L; dz /= L;
+    // hafif kıvrımlı hareket
+    this.swayPh += dt;
+    const wob = Math.sin(this.swayPh * 1.7 + this.e.id) * 0.18 * (L > 3 ? 1 : 0);
+    const ndx = dx - dz * wob, ndz = dz + dx * wob; dx = ndx; dz = ndz;
     // takım arkadaşlarından ayrışma
     for (const o of G.entities) {
       if (o === e || !o.alive) continue;
@@ -384,7 +529,7 @@ class Bot {
 
 // ----- Bot satın alma -----
 function botBuy(e, pistolRound, teamAvg) {
-  const T = e.team === 'T';
+  const T = e.team === 'T'; e._eco = false;
   const buy = id => G.buy(e, id, true);
   if (pistolRound) {
     const r = Math.random();
@@ -410,6 +555,7 @@ function botBuy(e, pistolRound, teamAvg) {
     buy(pick(T ? ['galil', 'mac10', 'ump45', 'mp7', 'ssg08'] : ['famas', 'mp9', 'ump45', 'mp7', 'ssg08']));
     buy('kevlar');
   } else {
+    e._eco = true;
     // eco: bazen tabanca
     if (e.money >= 1200 && Math.random() < 0.5) buy(pick(['p250', 'deagle', T ? 'tec9' : 'fiveseven']));
   }
@@ -419,3 +565,61 @@ function botBuy(e, pistolRound, teamAvg) {
   if (!T && !e.kit && e.money >= 400 && Math.random() < 0.6) buy('kit');
   if (!e.inv.secondary) e.giveWeapon(T ? 'glock' : 'usp');
 }
+
+// ----- Takım telsizi / sohbet (insan benzeri konuşmalar) -----
+const BotChat = {
+  lastGlobal: -10, lastSpot: { T: -10, CT: -10 },
+  zoneName(p) {
+    const z = MAP.zoneAt(p.x, p.z);
+    if (z === 'A') return "A'da"; if (z === 'B') return "B'de";
+    if (z === 'T') return 'T doğmada';
+    if (z === 'C') return 'CT doğmada';
+    const P = MAP.POS;
+    const dA = dist2(p, P.site.A), dB = dist2(p, P.site.B);
+    if (Math.min(dA, dB) < 20) return (dA < dB ? 'A' : 'B') + ' girişinde';
+    if (z === 'u') return { desert: 'tünelde', harbor: 'geçitte', snow: 'binanın içinde', town: 'kemer altında' }[MAP.info.theme] || 'içeride';
+    return 'ortada';
+  },
+  say(e, text, now, all) {
+    now = now === undefined ? G.now : now;
+    const b = e.bot;
+    if (b && now - b.lastChat < 3.5) return;
+    if (now - this.lastGlobal < 0.9) return;
+    if (b) b.lastChat = now; this.lastGlobal = now;
+    if (typeof UI !== 'undefined' && UI.chat) UI.chat(e, text, all || G.ffa);
+  },
+  spotted(e, t, now) {
+    if (G.ffa || now - this.lastSpot[e.team] < 6) return;
+    this.lastSpot[e.team] = now;
+    const n = G.entities.filter(o => o.alive && !G.ally(o, e) && o !== e && dist2(o.pos, t.pos) < 8).length;
+    const where = this.zoneName(t.pos);
+    this.say(e, n > 1 ? `${n} kişi ${where}!` : pick([`biri ${where}!`, `düşman ${where}`, `${where} birini gördüm`]), now);
+  },
+  roundStart(plan, ecoTeams) {
+    if (G.dm) return;
+    const Tb = G.bots.filter(b => b.e.team === 'T'), Cb = G.bots.filter(b => b.e.team === 'CT');
+    const later = (fn, d) => setTimeout(() => { if (G.running && !G.paused) fn(); }, d);
+    const to = plan === 'A' ? "A'ya" : "B'ye";
+    if (Tb.length) later(() => this.say(pick(Tb).e, pick([`${to} gidiyoruz, beraber girelim`, `${plan} oynayalım`, `hadi ${to}, hızlı girelim`])), 1500);
+    if (Cb.length) later(() => this.say(pick(Cb).e, pick(['ben bakıyorum burayı', 'pozisyon alın', 'sessiz tutalım'])), 2600);
+    for (const t of ['T', 'CT']) if (ecoTeams[t]) { const bs = t === 'T' ? Tb : Cb; if (bs.length) later(() => this.say(pick(bs).e, pick(['bu raunt eko, para biriktirin', 'eko yapıyoruz', 'alım yok bu el'])), 3600); }
+  },
+  planted(site) {
+    const Cb = G.bots.filter(b => b.e.alive && b.e.team === 'CT'), Tb = G.bots.filter(b => b.e.alive && b.e.team === 'T');
+    const at = site === 'A' ? "A'da" : "B'de", to = site === 'A' ? "A'ya" : "B'ye";
+    if (Cb.length) this.say(pick(Cb).e, pick([`bomba ${at}, dönün!`, `${site} kuruldu, geri alalım!`, `hepimiz ${to}!`]));
+    else if (Tb.length) this.say(pick(Tb).e, pick(['kuruldu, pozisyon alın', 'bomba aktif, saklanın', 'iyi, şimdi bekleyelim']));
+  },
+  death(v, k) {
+    if (!v.bot || Math.random() > v.bot.pers.chatty * 0.6) return;
+    const t = k && k !== v && k.alive ? `${k.name} ${this.zoneName(k.pos)}, canı ${Math.ceil(k.hp)}` : null;
+    this.say(v, (t && Math.random() < 0.6) ? t : pick(['ah be...', 'nereden çıktı o?', 'çok şanslıydı', 'kafadan aldı', 'üzgünüm çocuklar']));
+  },
+  roundEnd(win) {
+    if (G.dm) return;
+    const winners = G.bots.filter(b => b.e.team === win), losers = G.bots.filter(b => b.e.team !== win);
+    if (winners.length && Math.random() < 0.8) setTimeout(() => this.say(pick(winners).e, pick(['güzel raunt!', 'nasıl ama', 'iyi oynadık', 'devam böyle']), undefined), 700);
+    if (losers.length && Math.random() < 0.7) setTimeout(() => this.say(pick(losers).e, pick(['toparlanalım', 'sonraki bizim', 'yaa az kaldı', 'olur böyle']), undefined), 1700);
+  },
+  clutch(e) { this.say(e, pick([`1v${G.entities.filter(o => o.alive && !G.ally(o, e) && o !== e).length}, sessiz olun`, 'son kaldım, deniyorum', 'yalnızım, bakalım'])); },
+};

@@ -151,6 +151,18 @@ const UI = {
     while (kf.children.length > 6) kf.removeChild(kf.lastChild);
     setTimeout(() => el.remove(), 7000);
   },
+  chat(e, text, all) {
+    const p = G.player; if (!p) return;
+    const mate = !G.ffa && e.team === p.team;
+    if (!mate && !all) return; // rakip takımın telsizini duyamazsın
+    const box = $('chat'); if (!box) return;
+    const el = document.createElement('div'); el.className = 'cm';
+    const tag = all && !mate ? '[TÜMÜ] ' : (e.alive ? '' : '[ÖLÜ] ');
+    el.innerHTML = `<span class="${e.team}">${tag}${e.name}:</span> ${text.replace(/</g, '&lt;')}`;
+    box.appendChild(el);
+    while (box.children.length > 5) box.removeChild(box.firstChild);
+    setTimeout(() => { el.style.opacity = 0; }, 6500); setTimeout(() => el.remove(), 7500);
+  },
   hitmarker(hs, kill) {
     const h = $('hitmarker'); h.className = hs || kill ? 'hs' : ''; h.style.transition = 'none'; h.style.opacity = 1;
     requestAnimationFrame(() => { h.style.transition = 'opacity .3s'; h.style.opacity = 0; });

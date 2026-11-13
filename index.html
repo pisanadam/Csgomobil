@@ -42,6 +42,11 @@ html,body{margin:0;height:100%;overflow:hidden;background:#000;color:var(--txt);
 .kf.me{border-color:#d33}
 .kf .w{color:#ddd;font-weight:500;margin:0 6px;font-size:12px}
 .kf .T{color:var(--t)}.kf .CT{color:var(--ct)}
+#chat{position:absolute;left:max(8px,env(safe-area-inset-left));bottom:calc(max(8px,env(safe-area-inset-bottom)) + 60px);display:flex;flex-direction:column;gap:2px;max-width:46vw}
+#chat .cm{background:rgba(0,0,0,.45);padding:2px 7px;border-radius:4px;font-size:13px;font-weight:600;transition:opacity 1s;text-shadow:0 1px 2px #000}
+#chat .cm span{font-weight:800}#chat .T{color:var(--t)}#chat .CT{color:var(--ct)}
+body.mobile #chat{bottom:auto;top:calc(max(6px,env(safe-area-inset-top)) + 190px);max-width:34vw}
+body.mobile #chat .cm{font-size:11px}
 #centerMsg{position:absolute;top:22%;left:0;right:0;text-align:center;font-size:30px;font-weight:900;text-shadow:0 2px 6px #000;letter-spacing:1px}
 #centerMsg small{display:block;font-size:16px;font-weight:600;color:#ddd}
 #toast{position:absolute;top:41%;left:0;right:0;text-align:center;font-size:17px;font-weight:700;text-shadow:0 1px 4px #000}
@@ -203,6 +208,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
   </div>
   <div id="fps" class="hidden"></div>
   <div id="killfeed"></div>
+  <div id="chat"></div>
   <div id="scope"></div>
   <div id="crosshair"></div>
   <div id="hitmarker"></div>

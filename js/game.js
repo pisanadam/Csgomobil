@@ -184,8 +184,12 @@ G.startRound = function () {
   const avgT = avg('T'), avgC = avg('CT');
   for (const b of this.bots) botBuy(b.e, pistolRound, b.e.team === 'T' ? avgT : avgC);
   for (const b of this.bots) { b.e.slot = b.e.bestSlot(); b.e.onEquip(); }
+  const ecoTeams = { T: false, CT: false };
+  for (const t of ['T', 'CT']) { const bs = this.bots.filter(b => b.e.team === t); if (bs.length && bs.filter(b => b.e._eco).length >= Math.ceil(bs.length * 0.6) && !pistolRound) ecoTeams[t] = true; }
+  this._ecoTeams = ecoTeams;
   // roller
   this.assignRoles();
+  BotChat.roundStart(R.plan, this._ecoTeams || {});
   this.spec = null;
   UI.onRoundStart(R.num, pistolRound);
   Audio3.roundStart();
@@ -458,6 +462,10 @@ G.onKill = function (v, k, def, hs, wallbang) {
   // asist
   for (const [a, dmg] of v.dmgBy) if (a !== k && !this.ally(a, v) && dmg >= 40) a.stats.assists++;
   UI.killfeed(k && k !== v ? k : null, v, def, hs, wallbang);
+  BotChat.death(v, k);
+  for (const b of this.bots) if (G.ally(b.e, v) && b.e !== v) b.onTeammateDeath(v, k, this.now);
+  // son kalan bot
+  if (!this.dm && v.team) { const left = this.entities.filter(o => o.alive && o.team === v.team); if (left.length === 1 && left[0].bot && this.entities.some(o => o.alive && o.team !== v.team)) BotChat.clutch(left[0]); }
   // eşyaları düşür
   const drop = v.inv.primary || v.inv.secondary;
   if (this.dm) {
@@ -606,6 +614,7 @@ G.plantBomb = function (e) {
   this.addMoney(e, ECON.plantReward);
   e.switchTo(e.bestSlot(), true);
   UI.toast('BOMBA KURULDU!', 3, 'warn');
+  BotChat.planted(B.site);
   Audio3.beep(B.pos, true);
 };
 G.updateBomb = function (dt) {
@@ -858,6 +867,7 @@ G.endRound = function (win, reason) {
   const pw = win === this.player.team;
   Audio3.roundEnd(pw);
   UI.roundEnd(win, reason, pw);
+  BotChat.roundEnd(win);
   // hayatta kalan T bombayı tutar mı? (sonraki raunt yeni dağıtılır)
 };
 
