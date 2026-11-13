@@ -37,7 +37,7 @@ class Bot {
     this.guardSpot = null; this.executed = false; this.siteSpot = null; this.saving = false;
     this.holdUntil = 0; this.roam = null;
     this.checked.clear(); this.lookPt = null; this.retreatUntil = 0; this.dodge = null; this.trade = null;
-    this.knifeRunning = false; this.rotSince = 0; this.rotSiteSeen = null; this.hpCalled = false;
+    this.knifeRunning = false; this.rotSince = 0; this.rotSiteSeen = null; this.hpCalled = false; this.wallbang = null;
   }
   // ----- İnsan benzeri yardımcılar -----
   pathRemaining() {
@@ -156,6 +156,11 @@ class Bot {
             this.dodge = { fwd: rnd(-1, -0.3), side: Math.random() < 0.5 ? -1 : 1, until: now + rnd(0.5, 1.0), look: { x: back.x, z: back.z } };
           }
         }
+        // insan gibi: az önce duvarın arkasına kaçan rakibe duvardan ateş
+        if (!killed && this.lastSeen && S.botDifficulty >= 2 && e.def.mag && e.weapon().mag > 3 && Math.random() < 0.25 + 0.15 * S.botDifficulty * this.pers.aggr) {
+          const tp = { x: this.target.pos.x, y: this.target.pos.y + this.target.height * 0.6, z: this.target.pos.z };
+          if (G.wallbangScale(e.eye(), tp, e.def) > 0.25) this.wallbang = { p: tp, until: now + rnd(0.5, 1.1), start: now + rnd(0.08, 0.2) };
+        }
         this.target = null;
       }
     }
@@ -259,6 +264,17 @@ class Bot {
       if (!this.target && (now > this.lookUntil || !this.lookPt)) {
         if (this.lookPt) this.checked.set(this.lookPt.key, now);
         this.pickDanger(now);
+      }
+    }
+    // duvar arkasına ateş (wallbang)
+    if (this.wallbang && !this.target) {
+      const wbk = this.wallbang;
+      if (now > wbk.until) this.wallbang = null;
+      else {
+        const eye = e.eye(), dx = wbk.p.x - eye.x, dz = wbk.p.z - eye.z;
+        this.turnTo(Math.atan2(-dx, -dz) + e.punch.x * this.D.spray * DEG, Math.atan2(wbk.p.y - eye.y, Math.hypot(dx, dz)) - e.punch.y * this.D.spray * DEG, dt, this.D.turn);
+        if (now > wbk.start) { if (e.def.auto) e.trig = true; else { this.semiToggle = !this.semiToggle; e.trig = this.semiToggle; } }
+        return;
       }
     }
     // çatışma sonrası kaçış/yer değiştirme

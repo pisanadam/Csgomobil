@@ -337,15 +337,10 @@ G.hitTestEntity = function (e, o, d, maxT) {
 };
 G.fireBullet = function (sh, o, d, def, first) {
   const range = 250;
-  const hits = Phys.raycastAll(o, d, range);
-  // delme: tahta kasalardan geçebilir
-  let endT = range, dmgScale = 1, pens = 0, endHit = null;
-  const canPen = (def.pen || 0) >= 0.7 && def.type !== 'shotgun';
-  const penWalls = [];
-  for (const h of hits) {
-    if (h.box && h.box.pen && canPen && pens < 1) { pens++; penWalls.push(h); continue; }
-    endT = h.t; endHit = h; break;
-  }
+  // duvar delme (wallbang): malzeme kalınlığı x yoğunluk, silahın delme gücünden düşülür
+  const pr = this.penetrate(o, d, range, def);
+  const penWalls = pr.walls, endT = pr.endT, endHit = pr.endHit;
+  const pens = penWalls.length;
   // varlık isabeti
   let victim = null, vh = null;
   for (const e of this.entities) {
@@ -354,8 +349,9 @@ G.fireBullet = function (sh, o, d, def, first) {
     const r = this.hitTestEntity(e, o, d, endT);
     if (r && (!vh || r.t < vh.t)) { vh = r; victim = e; }
   }
-  // delmeden önce mi sonra mı
-  if (victim) for (const w of penWalls) if (w.t < vh.t) dmgScale *= 0.55;
+  // kurbandan önceki duvarlara göre hasar azalır
+  let dmgScale = 1;
+  if (victim) for (const w of penWalls) if (w.t < vh.t) dmgScale = w.scaleAfter;
   const isPl = sh.isPlayer;
   const muzzle = this.muzzleWorld(sh);
   if (victim) {
@@ -368,7 +364,10 @@ G.fireBullet = function (sh, o, d, def, first) {
     if (victim.bot) victim.bot.onDamaged(sh, this.now);
     if (victim.isPlayer) this.onPlayerHurt(sh, dmg);
     if (isPl) { UI.hitmarker(vh.group === 'head', !victim.alive); Audio3.hit(vh.group === 'head'); }
-    if (wasAlive && !victim.alive) this.onKill(victim, sh, def, vh.group === 'head', pens > 0 && penWalls.some(w => w.t < vh.t));
+    const wb = pens > 0 && penWalls.some(w => w.t < vh.t);
+    if (wb) for (const w of penWalls) if (w.t < vh.t) { FX.hole(w.point, w.normal); FX.impact(w.point, w.normal, w.box.kind); FX.hole(w.exit, w.exitN); }
+    if (wb && isPl && victim.alive) UI.toast('Duvar arkasından isabet!', 0.8);
+    if (wasAlive && !victim.alive) this.onKill(victim, sh, def, vh.group === 'head', wb);
     if (first && (!isPl || Math.random() < 0.4)) FX.tracer(muzzle, hp);
   } else {
     const end = endHit ? endHit.point : { x: o.x + d.x * range, y: o.y + d.y * range, z: o.z + d.z * range };
@@ -376,10 +375,42 @@ G.fireBullet = function (sh, o, d, def, first) {
       FX.impact(endHit.point, endHit.normal, endHit.box ? endHit.box.kind : 'ground');
       FX.hole(endHit.point, endHit.normal);
     }
-    for (const w of penWalls) FX.hole(w.point, w.normal);
+    for (const w of penWalls) { FX.hole(w.point, w.normal); FX.impact(w.point, w.normal, w.box.kind); FX.hole(w.exit, w.exitN); FX.impact(w.exit, w.exitN, w.box.kind); }
     if (first && (!isPl || Math.random() < 0.35)) FX.tracer(muzzle, end);
     // mermi vızıltısı -> botlar duyar
   }
+};
+// Silahın delme gücü (metre "duvar eşdeğeri") ve en fazla delinebilen yüzey sayısı
+const PEN_POWER = { awp: 4.2, ssg08: 3.3, ak47: 3.0, sg553: 3.1, aug: 3.0, m4a4: 2.7, m4a1s: 2.6, galil: 2.6, famas: 2.5, m249: 3.0, negev: 2.6,
+  deagle: 2.5, fiveseven: 1.7, tec9: 1.6, p250: 1.2, usp: 1.0, p2000: 1.0, glock: 0.9, p90: 1.7, mp7: 1.5, ump45: 1.4, mp9: 1.2, mac10: 1.1, nova: 0.3, xm1014: 0.4 };
+const MAT_DENSITY = { crate: 0.3, crate2: 0.35, lowwall: 0.8, wall: 0.75, ceil: 0.9 };
+G.penetrate = function (o, d, range, def) {
+  const hits = Phys.raycastAll(o, d, range);
+  const power = PEN_POWER[def.id] || (def.type === 'rifle' ? 2.6 : def.type === 'sniper' ? 3.3 : def.type === 'pistol' ? 1 : 0.8);
+  const maxPen = def.id === 'awp' ? 3 : (def.type === 'rifle' || def.type === 'sniper' || def.type === 'lmg' || def.id === 'deagle') ? 2 : 1;
+  let budget = power, scale = 1;
+  const walls = [];
+  for (const h of hits) {
+    if (h.ground || !h.box) return { walls, endT: h.t, endHit: h, scale };
+    const thick = Math.max(0.05, Math.min(h.tExit, range) - h.t);
+    const cost = thick * (MAT_DENSITY[h.box.kind] || 0.8);
+    if (walls.length < maxPen && cost < budget) {
+      budget -= cost;
+      scale *= (1 - 0.6 * cost / power) * 0.9;
+      if (scale < 0.1) return { walls, endT: h.t, endHit: h, scale: 0 };
+      const ex = { x: o.x + d.x * h.tExit, y: o.y + d.y * h.tExit, z: o.z + d.z * h.tExit };
+      walls.push(Object.assign(h, { scaleAfter: scale, exit: ex, exitN: { x: -h.normal.x, y: -h.normal.y, z: -h.normal.z } }));
+      continue;
+    }
+    return { walls, endT: h.t, endHit: h, scale: 0 };
+  }
+  return { walls, endT: range, endHit: null, scale };
+};
+// a noktasından b'ye mermi ulaşır mı? kalan hasar oranı (0 = ulaşmaz)
+G.wallbangScale = function (a, b, def) {
+  const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z, L = Math.hypot(dx, dy, dz);
+  const r = this.penetrate(a, { x: dx / L, y: dy / L, z: dz / L }, L, def);
+  return r.endT >= L - 0.01 ? (r.walls.length ? r.walls[r.walls.length - 1].scaleAfter : 1) : 0;
 };
 G.muzzleWorld = function (e) {
   const eye = e.eye(); const f = dirFromAngles(e.yaw, e.pitch);
