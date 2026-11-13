@@ -402,7 +402,7 @@ G.knifeAttack = function (e) {
   }
   // sırttan bıçak
   const back = Math.abs(angDiff(best.yaw, e.yaw)) < 1.0;
-  const dmg = back ? 180 : 40;
+  const dmg = 999; // yakın mesafede tek vuruşta öldürür
   const wasAlive = best.alive;
   best.takeDamage(dmg, e, { pen: 0.85 }, 'chest', d, this.now);
   FX.blood({ x: o.x + d.x * bt, y: o.y + d.y * bt, z: o.z + d.z * bt }, d, back);
@@ -476,6 +476,16 @@ G.onKill = function (v, k, def, hs, wallbang) {
   v.resetForDeath();
   if (v.model) Models.setCharGun(v.model, null);
   if (v.isPlayer) { UI.onPlayerDeath(k); this.spec = null; }
+};
+// İzleyici: sıradaki canlı takım arkadaşına geç
+G.cycleSpec = function () {
+  const p = this.player; if (!p || p.alive || !this.running) return;
+  let list = this.entities.filter(e => e.alive && e !== p && (this.ffa || this.ally(e, p)));
+  if (!list.length) list = this.entities.filter(e => e.alive && e !== p);
+  if (!list.length) return;
+  const i = list.indexOf(this.spec);
+  this.spec = list[(i + 1) % list.length];
+  Audio3.ui(700);
 };
 G.addMoney = function (e, m) { e.money = Math.max(0, Math.min(ECON.max, e.money + m)); };
 

@@ -3588,7 +3588,7 @@ G.knifeAttack = function (e) {
   }
   // sırttan bıçak
   const back = Math.abs(angDiff(best.yaw, e.yaw)) < 1.0;
-  const dmg = back ? 180 : 40;
+  const dmg = 999; // yakın mesafede tek vuruşta öldürür
   const wasAlive = best.alive;
   best.takeDamage(dmg, e, { pen: 0.85 }, 'chest', d, this.now);
   FX.blood({ x: o.x + d.x * bt, y: o.y + d.y * bt, z: o.z + d.z * bt }, d, back);
@@ -3662,6 +3662,16 @@ G.onKill = function (v, k, def, hs, wallbang) {
   v.resetForDeath();
   if (v.model) Models.setCharGun(v.model, null);
   if (v.isPlayer) { UI.onPlayerDeath(k); this.spec = null; }
+};
+// İzleyici: sıradaki canlı takım arkadaşına geç
+G.cycleSpec = function () {
+  const p = this.player; if (!p || p.alive || !this.running) return;
+  let list = this.entities.filter(e => e.alive && e !== p && (this.ffa || this.ally(e, p)));
+  if (!list.length) list = this.entities.filter(e => e.alive && e !== p);
+  if (!list.length) return;
+  const i = list.indexOf(this.spec);
+  this.spec = list[(i + 1) % list.length];
+  Audio3.ui(700);
 };
 G.addMoney = function (e, m) { e.money = Math.max(0, Math.min(ECON.max, e.money + m)); };
 
@@ -4316,6 +4326,7 @@ const Input = {
     cv.addEventListener('mousedown', e => {
       if (!G.running || G.paused || UI.buyOpen) return;
       if (!this.locked && !this.isMobile) { this.lockPointer(); return; }
+      if (G.player && !G.player.alive) { G.cycleSpec(); return; }
       if (e.button === 0) this.fireHeld = true;
       if (e.button === 2 && G.player) G.player.toggleScope();
     });
@@ -4368,6 +4379,12 @@ const Input = {
         const b = el.dataset.b;
         this.touches.set(t.identifier, { kind: b, el, x: t.clientX, y: t.clientY });
         this.pressButton(b, el, true);
+        continue;
+      }
+      // ölüyken ekrana dokunmak: sıradaki takım arkadaşını izle
+      if (G.player && !G.player.alive && G.running && !G.paused) {
+        G.cycleSpec();
+        this.touches.set(t.identifier, { kind: 'look', x: t.clientX, y: t.clientY });
         continue;
       }
       if (t.clientX < window.innerWidth * 0.42 && this.joy.id === null) {
@@ -4766,7 +4783,7 @@ const UI = {
     return h;
   },
   // ---------- Her kare ----------
-  set(id, v, prop) { if (this.cache[id + (prop || '')] !== v) { this.cache[id + (prop || '')] = v; if (prop) $(id).style[prop] = v; else $(id).textContent = v; } },
+  set(id, v, prop) { if (this.cache[id + (prop || '')] !== v) { this.cache[id + (prop || '')] = v; if (prop === 'html') $(id).innerHTML = v; else if (prop) $(id).style[prop] = v; else $(id).textContent = v; } },
   update(dt) {
     if (!G.running) return;
     const p = G.player, R = G.round;
@@ -4855,7 +4872,7 @@ const UI = {
     }
     // izleyici
     if (!p.alive && G.dm && p.respawnAt) { this.set('specInfo', `Yeniden doğuluyor… ${Math.max(0, p.respawnAt - G.now).toFixed(1)}s`); $('specInfo').classList.remove('hidden'); }
-    else if (!p.alive && G.spec) { this.set('specInfo', `İZLENİYOR: ${G.spec.name}  •  ${Math.ceil(G.spec.hp)} CP  •  ${G.spec.def.name}`); $('specInfo').classList.remove('hidden'); }
+    else if (!p.alive && G.spec) { this.set('specInfo', `İZLENİYOR: ${G.spec.name}  •  ${Math.ceil(G.spec.hp)} CP  •  ${G.spec.def.name}<br><small style="opacity:.7">${Input.isMobile ? 'Ekrana dokun' : 'Tıkla'}: sıradaki oyuncu</small>`, 'html'); $('specInfo').classList.remove('hidden'); }
     else $('specInfo').classList.add('hidden');
     // zamanlayıcılar
     if (this.msgT > 0) { this.msgT -= dt; if (this.msgT <= 0) $('centerMsg').innerHTML = ''; }

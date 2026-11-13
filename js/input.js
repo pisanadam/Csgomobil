@@ -22,6 +22,7 @@ const Input = {
     cv.addEventListener('mousedown', e => {
       if (!G.running || G.paused || UI.buyOpen) return;
       if (!this.locked && !this.isMobile) { this.lockPointer(); return; }
+      if (G.player && !G.player.alive) { G.cycleSpec(); return; }
       if (e.button === 0) this.fireHeld = true;
       if (e.button === 2 && G.player) G.player.toggleScope();
     });
@@ -74,6 +75,12 @@ const Input = {
         const b = el.dataset.b;
         this.touches.set(t.identifier, { kind: b, el, x: t.clientX, y: t.clientY });
         this.pressButton(b, el, true);
+        continue;
+      }
+      // ölüyken ekrana dokunmak: sıradaki takım arkadaşını izle
+      if (G.player && !G.player.alive && G.running && !G.paused) {
+        G.cycleSpec();
+        this.touches.set(t.identifier, { kind: 'look', x: t.clientX, y: t.clientY });
         continue;
       }
       if (t.clientX < window.innerWidth * 0.42 && this.joy.id === null) {

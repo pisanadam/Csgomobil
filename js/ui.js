@@ -271,7 +271,7 @@ const UI = {
     return h;
   },
   // ---------- Her kare ----------
-  set(id, v, prop) { if (this.cache[id + (prop || '')] !== v) { this.cache[id + (prop || '')] = v; if (prop) $(id).style[prop] = v; else $(id).textContent = v; } },
+  set(id, v, prop) { if (this.cache[id + (prop || '')] !== v) { this.cache[id + (prop || '')] = v; if (prop === 'html') $(id).innerHTML = v; else if (prop) $(id).style[prop] = v; else $(id).textContent = v; } },
   update(dt) {
     if (!G.running) return;
     const p = G.player, R = G.round;
@@ -360,7 +360,7 @@ const UI = {
     }
     // izleyici
     if (!p.alive && G.dm && p.respawnAt) { this.set('specInfo', `Yeniden doğuluyor… ${Math.max(0, p.respawnAt - G.now).toFixed(1)}s`); $('specInfo').classList.remove('hidden'); }
-    else if (!p.alive && G.spec) { this.set('specInfo', `İZLENİYOR: ${G.spec.name}  •  ${Math.ceil(G.spec.hp)} CP  •  ${G.spec.def.name}`); $('specInfo').classList.remove('hidden'); }
+    else if (!p.alive && G.spec) { this.set('specInfo', `İZLENİYOR: ${G.spec.name}  •  ${Math.ceil(G.spec.hp)} CP  •  ${G.spec.def.name}<br><small style="opacity:.7">${Input.isMobile ? 'Ekrana dokun' : 'Tıkla'}: sıradaki oyuncu</small>`, 'html'); $('specInfo').classList.remove('hidden'); }
     else $('specInfo').classList.add('hidden');
     // zamanlayıcılar
     if (this.msgT > 0) { this.msgT -= dt; if (this.msgT <= 0) $('centerMsg').innerHTML = ''; }
