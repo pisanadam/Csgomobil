@@ -93,6 +93,24 @@ body.mobile #touch{display:block}
 /* üst */
 #bBuy{left:calc(112px + var(--sl));top:calc(6px + var(--st));width:56px;height:40px;border-radius:9px;font-size:11px;background:rgba(40,130,60,.7);opacity:.9}
 #bMenu{right:calc(8px + var(--sr));top:calc(6px + var(--st));width:40px;height:40px;border-radius:9px;font-size:16px}
+#bRadio{right:calc(54px + var(--sr));top:calc(6px + var(--st));width:40px;height:40px;border-radius:9px;font-size:17px}
+#bNvg{right:calc(100px + var(--sr));top:calc(6px + var(--st));width:40px;height:40px;border-radius:9px;font-size:12px;color:#7dff8a}
+body.pdead #bFire,body.pdead #bFire2,body.pdead #bJump,body.pdead #bCrouch,body.pdead #bReload,body.pdead #bScope,body.pdead #bUse,body.pdead #slots,body.pdead #joyHint,body.pdead #bBuy{display:none!important}
+#radio{position:fixed;z-index:14;left:max(8px,env(safe-area-inset-left));top:50%;transform:translateY(-50%);background:rgba(10,12,16,.85);border:1px solid var(--line);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:4px;min-width:210px}
+#radio b{font-size:12px;color:var(--accent);letter-spacing:1px;margin-bottom:2px}
+#radio button{text-align:left;padding:8px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.14);background:#1f232a;color:#fff;font-weight:700;font-size:13px}
+#nvg{position:fixed;inset:0;z-index:4;pointer-events:none;background:radial-gradient(ellipse at center,rgba(60,255,90,.55) 0,rgba(20,200,60,.75) 60%,rgba(0,60,10,.95) 100%);mix-blend-mode:multiply}
+/* Klasik arayüz: kutusuz, kehribar rakamlar */
+body.hudclassic #hud .hudbox{background:transparent;border-color:transparent;backdrop-filter:none;color:#ffb22e;text-shadow:0 0 6px rgba(255,150,0,.45),0 1px 2px #000;font-family:"Courier New",ui-monospace,monospace;font-weight:900}
+body.hudclassic #money{color:#ffb22e}
+body.hudclassic #hpBox .ic,body.hudclassic #arBox .ic{color:#ffb22e}
+body.hudclassic #hpBox.low{color:#ff4530}
+body.hudclassic #scL,body.hudclassic #scR,body.hudclassic #timer{color:#ffb22e}
+body.hudclassic #timer.bomb{color:#ff4530}
+body.hudclassic #ammoBox small,body.hudclassic #wname{color:#c98a20}
+body.hudclassic #radarWrap{background:rgba(0,40,0,.35);border-color:rgba(120,255,120,.35)}
+body.hudclassic .kf{background:transparent;text-shadow:0 1px 2px #000}
+body.hudclassic #chat .cm{background:transparent;color:#ffd58a}
 #bScore{left:50%;transform:translateX(-50%);top:0;width:300px;height:46px;border:0;background:transparent;border-radius:0;opacity:0}
 #bWalk,#bDrop{display:none}
 /* silah yuvaları */
@@ -241,6 +259,8 @@ input[type=range]{width:100%;accent-color:#e9a83a}
   <div class="tb" id="bWalk" data-b="walk">YÜRÜ</div>
   <div class="tb" id="bBuy" data-b="buy">SATIN<br>AL</div>
   <div class="tb" id="bMenu" data-b="menu">❚❚</div>
+  <div class="tb hidden" id="bRadio" data-b="radio">📻</div>
+  <div class="tb hidden" id="bNvg" data-b="nvg">GG</div>
   <div class="tb" id="bScore" data-b="score"></div>
   <div class="tb" id="bDrop" data-b="drop">BIRAK</div>
   <div id="slots">
@@ -262,6 +282,11 @@ input[type=range]{width:100%;accent-color:#e9a83a}
 </div>
 
 <div id="scoreboard" class="hidden"></div>
+<div id="nvg" class="hidden"></div>
+<div id="radio" class="hidden"><b>TELSİZ</b>
+  <button data-r="1">1. Beni takip edin</button><button data-r="2">2. Pozisyonu tutun</button><button data-r="3">3. Saldırın! Git git git</button>
+  <button data-r="4">4. Geri çekilin / toplanın</button><button data-r="5">5. Düşman görüldü</button><button data-r="6">6. Rapor verin</button>
+</div>
 
 <!-- ============ ANA MENÜ ============ -->
 <div id="mainMenu" class="screen">
@@ -326,6 +351,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
       <div class="field"><label>Grafik Kalitesi</label><div class="seg" data-set="graphics" data-opts='[[0,"Düşük"],[1,"Orta"],[2,"Yüksek"]]' data-reload="1"></div><div style="font-size:12px;color:var(--dim)">Gölge/kalite değişiklikleri sonraki açılışta tam uygulanır.</div></div>
       <div class="field"><label>Doku Stili</label><div class="seg" data-set="texStyle" data-opts='[["retro","Retro (eski okul)"],["modern","Modern"]]' data-reload="1"></div><div style="font-size:12px;color:var(--dim)">Değişiklik oyun yeniden açılınca uygulanır.</div></div>
       <div class="field"><label>Netlik (Çözünürlük)</label><div class="seg" data-set="sharp" data-opts='[[0,"Düşük"],[1,"Orta"],[2,"Yüksek"],[3,"Ultra"]]'></div><div style="font-size:12px;color:var(--dim)">Yüksek = keskin görüntü. Telefon ısınır/kasarsa Orta seç.</div></div>
+      <div class="field"><label>Arayüz Stili</label><div class="seg" data-set="hudStyle" data-opts='[["modern","Modern"],["classic","Klasik (kehribar)"]]'></div></div>
       <div class="field"><label>Görüş Açısı (FOV) <span class="val" data-val="fov"></span> <small style="text-transform:none">— küçük = uzaktaki rakip daha büyük</small></label><input type="range" min="60" max="95" step="1" data-set="fov"></div>
       <div class="field"><label>Seçenekler</label><label class="check"><input type="checkbox" data-set="shadows" data-reload="1"> Gölgeler</label><label class="check"><input type="checkbox" data-set="showFps"> FPS göster</label><label class="check"><input type="checkbox" data-set="enemyGlow"> Düşmanları vurgula (kırmızı ton)</label></div>
       <div class="field"><label>Ses <span class="val" data-val="volume"></span></label><input type="range" min="0" max="1" step="0.05" data-set="volume"></div>
@@ -335,6 +361,10 @@ input[type=range]{width:100%;accent-color:#e9a83a}
         <div style="font-size:12px;color:var(--dim)">Tepki süresi, nişan hızı, sprey kontrolü, kafa vuruşu oranı, karşı-strafe ve el bombası kullanımı değişir.</div></div>
       <div class="field"><label>Takım Boyutu</label><div class="seg" data-set="teamSize" data-opts='[[1,"1v1"],[2,"2v2"],[3,"3v3"],[4,"4v4"],[5,"5v5"]]'></div></div>
       <div class="field"><label>Maç Uzunluğu</label><div class="seg" data-set="maxRounds" data-opts='[[8,"Kısa (8)"],[16,"Normal (16)"],[30,"Rekabetçi (30)"]]'></div></div>
+      <div class="field"><label>Başlangıç Parası</label><div class="seg" data-set="startMoney" data-opts='[[800,"$800"],[3000,"$3000"],[16000,"$16000"]]'></div></div>
+      <div class="field"><label>Raunt Süresi</label><div class="seg" data-set="roundTime" data-opts='[[105,"1:45"],[115,"1:55"],[180,"3:00"]]'></div></div>
+      <div class="field"><label>C4 Süresi</label><div class="seg" data-set="c4Time" data-opts='[[35,"35 sn"],[40,"40 sn"],[45,"45 sn"]]'></div></div>
+      <div class="field"><label>Hazırlık Süresi</label><div class="seg" data-set="freezeTime" data-opts='[[3,"3 sn"],[6,"6 sn"],[10,"10 sn"]]'></div></div>
       <div class="field"><label>Dost Ateşi</label><label class="check"><input type="checkbox" data-set="friendlyFire"> Takım arkadaşlarına hasar</label></div>
     </div>
     <div class="row" style="margin-top:12px"><button class="btn sm" id="setReset">Varsayılanlara dön</button></div>
@@ -350,8 +380,10 @@ input[type=range]{width:100%;accent-color:#e9a83a}
     <p><b>Ekonomi:</b> Her raunt kazanç/kayıp parası ve öldürme ödülleri alırsın. Raunt başında doğma bölgesindeyken <b>SATIN AL</b> ile silah, zırh, kit ve bomba al. Hayatta kalırsan eşyaların sonraki raunta geçer.</p>
     <p><b>İsabet:</b> Koşarken atış isabetsizdir. Durarak (veya eğilerek) ateş et, uzun mesafede kısa seri at. Sprey deseni sabittir — aşağı çekerek kontrol edebilirsin. Kafa vuruşu 4x hasar.</p>
     <p><b>Mobil:</b> Sol yarıya dokunup sürükle = yürü/koş (az itersen sessiz yürür). Sağ yarıyı kaydır = etrafa bak. Ateş tuşuna basılıyken parmağını kaydırarak nişan alabilirsin. Üstteki skora basılı tut = skor tablosu. Silah değiştirmek için alttaki silah kutularına dokun. Bomba bölgesinde <b>KUR</b>, bombanın yanında <b>İMHA</b> tuşuna basılı tut.</p>
-    <p><b>Masaüstü:</b> <kbd>WASD</kbd> hareket, <kbd>Fare</kbd> nişan/ateş, <kbd>Sağ tık</kbd> dürbün, <kbd>Boşluk</kbd> zıpla, <kbd>Ctrl</kbd>/<kbd>C</kbd> eğil, <kbd>Shift</kbd> yürü (sessiz), <kbd>R</kbd> doldur, <kbd>E</kbd> kur/imha/silah al, <kbd>G</kbd> bırak, <kbd>B</kbd> satın al, <kbd>1-5</kbd> silahlar, <kbd>Q</kbd> son silah, <kbd>Tab</kbd> skor, <kbd>Esc</kbd> menü.</p>
+    <p><b>Masaüstü:</b> <kbd>WASD</kbd> hareket, <kbd>Fare</kbd> nişan/ateş, <kbd>Sağ tık</kbd> dürbün, <kbd>Boşluk</kbd> zıpla, <kbd>Ctrl</kbd>/<kbd>C</kbd> eğil, <kbd>Shift</kbd> yürü (sessiz), <kbd>R</kbd> doldur, <kbd>E</kbd> kur/imha/silah al, <kbd>G</kbd> bırak, <kbd>B</kbd> satın al, <kbd>1-5</kbd> silahlar, <kbd>Q</kbd> son silah, <kbd>Z</kbd> telsiz, <kbd>N</kbd> gece görüşü, <kbd>Tab</kbd> skor, <kbd>Esc</kbd> menü.</p>
     <p><b>Duvar arkasından vurma:</b> Tahta kasalar ve tek kat (ince) duvarlar delinebilir. Delme gücü silaha göre değişir: AWP, AK-47, SG 553, AUG ve Desert Eagle en iyisidir; tabancalar ve SMG'ler çoğunlukla sadece kasaları deler. Her delinen yüzey hasarı düşürür.</p>
+    <p><b>İkincil ateş:</b> NİŞAN/sağ tık silaha göre değişir: dürbünlü silahlarda dürbün, M4A1-S ve USP-S'te susturucu tak/çıkar, Glock ve FAMAS'ta 3'lü seri atış, diğerlerinde hafif yakınlaştırma.</p>
+    <p><b>Telsiz:</b> 📻 (ya da <kbd>Z</kbd>) ile takım botlarına komut ver: takip et, pozisyon tut, saldır, geri çekil, düşman bildir, rapor iste.</p>
     <p><b>Bombalar:</b> HE hasar verir, flaş kör eder (bakmayın!), sis görüşü keser ve yangını söndürür, molotof/yangın bölgeyi kapatır.</p>
   </div>
 </div>
@@ -437,6 +469,8 @@ const DEFAULT_SETTINGS = {
   maxRounds: 16,
   friendlyFire: false,
   playerTeam: 'auto',
+  startMoney: 800, roundTime: 115, c4Time: 40, freezeTime: 6,
+  hudStyle: 'modern',    // 'modern' | 'classic'
   map: 'dust',            // dust, harbor, snow, town, random
   mode: 'comp',          // 'comp' rekabetçi, 'dm' ölüm kalım
   dmTime: 300,           // ölüm kalım süresi (sn)
@@ -540,14 +574,15 @@ const Audio3 = {
     o.connect(g); g.connect(dest);
     o.start(t); o.stop(t + dur + 0.05);
   },
-  shot(def, pos) {
+  shot(def, pos, sil) {
     if (!this.ctx) return;
-    const sp = this.spatial(pos, def.silenced ? 35 : 120);
+    if (sil === undefined) sil = def.silenced;
+    const sp = this.spatial(pos, sil ? 35 : 120);
     if (sp.vol < 0.003) return;
     const t = this.ctx.currentTime, d = sp.node;
     const k = def.sound || {};
     const body = k.body || 1, pitch = k.pitch || 1;
-    if (def.silenced) {
+    if (sil) {
       this.noiseBurst(d, t, 0.09, 1800 * pitch, 0.8, 0.5, 'bandpass');
       this.tone(d, t, 0.06, 300, 120, 0.25, 'triangle');
       return;
@@ -728,7 +763,19 @@ const WEAPONS = {
   deagle: { id: 'deagle', name: 'Desert Eagle', slot: 'secondary', type: 'pistol', price: 700, damage: 63, pen: 0.932, rpm: 267, mag: 7, reserve: 35, reload: 2.2,
     speed: 230, rangeMod: 0.81, inacc: 0.6, crouchInacc: 0.45, moveInacc: 4.5, fireInacc: 5.0, recover: 0.45, recoil: 2.6, side: 'both', reward: 300,
     model: { kind: 'pistol', body: 0x9a9a9a, grip: 0x222222, len: 0.25 }, sound: { body: 1.2, pitch: 0.8 } },
+  p228: { id: 'p228', name: 'P228', slot: 'secondary', type: 'pistol', price: 600, damage: 32, pen: 0.625, rpm: 400, mag: 13, reserve: 52, reload: 2.7,
+    speed: 240, rangeMod: 0.8, inacc: 0.7, crouchInacc: 0.55, moveInacc: 2.2, fireInacc: 1.8, recover: 0.32, recoil: 1.05, side: 'both', reward: 300,
+    model: { kind: 'pistol', body: 0x4a4a48, grip: 0x1f1f1f, len: 0.18 }, sound: { body: 0.7, pitch: 1.15 } },
+  elite: { id: 'elite', name: 'Çift Beretta', slot: 'secondary', type: 'pistol', price: 800, damage: 36, pen: 0.52, rpm: 500, mag: 30, reserve: 120, reload: 4.3,
+    speed: 240, rangeMod: 0.79, inacc: 1.0, crouchInacc: 0.85, moveInacc: 2.4, fireInacc: 1.5, recover: 0.3, recoil: 1.0, side: 'T', reward: 300,
+    model: { kind: 'pistol', body: 0x8d8f92, grip: 0x3a2a1c, len: 0.2 }, sound: { body: 0.75, pitch: 1.1 } },
   // ---------- SMG ----------
+  mp5: { id: 'mp5', name: 'MP5', slot: 'primary', type: 'smg', price: 1500, damage: 26, pen: 0.6, rpm: 800, mag: 30, reserve: 120, reload: 2.6,
+    speed: 235, rangeMod: 0.84, inacc: 0.9, crouchInacc: 0.75, moveInacc: 2.2, fireInacc: 0.45, recover: 0.3, recoil: 0.7, side: 'both', reward: 600, auto: true,
+    model: { kind: 'smg', body: 0x2a2a2a, furn: 0x1c1c1c, len: 0.5 }, sound: { body: 0.75, pitch: 1.2 } },
+  tmp: { id: 'tmp', name: 'TMP', slot: 'primary', type: 'smg', price: 1250, damage: 20, pen: 0.5, rpm: 857, mag: 30, reserve: 120, reload: 2.1,
+    speed: 240, rangeMod: 0.84, inacc: 1.0, crouchInacc: 0.85, moveInacc: 2.2, fireInacc: 0.4, recover: 0.3, recoil: 0.6, side: 'CT', reward: 600, auto: true, silenced: true,
+    model: { kind: 'smg', body: 0x2e2e2e, furn: 0x151515, len: 0.34, silencer: true }, sound: { body: 0.6, pitch: 1.3 } },
   mac10: { id: 'mac10', name: 'MAC-10', slot: 'primary', type: 'smg', price: 1050, damage: 29, pen: 0.575, rpm: 800, mag: 30, reserve: 100, reload: 3.2,
     speed: 240, rangeMod: 0.8, inacc: 1.2, crouchInacc: 1.0, moveInacc: 2.4, fireInacc: 0.55, recover: 0.3, recoil: 0.75, side: 'T', reward: 600, auto: true,
     model: { kind: 'smg', body: 0x2a2a2a, furn: 0x1a1a1a, len: 0.34 }, sound: { body: 0.7, pitch: 1.3 } },
@@ -751,6 +798,9 @@ const WEAPONS = {
   xm1014: { id: 'xm1014', name: 'XM1014', slot: 'primary', type: 'shotgun', price: 2000, damage: 20, pellets: 6, pelletSpread: 4.2, pen: 0.8, rpm: 171, mag: 7, reserve: 32, reload: 0.45, shellReload: true,
     speed: 215, rangeMod: 0.7, inacc: 0.6, crouchInacc: 0.5, moveInacc: 1.5, fireInacc: 1.8, recover: 0.5, recoil: 2.2, side: 'both', reward: 900, auto: true,
     model: { kind: 'shotgun', body: 0x1e1e1e, furn: 0x1e1e1e, len: 1.0 }, sound: { body: 1.3, pitch: 0.8 } },
+  m3: { id: 'm3', name: 'M3 Super 90', slot: 'primary', type: 'shotgun', price: 1700, damage: 20, pellets: 9, pelletSpread: 3.6, pen: 0.5, rpm: 68, mag: 8, reserve: 32, reload: 0.5, shellReload: true,
+    speed: 220, rangeMod: 0.7, inacc: 0.5, crouchInacc: 0.4, moveInacc: 1.5, fireInacc: 2.0, recover: 0.6, recoil: 3.0, side: 'both', reward: 900, auto: false,
+    model: { kind: 'shotgun', body: 0x1c1c1c, furn: 0x2a2a2a, len: 1.0 }, sound: { body: 1.45, pitch: 0.72 } },
   negev: { id: 'negev', name: 'Negev', slot: 'primary', type: 'lmg', price: 1700, damage: 35, pen: 0.71, rpm: 800, mag: 150, reserve: 300, reload: 5.7,
     speed: 150, rangeMod: 0.9, inacc: 1.6, crouchInacc: 1.2, moveInacc: 7, fireInacc: 0.3, recover: 0.6, recoil: 0.6, side: 'both', reward: 300, auto: true,
     model: { kind: 'lmg', body: 0x2e3029, furn: 0x22241f, len: 1.0 }, sound: { body: 1.1, pitch: 0.95 } },
@@ -785,6 +835,12 @@ const WEAPONS = {
   awp: { id: 'awp', name: 'AWP', slot: 'primary', type: 'sniper', price: 4750, damage: 115, pen: 0.975, rpm: 41, mag: 5, reserve: 30, reload: 3.7,
     speed: 200, rangeMod: 0.99, inacc: 7.5, scopedInacc: 0.02, crouchInacc: 6.5, moveInacc: 12, fireInacc: 3, recover: 0.6, recoil: 3.0, side: 'both', reward: 100, auto: false, scope: [40, 10], bolt: true,
     model: { kind: 'sniper', body: 0x3d5233, furn: 0x3d5233, len: 1.15, heavy: true }, sound: { body: 1.6, pitch: 0.7 } },
+  g3sg1: { id: 'g3sg1', name: 'G3SG1', slot: 'primary', type: 'sniper', price: 5000, damage: 80, pen: 0.82, rpm: 240, mag: 20, reserve: 90, reload: 4.7,
+    speed: 210, rangeMod: 0.98, inacc: 3.5, scopedInacc: 0.18, crouchInacc: 3.0, moveInacc: 9, fireInacc: 1.6, recover: 0.5, recoil: 0.9, side: 'T', reward: 300, auto: true, scope: [40, 15],
+    model: { kind: 'sniper', body: 0x2c2c2a, furn: 0x3a3b30, len: 1.05 }, sound: { body: 1.3, pitch: 0.85 } },
+  sg550: { id: 'sg550', name: 'SG 550', slot: 'primary', type: 'sniper', price: 4200, damage: 70, pen: 0.8, rpm: 240, mag: 30, reserve: 90, reload: 3.8,
+    speed: 210, rangeMod: 0.98, inacc: 3.5, scopedInacc: 0.2, crouchInacc: 3.0, moveInacc: 9, fireInacc: 1.5, recover: 0.5, recoil: 0.85, side: 'CT', reward: 300, auto: true, scope: [40, 15],
+    model: { kind: 'sniper', body: 0x30332c, furn: 0x262822, len: 1.0 }, sound: { body: 1.25, pitch: 0.9 } },
   // ---------- BOMBALAR ----------
   he: { id: 'he', name: 'HE Bombası', slot: 'grenade', type: 'grenade', price: 300, side: 'both', reward: 300, speed: 245, nade: 'he', model: { kind: 'nade', color: 0x3d5a2a } },
   flash: { id: 'flash', name: 'Flaş Bombası', slot: 'grenade', type: 'grenade', price: 200, side: 'both', reward: 300, speed: 245, nade: 'flash', max: 2, model: { kind: 'nade', color: 0x8a8f99 } },
@@ -811,18 +867,23 @@ const WEAPONS = {
   }
 })();
 
+// İkincil ateş (alt) modları: susturucu tak/çıkar, 3'lü seri atış
+WEAPONS.m4a1s.alt = 'silencer'; WEAPONS.usp.alt = 'silencer';
+WEAPONS.glock.alt = 'burst'; WEAPONS.famas.alt = 'burst';
+
 const EQUIPMENT = {
   kevlar: { id: 'kevlar', name: 'Kevlar Yelek', price: 650, side: 'both' },
   helmet: { id: 'helmet', name: 'Kevlar + Kask', price: 1000, side: 'both' },
   kit: { id: 'kit', name: 'İmha Kiti', price: 400, side: 'CT' },
+  nvg: { id: 'nvg', name: 'Gece Görüşü', price: 1250, side: 'both' },
 };
 
 const BUY_MENU = [
-  { cat: 'Tabancalar', items: ['glock', 'usp', 'p2000', 'p250', 'tec9', 'fiveseven', 'deagle'] },
-  { cat: 'Ağır', items: ['nova', 'xm1014', 'negev', 'm249'] },
-  { cat: 'SMG', items: ['mac10', 'mp9', 'mp7', 'ump45', 'p90'] },
-  { cat: 'Tüfekler', items: ['galil', 'famas', 'ak47', 'm4a4', 'm4a1s', 'ssg08', 'sg553', 'aug', 'awp'] },
-  { cat: 'Ekipman', items: ['kevlar', 'helmet', 'kit'] },
+  { cat: 'Tabancalar', items: ['glock', 'usp', 'p2000', 'p228', 'p250', 'elite', 'tec9', 'fiveseven', 'deagle'] },
+  { cat: 'Ağır', items: ['nova', 'm3', 'xm1014', 'negev', 'm249'] },
+  { cat: 'SMG', items: ['mac10', 'tmp', 'mp9', 'mp5', 'mp7', 'ump45', 'p90'] },
+  { cat: 'Tüfekler', items: ['galil', 'famas', 'ak47', 'm4a4', 'm4a1s', 'ssg08', 'sg553', 'aug', 'awp', 'sg550', 'g3sg1'] },
+  { cat: 'Ekipman', items: ['kevlar', 'helmet', 'kit', 'nvg'] },
   { cat: 'Bombalar', items: ['flash', 'smoke', 'he', 'molotov', 'incendiary'] },
 ];
 
@@ -2326,7 +2387,7 @@ class Entity {
       if (def.nade === 'fire' && this.inv.grenades.some(g => WEAPONS[g].nade === 'fire')) return false;
       this.inv.grenades.push(id); return true;
     }
-    const w = { def, mag: def.mag, reserve: def.reserve };
+    const w = { def, mag: def.mag, reserve: def.reserve, sil: true, burst: false };
     this.inv[def.slot] = w;
     return w;
   }
@@ -2340,7 +2401,7 @@ class Entity {
     if (!this.weapon(slot)) return;
     if (slot === this.slot && !force) return;
     if (this.slot !== slot) this.prevSlot = this.slot;
-    this.slot = slot; this.reloadT = 0; this.scoped = 0; this.rescopeAt = 0; this.zoomed = false;
+    this.slot = slot; this.reloadT = 0; this.scoped = 0; this.rescopeAt = 0; this.zoomed = false; this.burstLeft = 0;
     this.deployT = slot === 'knife' ? 0.5 : slot === 'bomb' ? 0.25 : (this.def.type === 'sniper' ? 1.1 : 0.85);
     this.plantT = 0;
     this.onEquip();
@@ -2352,8 +2413,10 @@ class Entity {
   }
   resetForDeath() {
     this.inv = { primary: null, secondary: null, knife: { def: WEAPONS.knife }, grenades: [], bomb: false };
-    this.armor = 0; this.helmet = false; this.kit = false;
+    this.armor = 0; this.helmet = false; this.kit = false; this.nvg = false; this.nvgOn = false;
+    this.zoomed = false; this.scoped = 0; this.burstLeft = 0;
   }
+  isSilenced() { const w = this.weapon(); return !!(w && w.def.silenced && w.sil !== false); }
   // ----- Hareket -----
   maxSpeed() {
     let sp = this.def.speed || 250;
@@ -2469,7 +2532,7 @@ class Entity {
     // tekrar dürbün
     if (this.rescopeAt && now >= this.rescopeAt) { this.scoped = this.rescopeLevel; this.rescopeAt = 0; }
     // tetik
-    if (this.trig) this.tryFire(now);
+    if (this.trig || this.burstLeft > 0) this.tryFire(now);
     else this.trigLatch = false;
     if (this.flashT > 0) this.flashT -= dt;
   }
@@ -2496,11 +2559,14 @@ class Entity {
     if (this.reloadT > 0) {
       if (d.shellReload && w.mag > 0) this.reloadT = 0; else return;
     }
-    if (!d.auto && this.trigLatch) return;
+    const midBurst = this.burstLeft > 0;
+    if (!midBurst && (w.burst || !d.auto) && this.trigLatch) return;
     this.trigLatch = true;
-    if (w.mag <= 0) { G.sound('click', this, 900); this.nextFire = now + 0.25; this.reload(); return; }
+    if (w.mag <= 0) { this.burstLeft = 0; G.sound('click', this, 900); this.nextFire = now + 0.25; this.reload(); return; }
+    if (w.burst && !midBurst) this.burstLeft = 3;
     if (!(this.isPlayer && Cheats.c.ammo)) w.mag--;
     this.nextFire = now + d.interval;
+    if (w.burst) { this.burstLeft--; this.nextFire = now + (this.burstLeft > 0 ? 0.055 : 0.42); }
     const inacc = (this.isPlayer && this.cheatShot) ? 0 : this.inaccuracy();
     const eye = this.eye();
     const pellets = d.pellets || 1;
@@ -2524,7 +2590,19 @@ class Entity {
     if (w.mag === 0 && w.reserve > 0) { this.autoReloadAt = now + 0.35; }
   }
   toggleScope() {
-    const d = this.def;
+    const d = this.def, w0 = this.weapon();
+    // ikincil ateş: susturucu / seri atış
+    if (d.alt === 'silencer' && w0) {
+      if (this.reloadT > 0 || this.deployT > 0) return;
+      w0.sil = !w0.sil; this.deployT = 1.3;
+      if (typeof G !== 'undefined') { G.sound('click', this, 1300); if (this.isPlayer) UI.toast(w0.sil ? 'Susturucu takıldı' : 'Susturucu çıkarıldı', 1.2); }
+      return;
+    }
+    if (d.alt === 'burst' && w0) {
+      w0.burst = !w0.burst; this.burstLeft = 0;
+      if (typeof G !== 'undefined') { G.sound('click', this, 1700); if (this.isPlayer) UI.toast(w0.burst ? "3'lü seri atış" : (d.auto ? 'Tam otomatik' : 'Tek atış'), 1.2); }
+      return;
+    }
     if (!d.scope) { if (d.mag) { this.zoomed = !this.zoomed; if (typeof G !== 'undefined') G.sound('click', this, 2000); } return; }
     if (this.reloadT > 0 || this.deployT > 0) return;
     this.rescopeAt = 0;
@@ -2749,6 +2827,17 @@ class Bot {
       }
       return { key: 'roam', p: this.roam };
     }
+    // oyuncunun telsiz komutu
+    const od = this.order;
+    if (od && now < od.until && B.state !== 'planted' && G.player && G.player.alive && !(e.inv.bomb && this.executed)) {
+      if (od.type === 'follow') {
+        const pp = G.player.pos;
+        if (!od.spot || dist2(od.at || pp, pp) > 3.5) { od.at = { x: pp.x, z: pp.z }; od.spot = G.randomNear(pp, 1.6, 3.6); }
+        return { key: 'follow', p: od.spot, hold: true, look: { x: pp.x - Math.sin(G.player.yaw) * 15, z: pp.z - Math.cos(G.player.yaw) * 15 } };
+      }
+      if (od.type === 'hold') return { key: 'ordhold', p: od.p, look: od.look, hold: true };
+      if (od.type === 'push') { const kp = this.knownEnemyPoint(now); if (kp) return { key: 'push', p: kp }; const st = MAP.POS.tStage.mid[0]; return { key: 'push', p: st }; }
+    } else if (od) this.order = null;
     if (this.trade && now < this.tradeUntil && B.state !== 'planted') return { key: 'trade', p: this.trade };
     if (e.team === 'T') {
       if (B.state === 'dropped') {
@@ -3304,7 +3393,9 @@ G.startMatch = function () {
   this.sideOfGroup = [pt, pt === 'T' ? 'CT' : 'T'];
   this.score = [0, 0]; this.lossStreak = { T: 0, CT: 0 };
   this.dm = S.mode === 'dm'; this.ffa = this.dm;
-  this.FREEZE = this.dm ? 3 : 6; this.ROUND_TIME = this.dm ? S.dmTime : 115;
+  this.FREEZE = this.dm ? 3 : (S.freezeTime || 6); this.ROUND_TIME = this.dm ? S.dmTime : (S.roundTime || 115);
+  this.BOMB_TIME = S.c4Time || 40; ECON.start = S.startMoney || 800;
+  document.body.classList.toggle('hudclassic', S.hudStyle === 'classic');
   const names = BOT_NAMES.slice().sort(() => Math.random() - 0.5);
   const n = Math.max(1, Math.min(5, S.teamSize));
   const pl = this.player = new Entity('Sen', pt, true); pl.group = 0;
@@ -3361,6 +3452,7 @@ G.startRound = function () {
     e.yaw = e.team === 'T' ? 0 : Math.PI; e.pitch = 0;
     e.alive = true; e.hp = 100; e.deathT = 0; e.flashT = 0; e.crouch = 0; e.height = STAND_H;
     e.plantT = 0; e.defuseT = 0; e.recoilIdx = 0; e.fireInacc = 0; e.punch.x = e.punch.y = 0; e.scoped = 0; e.reloadT = 0;
+    e.zoomed = false; e.burstLeft = 0; e.order = null; e.nextFire = 0;
     e.dmgBy.clear(); e.inv.bomb = false; e.trig = false;
     if (!e.inv.secondary) e.giveWeapon(e.team === 'T' ? 'glock' : 'usp');
     // eldeki silahların şarjörleri dolsun (CS: kalan cephane korunur, bu sürümde dolduruyoruz)
@@ -3449,6 +3541,7 @@ G.update = function (dt) {
     this.updateModel(e, dt);
   }
   this.updatePlayerAssist(dt);
+  this.separatePlayers();
   this.updateNades(dt);
   this.updateBomb(dt);
   this.updatePickups();
@@ -3585,7 +3678,7 @@ G.fireBullet = function (sh, o, d, def, first) {
   }
 };
 // Silahın delme gücü (metre "duvar eşdeğeri") ve en fazla delinebilen yüzey sayısı
-const PEN_POWER = { awp: 4.2, ssg08: 3.3, ak47: 3.0, sg553: 3.1, aug: 3.0, m4a4: 2.7, m4a1s: 2.6, galil: 2.6, famas: 2.5, m249: 3.0, negev: 2.6,
+const PEN_POWER = { g3sg1: 3.4, sg550: 3.2, mp5: 1.4, tmp: 1.0, p228: 1.2, elite: 1.0, m3: 0.3, awp: 4.2, ssg08: 3.3, ak47: 3.0, sg553: 3.1, aug: 3.0, m4a4: 2.7, m4a1s: 2.6, galil: 2.6, famas: 2.5, m249: 3.0, negev: 2.6,
   deagle: 2.5, fiveseven: 1.7, tec9: 1.6, p250: 1.2, usp: 1.0, p2000: 1.0, glock: 0.9, p90: 1.7, mp7: 1.5, ump45: 1.4, mp9: 1.2, mac10: 1.1, nova: 0.3, xm1014: 0.4 };
 const MAT_DENSITY = { crate: 0.3, crate2: 0.35, lowwall: 0.8, wall: 0.75, ceil: 0.9 };
 G.penetrate = function (o, d, range, def) {
@@ -3648,16 +3741,17 @@ G.knifeAttack = function (e) {
   if (wasAlive && !best.alive) this.onKill(best, e, WEAPONS.knife, false);
 };
 G.onShot = function (e, def) {
-  Audio3.shot(def, e.isPlayer ? null : e.eye());
+  const sil = e.isSilenced();
+  Audio3.shot(def, e.isPlayer ? null : e.eye(), sil);
   if (e.isPlayer) { this.vm.kick = 1; this.vm.flashT = 0.045; }
   else FX.muzzleFlash3P(this.muzzleWorld(e));
   // botlar duyar
-  const range = def.silenced ? 18 : 60;
+  const range = sil ? 18 : 60;
   for (const b of this.bots) {
     if (b.e === e || this.ally(b.e, e) || !b.e.alive) continue;
     if (dist2(b.e.pos, e.pos) < range) b.hear(e.pos, this.now, 'shot');
   }
-  if (!def.silenced) e.spottedUntil = Math.max(e.spottedUntil, this.now + 0.3); // radarda görünür
+  if (!sil) e.spottedUntil = Math.max(e.spottedUntil, this.now + 0.3); // radarda görünür
 };
 G.onFootstep = function (e) {
   if (!e.isPlayer) Audio3.footstep(e.pos, this.ally(e, this.player) ? 0.5 : 1);
@@ -3712,6 +3806,45 @@ G.onKill = function (v, k, def, hs, wallbang) {
   v.resetForDeath();
   if (v.model) Models.setCharGun(v.model, null);
   if (v.isPlayer) { UI.onPlayerDeath(k); this.spec = null; }
+};
+// Oyuncular birbirinin içinden geçemez (yumuşak itme, duvarlara saygılı)
+G.separatePlayers = function () {
+  const E = this.entities, R = 0.74;
+  for (let i = 0; i < E.length; i++) {
+    const a = E[i]; if (!a.alive) continue;
+    for (let j = i + 1; j < E.length; j++) {
+      const b = E[j]; if (!b.alive) continue;
+      const dx = b.pos.x - a.pos.x, dz = b.pos.z - a.pos.z;
+      if (Math.abs(dx) > R || Math.abs(dz) > R || Math.abs(a.pos.y - b.pos.y) > 1.5) continue;
+      const d = Math.hypot(dx, dz); if (d >= R) continue;
+      const nx = d > 0.001 ? dx / d : 1, nz = d > 0.001 ? dz / d : 0, push = (R - d) * 0.5;
+      Phys.moveBody(a, -nx * push, 0, -nz * push); Phys.moveBody(b, nx * push, 0, nz * push);
+    }
+  }
+};
+// ---- Telsiz komutları (oyuncu -> takım botları) ----
+G.radio = function (n) {
+  const p = this.player; if (!p || !p.alive || this.ffa || !this.running) return;
+  const mates = this.bots.filter(b => b.e.alive && b.e.team === p.team);
+  const now = this.now;
+  const texts = ['Beni takip edin!', 'Pozisyonu tutun!', 'Saldırın, git git git!', 'Geri çekilin, toplanın!', 'Düşman görüldü!', 'Rapor verin.'];
+  UI.chat(p, texts[n - 1]); Audio3.ui(520);
+  const reply = (list, opts) => list.slice(0, 2).forEach((b, i) => setTimeout(() => { if (b.e.alive) UI.chat(b.e, pick(opts)); }, 600 + i * 700));
+  if (n === 1) { mates.forEach(b => b.order = { type: 'follow', until: now + 30 }); reply(mates, ['anlaşıldı, arkandayım', 'tamam, geliyorum', 'takipteyim']); }
+  else if (n === 2) { mates.forEach(b => b.order = { type: 'hold', p: { x: b.e.pos.x, z: b.e.pos.z }, look: { x: p.pos.x - Math.sin(p.yaw) * 20, z: p.pos.z - Math.cos(p.yaw) * 20 }, until: now + 25 }); reply(mates, ['anlaşıldı, tutuyorum', 'pozisyondayım', 'tamam, bekliyorum']); }
+  else if (n === 3) { mates.forEach(b => { b.order = null; if (b.role) b.role.executeAt = now; if (b.e.team === 'CT') b.order = { type: 'push', until: now + 20 }; }); reply(mates, ['gidiyoruz!', 'anlaşıldı, giriyorum', 'hadi hadi!']); }
+  else if (n === 4) { mates.forEach(b => b.order = { type: 'follow', until: now + 12 }); reply(mates, ['geri çekiliyorum', 'tamam, toplanıyoruz', 'geliyorum']); }
+  else if (n === 5) {
+    const eye = p.eye(); let c = 0;
+    for (const e of this.entities) {
+      if (!e.alive || e.team === p.team) continue;
+      const head = { x: e.pos.x, y: e.pos.y + e.height - 0.12, z: e.pos.z };
+      const f = dirFromAngles(p.yaw, p.pitch), dx = head.x - eye.x, dy = head.y - eye.y, dz = head.z - eye.z, d = Math.hypot(dx, dy, dz);
+      if ((dx * f.x + dy * f.y + dz * f.z) / d > 0.6 && !Phys.blocked(eye, head)) { this.spot(e, p.team, now); c++; mates.forEach(b => { if (!b.target) { b.noise = { x: e.pos.x, y: e.pos.y, z: e.pos.z }; b.noiseT = now; } }); }
+    }
+    reply(mates, c ? ['gördüm, bakıyorum', 'anlaşıldı, dikkat'] : ['ben göremiyorum', 'nerede?']);
+  }
+  else if (n === 6) mates.forEach((b, i) => setTimeout(() => { if (b.e.alive) UI.chat(b.e, `${BotChat.zoneName(b.e.pos).replace(/'d[ae]$/, '')} — ${Math.ceil(b.e.hp)} can${b.e.inv.bomb ? ', bomba bende' : ''}`); }, 500 + i * 600));
 };
 // İzleyici: sıradaki canlı takım arkadaşına geç
 G.cycleSpec = function () {
@@ -3808,6 +3941,7 @@ G.buy = function (e, id, bot) {
     if (id === 'kevlar') e.armor = 100;
     if (id === 'helmet') { e.armor = 100; e.helmet = true; }
     if (id === 'kit') e.kit = true;
+    if (id === 'nvg') { if (e.nvg) return false; e.nvg = true; }
   } else if (def.slot === 'grenade') {
     if (!e.giveWeapon(id)) return false;
   } else {
@@ -4290,7 +4424,7 @@ G.sound = function (kind, e, f) {
 };
 
 // ================= ÖLÜM KALIM =================
-const DM_BOT_GUNS = ['ak47', 'ak47', 'm4a4', 'm4a1s', 'm4a1s', 'awp', 'galil', 'famas', 'sg553', 'aug', 'mp9', 'ump45', 'p90', 'mac10', 'ssg08', 'xm1014', 'mp7'];
+const DM_BOT_GUNS = ['mp5', 'm3', 'g3sg1', 'sg550', 'ak47', 'ak47', 'm4a4', 'm4a1s', 'm4a1s', 'awp', 'galil', 'famas', 'sg553', 'aug', 'mp9', 'ump45', 'p90', 'mac10', 'ssg08', 'xm1014', 'mp7'];
 G.dmLoadout = function (e) {
   e.resetForDeath();
   e.armor = 100; e.helmet = true; e.money = 16000;
@@ -4499,6 +4633,8 @@ const Input = {
       case 'scope': p.toggleScope(); break;
       case 'buy': UI.toggleBuy(); break;
       case 'menu': UI.pause(true); break;
+      case 'radio': UI.toggleRadio(); break;
+      case 'nvg': UI.toggleNvg(); break;
       case 'drop': G.dropWeapon(); break;
       case 'slot': p.switchTo(el.dataset.s); break;
     }
@@ -4508,7 +4644,8 @@ const Input = {
     const k = e.code;
     if (k === 'Tab') { e.preventDefault(); this.scoreHeld = down; UI.showScore(down); return; }
     if (!G.running) return;
-    if (k === 'Escape' && down) { if (UI.buyOpen) UI.toggleBuy(false); return; }
+    if (k === 'Escape' && down) { if (UI.buyOpen) UI.toggleBuy(false); UI.toggleRadio(false); return; }
+    if (down && UI.radioOpen && /^Digit[1-6]$/.test(k)) { G.radio(parseInt(k.slice(5))); UI.toggleRadio(false); return; }
     this.keys[k] = down;
     if (!down) return;
     Audio3.init();
@@ -4521,6 +4658,8 @@ const Input = {
       case 'KeyG': G.dropWeapon(); break;
       case 'KeyE': if (UI.useMode === 'pick') G.playerSwapPickup(); break;
       case 'KeyQ': p.switchTo(p.prevSlot); break;
+      case 'KeyZ': UI.toggleRadio(); break;
+      case 'KeyN': UI.toggleNvg(); break;
       case 'Digit1': p.switchTo('primary'); break;
       case 'Digit2': p.switchTo('secondary'); break;
       case 'Digit3': p.switchTo('knife'); break;
@@ -4586,6 +4725,7 @@ const UI = {
     $('meAgain').onclick = () => { $('matchEnd').classList.add('hidden'); this.play(); };
     $('meMenu').onclick = () => { $('matchEnd').classList.add('hidden'); this.quit(); };
     $('buyClose').onclick = () => this.toggleBuy(false);
+    document.querySelectorAll('#radio button').forEach(b => { const go = ev => { ev.preventDefault(); ev.stopPropagation(); G.radio(parseInt(b.dataset.r)); this.toggleRadio(false); }; b.addEventListener('touchstart', go, { passive: false }); b.addEventListener('click', go); });
     $('buyMenu').addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
     this.buildCrosshair();
     this.radarImg = MAP.radarImage(8);
@@ -4627,6 +4767,7 @@ const UI = {
     Audio3.setVolume(S.volume);
     $('fps').classList.toggle('hidden', !S.showFps);
     if ((key === 'graphics' || key === 'sharp') && G.renderer) G.applyGraphics();
+    document.body.classList.toggle('hudclassic', S.hudStyle === 'classic');
     if (key === 'map' && G.renderer && !G.running) G.loadMap(S.map === 'random' ? 'dust' : S.map);
     if (key === 'fov' && G.camera) { G.camera.fov = S.fov; G.camera.updateProjectionMatrix(); }
   },
@@ -4665,8 +4806,18 @@ const UI = {
     if (on) { Input.fireHeld = false; if (document.exitPointerLock) document.exitPointerLock(); }
     else Input.lockPointer();
   },
+  toggleRadio(force) {
+    const open = force === undefined ? !this.radioOpen : force;
+    if (open && (!G.running || !G.player || !G.player.alive || G.ffa)) return;
+    this.radioOpen = open; $('radio').classList.toggle('hidden', !open);
+  },
+  toggleNvg() {
+    const p = G.player; if (!p || !p.alive || !p.nvg) return;
+    p.nvgOn = !p.nvgOn; Audio3.ui(p.nvgOn ? 1500 : 900);
+  },
   onMatchStart() {
-    this.cache = {}; $('killfeed').innerHTML = '';
+    this.cache = {}; $('killfeed').innerHTML = ''; $('chat').innerHTML = ''; $('toast').textContent = ''; $('centerMsg').innerHTML = ''; this.toastT = 0; this.msgT = 0;
+    this.toggleRadio(false);
     $('specInfo').classList.add('hidden');
   },
   onRoundStart(n, pistol) {
@@ -4788,13 +4939,14 @@ const UI = {
       const b = document.createElement('button'); b.className = 'bi';
       let price = def.price; if (id === 'helmet' && p.armor >= 100 && !p.helmet) price = 350;
       if (G.dm) price = 0;
-      const own = (def.slot && p.inv[def.slot] && p.inv[def.slot].def.id === id) || (def.slot === 'grenade' && p.inv.grenades.includes(id)) || (id === 'kit' && p.kit) || (id === 'helmet' && p.helmet) || (id === 'kevlar' && p.armor >= 100);
+      const own = (def.slot && p.inv[def.slot] && p.inv[def.slot].def.id === id) || (def.slot === 'grenade' && p.inv.grenades.includes(id)) || (id === 'kit' && p.kit) || (id === 'nvg' && p.nvg) || (id === 'helmet' && p.helmet) || (id === 'kevlar' && p.armor >= 100);
       if (p.money < price) b.classList.add('no');
       if (own) b.classList.add('own');
       let info = '';
       if (def.damage && def.mag) info = `Hasar ${def.damage}${def.pellets ? 'x' + def.pellets : ''} • ${def.mag}/${def.reserve} • ${Math.round(def.pen * 100)}% zırh delme`;
       else if (def.nade) info = { he: 'Patlayıcı hasar', flash: 'Kör eder (en fazla 2)', smoke: 'Görüşü engeller', fire: 'Alanı yakar' }[def.nade];
       else if (id === 'kit') info = 'İmha süresi 10s → 5s';
+      else if (id === 'nvg') info = 'Karanlık yerleri aydınlatır (N / GG tuşu)';
       else if (id === 'helmet') info = 'Kafa vuruşlarına karşı';
       else if (id === 'kevlar') info = 'Gövde hasarını azaltır';
       b.innerHTML = `${def.name}<span>${G.dm ? 'ÜCRETSİZ' : '$' + price}</span><em>${info}</em>`;
@@ -4868,7 +5020,7 @@ const UI = {
     if (this.cache.buyz !== inBuy) { this.cache.buyz = inBuy; $('money').className = 'hudbox' + (inBuy ? ' buyzone' : ''); $('bBuy').classList.toggle('hidden', !inBuy); if (!inBuy && this.buyOpen) this.toggleBuy(false); }
     const w = view.weapon();
     const d = w ? w.def : WEAPONS.knife;
-    this.set('wname', d.name);
+    this.set('wname', d.name + (w && w.burst ? ' • SERİ' : '') + (w && d.silenced && w.sil === false ? ' • susturucusuz' : ''));
     if (d.mag) { this.set('ammo', String(w.mag)); this.set('reserve', '/ ' + w.reserve); }
     else if (d.type === 'grenade') { this.set('ammo', String(view.inv.grenades.filter(g => g === d.id).length)); this.set('reserve', ''); }
     else { this.set('ammo', d.type === 'knife' ? '—' : 'C4'); this.set('reserve', ''); }
@@ -4910,8 +5062,18 @@ const UI = {
       if (um && !Input.isMobile) this.toast(um === 'plant' ? '[E] basılı tut: Bombayı kur' : um === 'defuse' ? '[E] basılı tut: İmha et' : '[E] Silahı al', 1.5);
     }
     // dürbün tuşu
-    const hasScope = p.alive && !!(d.scope || d.mag);
-    if (this.cache.hs !== hasScope) { this.cache.hs = hasScope; $('bScope').classList.toggle('hidden', !hasScope); }
+    const pd = p.def;
+    const altLbl = !p.alive ? '' : pd.scope ? 'DÜRBÜN' : pd.alt === 'silencer' ? 'SUST.' : pd.alt === 'burst' ? 'SERİ' : pd.mag ? 'NİŞAN' : '';
+    if (this.cache.hs !== altLbl) { this.cache.hs = altLbl; $('bScope').classList.toggle('hidden', !altLbl); $('bScope').textContent = altLbl; }
+    // ölüyken aksiyon tuşlarını gizle; gece görüşü & telsiz tuşları
+    const deadCls = !p.alive;
+    if (this.cache.dead !== deadCls) { this.cache.dead = deadCls; document.body.classList.toggle('pdead', deadCls); if (deadCls) this.toggleRadio(false); }
+    const nv = p.alive && p.nvg;
+    if (this.cache.nv !== nv) { this.cache.nv = nv; $('bNvg').classList.toggle('hidden', !nv); }
+    const nvOn = !!(view.alive && view.nvg && view.nvgOn);
+    if (this.cache.nvOn !== nvOn) { this.cache.nvOn = nvOn; $('nvg').classList.toggle('hidden', !nvOn); if (G.hemi) G.hemi.intensity = (Tex.RETRO ? 0.72 : 0.62) * (nvOn ? 1.9 : 1); }
+    const rad = p.alive && !G.ffa;
+    if (this.cache.rad !== rad) { this.cache.rad = rad; $('bRadio').classList.toggle('hidden', !rad); }
     // yuvalar
     const slotSig = ['primary', 'secondary', 'grenade', 'bomb'].map(s => { const ww = p.weapon(s); return ww ? ww.def.id : '-'; }).join() + p.slot + p.inv.grenades.length;
     if (this.cache.slots !== slotSig) {
@@ -5071,7 +5233,9 @@ const Cheats = {
     return true;
   },
   animate(e, parts) {
+    if (e.isPlayer && e._spun && !this.c.spin) { e._spun = false; parts.armL.rotation.z = 0.62; parts.armR.rotation.z = -0.38; parts.head.rotation.x = 0; }
     if (!e.isPlayer || !this.c.spin || !e.alive) return;
+    e._spun = true;
     e.model.root.rotation.y = G.now * 22;
     parts.upper.rotation.x = -0.9 + Math.sin(G.now * 9) * 0.3;
     parts.head.rotation.x = -0.6;

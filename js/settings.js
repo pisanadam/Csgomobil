@@ -33,6 +33,8 @@ const DEFAULT_SETTINGS = {
   maxRounds: 16,
   friendlyFire: false,
   playerTeam: 'auto',
+  startMoney: 800, roundTime: 115, c4Time: 40, freezeTime: 6,
+  hudStyle: 'modern',    // 'modern' | 'classic'
   map: 'dust',            // dust, harbor, snow, town, random
   mode: 'comp',          // 'comp' rekabetçi, 'dm' ölüm kalım
   dmTime: 300,           // ölüm kalım süresi (sn)

@@ -188,6 +188,17 @@ class Bot {
       }
       return { key: 'roam', p: this.roam };
     }
+    // oyuncunun telsiz komutu
+    const od = this.order;
+    if (od && now < od.until && B.state !== 'planted' && G.player && G.player.alive && !(e.inv.bomb && this.executed)) {
+      if (od.type === 'follow') {
+        const pp = G.player.pos;
+        if (!od.spot || dist2(od.at || pp, pp) > 3.5) { od.at = { x: pp.x, z: pp.z }; od.spot = G.randomNear(pp, 1.6, 3.6); }
+        return { key: 'follow', p: od.spot, hold: true, look: { x: pp.x - Math.sin(G.player.yaw) * 15, z: pp.z - Math.cos(G.player.yaw) * 15 } };
+      }
+      if (od.type === 'hold') return { key: 'ordhold', p: od.p, look: od.look, hold: true };
+      if (od.type === 'push') { const kp = this.knownEnemyPoint(now); if (kp) return { key: 'push', p: kp }; const st = MAP.POS.tStage.mid[0]; return { key: 'push', p: st }; }
+    } else if (od) this.order = null;
     if (this.trade && now < this.tradeUntil && B.state !== 'planted') return { key: 'trade', p: this.trade };
     if (e.team === 'T') {
       if (B.state === 'dropped') {

@@ -22,6 +22,7 @@ const UI = {
     $('meAgain').onclick = () => { $('matchEnd').classList.add('hidden'); this.play(); };
     $('meMenu').onclick = () => { $('matchEnd').classList.add('hidden'); this.quit(); };
     $('buyClose').onclick = () => this.toggleBuy(false);
+    document.querySelectorAll('#radio button').forEach(b => { const go = ev => { ev.preventDefault(); ev.stopPropagation(); G.radio(parseInt(b.dataset.r)); this.toggleRadio(false); }; b.addEventListener('touchstart', go, { passive: false }); b.addEventListener('click', go); });
     $('buyMenu').addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
     this.buildCrosshair();
     this.radarImg = MAP.radarImage(8);
@@ -63,6 +64,7 @@ const UI = {
     Audio3.setVolume(S.volume);
     $('fps').classList.toggle('hidden', !S.showFps);
     if ((key === 'graphics' || key === 'sharp') && G.renderer) G.applyGraphics();
+    document.body.classList.toggle('hudclassic', S.hudStyle === 'classic');
     if (key === 'map' && G.renderer && !G.running) G.loadMap(S.map === 'random' ? 'dust' : S.map);
     if (key === 'fov' && G.camera) { G.camera.fov = S.fov; G.camera.updateProjectionMatrix(); }
   },
@@ -101,8 +103,18 @@ const UI = {
     if (on) { Input.fireHeld = false; if (document.exitPointerLock) document.exitPointerLock(); }
     else Input.lockPointer();
   },
+  toggleRadio(force) {
+    const open = force === undefined ? !this.radioOpen : force;
+    if (open && (!G.running || !G.player || !G.player.alive || G.ffa)) return;
+    this.radioOpen = open; $('radio').classList.toggle('hidden', !open);
+  },
+  toggleNvg() {
+    const p = G.player; if (!p || !p.alive || !p.nvg) return;
+    p.nvgOn = !p.nvgOn; Audio3.ui(p.nvgOn ? 1500 : 900);
+  },
   onMatchStart() {
-    this.cache = {}; $('killfeed').innerHTML = '';
+    this.cache = {}; $('killfeed').innerHTML = ''; $('chat').innerHTML = ''; $('toast').textContent = ''; $('centerMsg').innerHTML = ''; this.toastT = 0; this.msgT = 0;
+    this.toggleRadio(false);
     $('specInfo').classList.add('hidden');
   },
   onRoundStart(n, pistol) {
@@ -224,13 +236,14 @@ const UI = {
       const b = document.createElement('button'); b.className = 'bi';
       let price = def.price; if (id === 'helmet' && p.armor >= 100 && !p.helmet) price = 350;
       if (G.dm) price = 0;
-      const own = (def.slot && p.inv[def.slot] && p.inv[def.slot].def.id === id) || (def.slot === 'grenade' && p.inv.grenades.includes(id)) || (id === 'kit' && p.kit) || (id === 'helmet' && p.helmet) || (id === 'kevlar' && p.armor >= 100);
+      const own = (def.slot && p.inv[def.slot] && p.inv[def.slot].def.id === id) || (def.slot === 'grenade' && p.inv.grenades.includes(id)) || (id === 'kit' && p.kit) || (id === 'nvg' && p.nvg) || (id === 'helmet' && p.helmet) || (id === 'kevlar' && p.armor >= 100);
       if (p.money < price) b.classList.add('no');
       if (own) b.classList.add('own');
       let info = '';
       if (def.damage && def.mag) info = `Hasar ${def.damage}${def.pellets ? 'x' + def.pellets : ''} • ${def.mag}/${def.reserve} • ${Math.round(def.pen * 100)}% zırh delme`;
       else if (def.nade) info = { he: 'Patlayıcı hasar', flash: 'Kör eder (en fazla 2)', smoke: 'Görüşü engeller', fire: 'Alanı yakar' }[def.nade];
       else if (id === 'kit') info = 'İmha süresi 10s → 5s';
+      else if (id === 'nvg') info = 'Karanlık yerleri aydınlatır (N / GG tuşu)';
       else if (id === 'helmet') info = 'Kafa vuruşlarına karşı';
       else if (id === 'kevlar') info = 'Gövde hasarını azaltır';
       b.innerHTML = `${def.name}<span>${G.dm ? 'ÜCRETSİZ' : '$' + price}</span><em>${info}</em>`;
@@ -304,7 +317,7 @@ const UI = {
     if (this.cache.buyz !== inBuy) { this.cache.buyz = inBuy; $('money').className = 'hudbox' + (inBuy ? ' buyzone' : ''); $('bBuy').classList.toggle('hidden', !inBuy); if (!inBuy && this.buyOpen) this.toggleBuy(false); }
     const w = view.weapon();
     const d = w ? w.def : WEAPONS.knife;
-    this.set('wname', d.name);
+    this.set('wname', d.name + (w && w.burst ? ' • SERİ' : '') + (w && d.silenced && w.sil === false ? ' • susturucusuz' : ''));
     if (d.mag) { this.set('ammo', String(w.mag)); this.set('reserve', '/ ' + w.reserve); }
     else if (d.type === 'grenade') { this.set('ammo', String(view.inv.grenades.filter(g => g === d.id).length)); this.set('reserve', ''); }
     else { this.set('ammo', d.type === 'knife' ? '—' : 'C4'); this.set('reserve', ''); }
@@ -346,8 +359,18 @@ const UI = {
       if (um && !Input.isMobile) this.toast(um === 'plant' ? '[E] basılı tut: Bombayı kur' : um === 'defuse' ? '[E] basılı tut: İmha et' : '[E] Silahı al', 1.5);
     }
     // dürbün tuşu
-    const hasScope = p.alive && !!(d.scope || d.mag);
-    if (this.cache.hs !== hasScope) { this.cache.hs = hasScope; $('bScope').classList.toggle('hidden', !hasScope); }
+    const pd = p.def;
+    const altLbl = !p.alive ? '' : pd.scope ? 'DÜRBÜN' : pd.alt === 'silencer' ? 'SUST.' : pd.alt === 'burst' ? 'SERİ' : pd.mag ? 'NİŞAN' : '';
+    if (this.cache.hs !== altLbl) { this.cache.hs = altLbl; $('bScope').classList.toggle('hidden', !altLbl); $('bScope').textContent = altLbl; }
+    // ölüyken aksiyon tuşlarını gizle; gece görüşü & telsiz tuşları
+    const deadCls = !p.alive;
+    if (this.cache.dead !== deadCls) { this.cache.dead = deadCls; document.body.classList.toggle('pdead', deadCls); if (deadCls) this.toggleRadio(false); }
+    const nv = p.alive && p.nvg;
+    if (this.cache.nv !== nv) { this.cache.nv = nv; $('bNvg').classList.toggle('hidden', !nv); }
+    const nvOn = !!(view.alive && view.nvg && view.nvgOn);
+    if (this.cache.nvOn !== nvOn) { this.cache.nvOn = nvOn; $('nvg').classList.toggle('hidden', !nvOn); if (G.hemi) G.hemi.intensity = (Tex.RETRO ? 0.72 : 0.62) * (nvOn ? 1.9 : 1); }
+    const rad = p.alive && !G.ffa;
+    if (this.cache.rad !== rad) { this.cache.rad = rad; $('bRadio').classList.toggle('hidden', !rad); }
     // yuvalar
     const slotSig = ['primary', 'secondary', 'grenade', 'bomb'].map(s => { const ww = p.weapon(s); return ww ? ww.def.id : '-'; }).join() + p.slot + p.inv.grenades.length;
     if (this.cache.slots !== slotSig) {

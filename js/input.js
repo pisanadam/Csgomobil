@@ -145,6 +145,8 @@ const Input = {
       case 'scope': p.toggleScope(); break;
       case 'buy': UI.toggleBuy(); break;
       case 'menu': UI.pause(true); break;
+      case 'radio': UI.toggleRadio(); break;
+      case 'nvg': UI.toggleNvg(); break;
       case 'drop': G.dropWeapon(); break;
       case 'slot': p.switchTo(el.dataset.s); break;
     }
@@ -154,7 +156,8 @@ const Input = {
     const k = e.code;
     if (k === 'Tab') { e.preventDefault(); this.scoreHeld = down; UI.showScore(down); return; }
     if (!G.running) return;
-    if (k === 'Escape' && down) { if (UI.buyOpen) UI.toggleBuy(false); return; }
+    if (k === 'Escape' && down) { if (UI.buyOpen) UI.toggleBuy(false); UI.toggleRadio(false); return; }
+    if (down && UI.radioOpen && /^Digit[1-6]$/.test(k)) { G.radio(parseInt(k.slice(5))); UI.toggleRadio(false); return; }
     this.keys[k] = down;
     if (!down) return;
     Audio3.init();
@@ -167,6 +170,8 @@ const Input = {
       case 'KeyG': G.dropWeapon(); break;
       case 'KeyE': if (UI.useMode === 'pick') G.playerSwapPickup(); break;
       case 'KeyQ': p.switchTo(p.prevSlot); break;
+      case 'KeyZ': UI.toggleRadio(); break;
+      case 'KeyN': UI.toggleNvg(); break;
       case 'Digit1': p.switchTo('primary'); break;
       case 'Digit2': p.switchTo('secondary'); break;
       case 'Digit3': p.switchTo('knife'); break;

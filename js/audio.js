@@ -65,14 +65,15 @@ const Audio3 = {
     o.connect(g); g.connect(dest);
     o.start(t); o.stop(t + dur + 0.05);
   },
-  shot(def, pos) {
+  shot(def, pos, sil) {
     if (!this.ctx) return;
-    const sp = this.spatial(pos, def.silenced ? 35 : 120);
+    if (sil === undefined) sil = def.silenced;
+    const sp = this.spatial(pos, sil ? 35 : 120);
     if (sp.vol < 0.003) return;
     const t = this.ctx.currentTime, d = sp.node;
     const k = def.sound || {};
     const body = k.body || 1, pitch = k.pitch || 1;
-    if (def.silenced) {
+    if (sil) {
       this.noiseBurst(d, t, 0.09, 1800 * pitch, 0.8, 0.5, 'bandpass');
       this.tone(d, t, 0.06, 300, 120, 0.25, 'triangle');
       return;

@@ -11,7 +11,8 @@ Mobilde ve masaüstünde tarayıcıda oynanan, 5v5 bomba kurma / imha modlu takt
 - Modlar: Rekabetçi (bomba kurma/imha) ve Ölüm Kalım (herkes herkese karşı, yeniden doğma, ücretsiz satın alma, 3/5/10 dk)
 - Raunt sistemi: hazırlık süresi, satın alma süresi, 1:55 raunt, 40 sn bomba sayacı, devre arasında taraf değişimi
 - Ekonomi: başlangıç $800, öldürme ödülleri silaha göre, kazanma/kaybetme bonusları, kayıp serisi
-- 25+ silah: tabancalar, SMG'ler, pompalılar, makineli tüfekler, tüfekler, keskin nişancı tüfekleri (dürbünlü)
+- 30+ silah: tabancalar, SMG'ler, pompalılar, makineli tüfekler, tüfekler, sürgülü ve otomatik keskin nişancı tüfekleri; susturucu tak/çıkar ve 3'lü seri atış modları
+- Telsiz komutları (botlar uyar), gece görüşü, klasik (kehribar) arayüz, sunucu ayarları (para, süreler)
 - Ekipman: kevlar, kask, imha kiti; HE, flaş, sis, molotof/yangın bombası
 - Sabit sprey desenleri, hareket isabetsizliği, kafa vuruşu 4x, zırh delme, mesafeye göre hasar düşüşü, tahta kasalardan mermi geçirme
 - Botlar: tepki süresi, nişan hızı, sprey kontrolü, karşı-strafe, takım taktikleri (site seçimi, rotasyon, bomba kurma/imha, kurtarma), el bombası kullanımı, ekonomiye göre satın alma

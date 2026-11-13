@@ -93,6 +93,24 @@ body.mobile #touch{display:block}
 /* üst */
 #bBuy{left:calc(112px + var(--sl));top:calc(6px + var(--st));width:56px;height:40px;border-radius:9px;font-size:11px;background:rgba(40,130,60,.7);opacity:.9}
 #bMenu{right:calc(8px + var(--sr));top:calc(6px + var(--st));width:40px;height:40px;border-radius:9px;font-size:16px}
+#bRadio{right:calc(54px + var(--sr));top:calc(6px + var(--st));width:40px;height:40px;border-radius:9px;font-size:17px}
+#bNvg{right:calc(100px + var(--sr));top:calc(6px + var(--st));width:40px;height:40px;border-radius:9px;font-size:12px;color:#7dff8a}
+body.pdead #bFire,body.pdead #bFire2,body.pdead #bJump,body.pdead #bCrouch,body.pdead #bReload,body.pdead #bScope,body.pdead #bUse,body.pdead #slots,body.pdead #joyHint,body.pdead #bBuy{display:none!important}
+#radio{position:fixed;z-index:14;left:max(8px,env(safe-area-inset-left));top:50%;transform:translateY(-50%);background:rgba(10,12,16,.85);border:1px solid var(--line);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:4px;min-width:210px}
+#radio b{font-size:12px;color:var(--accent);letter-spacing:1px;margin-bottom:2px}
+#radio button{text-align:left;padding:8px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.14);background:#1f232a;color:#fff;font-weight:700;font-size:13px}
+#nvg{position:fixed;inset:0;z-index:4;pointer-events:none;background:radial-gradient(ellipse at center,rgba(60,255,90,.55) 0,rgba(20,200,60,.75) 60%,rgba(0,60,10,.95) 100%);mix-blend-mode:multiply}
+/* Klasik arayüz: kutusuz, kehribar rakamlar */
+body.hudclassic #hud .hudbox{background:transparent;border-color:transparent;backdrop-filter:none;color:#ffb22e;text-shadow:0 0 6px rgba(255,150,0,.45),0 1px 2px #000;font-family:"Courier New",ui-monospace,monospace;font-weight:900}
+body.hudclassic #money{color:#ffb22e}
+body.hudclassic #hpBox .ic,body.hudclassic #arBox .ic{color:#ffb22e}
+body.hudclassic #hpBox.low{color:#ff4530}
+body.hudclassic #scL,body.hudclassic #scR,body.hudclassic #timer{color:#ffb22e}
+body.hudclassic #timer.bomb{color:#ff4530}
+body.hudclassic #ammoBox small,body.hudclassic #wname{color:#c98a20}
+body.hudclassic #radarWrap{background:rgba(0,40,0,.35);border-color:rgba(120,255,120,.35)}
+body.hudclassic .kf{background:transparent;text-shadow:0 1px 2px #000}
+body.hudclassic #chat .cm{background:transparent;color:#ffd58a}
 #bScore{left:50%;transform:translateX(-50%);top:0;width:300px;height:46px;border:0;background:transparent;border-radius:0;opacity:0}
 #bWalk,#bDrop{display:none}
 /* silah yuvaları */
@@ -241,6 +259,8 @@ input[type=range]{width:100%;accent-color:#e9a83a}
   <div class="tb" id="bWalk" data-b="walk">YÜRÜ</div>
   <div class="tb" id="bBuy" data-b="buy">SATIN<br>AL</div>
   <div class="tb" id="bMenu" data-b="menu">❚❚</div>
+  <div class="tb hidden" id="bRadio" data-b="radio">📻</div>
+  <div class="tb hidden" id="bNvg" data-b="nvg">GG</div>
   <div class="tb" id="bScore" data-b="score"></div>
   <div class="tb" id="bDrop" data-b="drop">BIRAK</div>
   <div id="slots">
@@ -262,6 +282,11 @@ input[type=range]{width:100%;accent-color:#e9a83a}
 </div>
 
 <div id="scoreboard" class="hidden"></div>
+<div id="nvg" class="hidden"></div>
+<div id="radio" class="hidden"><b>TELSİZ</b>
+  <button data-r="1">1. Beni takip edin</button><button data-r="2">2. Pozisyonu tutun</button><button data-r="3">3. Saldırın! Git git git</button>
+  <button data-r="4">4. Geri çekilin / toplanın</button><button data-r="5">5. Düşman görüldü</button><button data-r="6">6. Rapor verin</button>
+</div>
 
 <!-- ============ ANA MENÜ ============ -->
 <div id="mainMenu" class="screen">
@@ -326,6 +351,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
       <div class="field"><label>Grafik Kalitesi</label><div class="seg" data-set="graphics" data-opts='[[0,"Düşük"],[1,"Orta"],[2,"Yüksek"]]' data-reload="1"></div><div style="font-size:12px;color:var(--dim)">Gölge/kalite değişiklikleri sonraki açılışta tam uygulanır.</div></div>
       <div class="field"><label>Doku Stili</label><div class="seg" data-set="texStyle" data-opts='[["retro","Retro (eski okul)"],["modern","Modern"]]' data-reload="1"></div><div style="font-size:12px;color:var(--dim)">Değişiklik oyun yeniden açılınca uygulanır.</div></div>
       <div class="field"><label>Netlik (Çözünürlük)</label><div class="seg" data-set="sharp" data-opts='[[0,"Düşük"],[1,"Orta"],[2,"Yüksek"],[3,"Ultra"]]'></div><div style="font-size:12px;color:var(--dim)">Yüksek = keskin görüntü. Telefon ısınır/kasarsa Orta seç.</div></div>
+      <div class="field"><label>Arayüz Stili</label><div class="seg" data-set="hudStyle" data-opts='[["modern","Modern"],["classic","Klasik (kehribar)"]]'></div></div>
       <div class="field"><label>Görüş Açısı (FOV) <span class="val" data-val="fov"></span> <small style="text-transform:none">— küçük = uzaktaki rakip daha büyük</small></label><input type="range" min="60" max="95" step="1" data-set="fov"></div>
       <div class="field"><label>Seçenekler</label><label class="check"><input type="checkbox" data-set="shadows" data-reload="1"> Gölgeler</label><label class="check"><input type="checkbox" data-set="showFps"> FPS göster</label><label class="check"><input type="checkbox" data-set="enemyGlow"> Düşmanları vurgula (kırmızı ton)</label></div>
       <div class="field"><label>Ses <span class="val" data-val="volume"></span></label><input type="range" min="0" max="1" step="0.05" data-set="volume"></div>
@@ -335,6 +361,10 @@ input[type=range]{width:100%;accent-color:#e9a83a}
         <div style="font-size:12px;color:var(--dim)">Tepki süresi, nişan hızı, sprey kontrolü, kafa vuruşu oranı, karşı-strafe ve el bombası kullanımı değişir.</div></div>
       <div class="field"><label>Takım Boyutu</label><div class="seg" data-set="teamSize" data-opts='[[1,"1v1"],[2,"2v2"],[3,"3v3"],[4,"4v4"],[5,"5v5"]]'></div></div>
       <div class="field"><label>Maç Uzunluğu</label><div class="seg" data-set="maxRounds" data-opts='[[8,"Kısa (8)"],[16,"Normal (16)"],[30,"Rekabetçi (30)"]]'></div></div>
+      <div class="field"><label>Başlangıç Parası</label><div class="seg" data-set="startMoney" data-opts='[[800,"$800"],[3000,"$3000"],[16000,"$16000"]]'></div></div>
+      <div class="field"><label>Raunt Süresi</label><div class="seg" data-set="roundTime" data-opts='[[105,"1:45"],[115,"1:55"],[180,"3:00"]]'></div></div>
+      <div class="field"><label>C4 Süresi</label><div class="seg" data-set="c4Time" data-opts='[[35,"35 sn"],[40,"40 sn"],[45,"45 sn"]]'></div></div>
+      <div class="field"><label>Hazırlık Süresi</label><div class="seg" data-set="freezeTime" data-opts='[[3,"3 sn"],[6,"6 sn"],[10,"10 sn"]]'></div></div>
       <div class="field"><label>Dost Ateşi</label><label class="check"><input type="checkbox" data-set="friendlyFire"> Takım arkadaşlarına hasar</label></div>
     </div>
     <div class="row" style="margin-top:12px"><button class="btn sm" id="setReset">Varsayılanlara dön</button></div>
@@ -350,8 +380,10 @@ input[type=range]{width:100%;accent-color:#e9a83a}
     <p><b>Ekonomi:</b> Her raunt kazanç/kayıp parası ve öldürme ödülleri alırsın. Raunt başında doğma bölgesindeyken <b>SATIN AL</b> ile silah, zırh, kit ve bomba al. Hayatta kalırsan eşyaların sonraki raunta geçer.</p>
     <p><b>İsabet:</b> Koşarken atış isabetsizdir. Durarak (veya eğilerek) ateş et, uzun mesafede kısa seri at. Sprey deseni sabittir — aşağı çekerek kontrol edebilirsin. Kafa vuruşu 4x hasar.</p>
     <p><b>Mobil:</b> Sol yarıya dokunup sürükle = yürü/koş (az itersen sessiz yürür). Sağ yarıyı kaydır = etrafa bak. Ateş tuşuna basılıyken parmağını kaydırarak nişan alabilirsin. Üstteki skora basılı tut = skor tablosu. Silah değiştirmek için alttaki silah kutularına dokun. Bomba bölgesinde <b>KUR</b>, bombanın yanında <b>İMHA</b> tuşuna basılı tut.</p>
-    <p><b>Masaüstü:</b> <kbd>WASD</kbd> hareket, <kbd>Fare</kbd> nişan/ateş, <kbd>Sağ tık</kbd> dürbün, <kbd>Boşluk</kbd> zıpla, <kbd>Ctrl</kbd>/<kbd>C</kbd> eğil, <kbd>Shift</kbd> yürü (sessiz), <kbd>R</kbd> doldur, <kbd>E</kbd> kur/imha/silah al, <kbd>G</kbd> bırak, <kbd>B</kbd> satın al, <kbd>1-5</kbd> silahlar, <kbd>Q</kbd> son silah, <kbd>Tab</kbd> skor, <kbd>Esc</kbd> menü.</p>
+    <p><b>Masaüstü:</b> <kbd>WASD</kbd> hareket, <kbd>Fare</kbd> nişan/ateş, <kbd>Sağ tık</kbd> dürbün, <kbd>Boşluk</kbd> zıpla, <kbd>Ctrl</kbd>/<kbd>C</kbd> eğil, <kbd>Shift</kbd> yürü (sessiz), <kbd>R</kbd> doldur, <kbd>E</kbd> kur/imha/silah al, <kbd>G</kbd> bırak, <kbd>B</kbd> satın al, <kbd>1-5</kbd> silahlar, <kbd>Q</kbd> son silah, <kbd>Z</kbd> telsiz, <kbd>N</kbd> gece görüşü, <kbd>Tab</kbd> skor, <kbd>Esc</kbd> menü.</p>
     <p><b>Duvar arkasından vurma:</b> Tahta kasalar ve tek kat (ince) duvarlar delinebilir. Delme gücü silaha göre değişir: AWP, AK-47, SG 553, AUG ve Desert Eagle en iyisidir; tabancalar ve SMG'ler çoğunlukla sadece kasaları deler. Her delinen yüzey hasarı düşürür.</p>
+    <p><b>İkincil ateş:</b> NİŞAN/sağ tık silaha göre değişir: dürbünlü silahlarda dürbün, M4A1-S ve USP-S'te susturucu tak/çıkar, Glock ve FAMAS'ta 3'lü seri atış, diğerlerinde hafif yakınlaştırma.</p>
+    <p><b>Telsiz:</b> 📻 (ya da <kbd>Z</kbd>) ile takım botlarına komut ver: takip et, pozisyon tut, saldır, geri çekil, düşman bildir, rapor iste.</p>
     <p><b>Bombalar:</b> HE hasar verir, flaş kör eder (bakmayın!), sis görüşü keser ve yangını söndürür, molotof/yangın bölgeyi kapatır.</p>
   </div>
 </div>

@@ -99,7 +99,9 @@ G.startMatch = function () {
   this.sideOfGroup = [pt, pt === 'T' ? 'CT' : 'T'];
   this.score = [0, 0]; this.lossStreak = { T: 0, CT: 0 };
   this.dm = S.mode === 'dm'; this.ffa = this.dm;
-  this.FREEZE = this.dm ? 3 : 6; this.ROUND_TIME = this.dm ? S.dmTime : 115;
+  this.FREEZE = this.dm ? 3 : (S.freezeTime || 6); this.ROUND_TIME = this.dm ? S.dmTime : (S.roundTime || 115);
+  this.BOMB_TIME = S.c4Time || 40; ECON.start = S.startMoney || 800;
+  document.body.classList.toggle('hudclassic', S.hudStyle === 'classic');
   const names = BOT_NAMES.slice().sort(() => Math.random() - 0.5);
   const n = Math.max(1, Math.min(5, S.teamSize));
   const pl = this.player = new Entity('Sen', pt, true); pl.group = 0;
@@ -156,6 +158,7 @@ G.startRound = function () {
     e.yaw = e.team === 'T' ? 0 : Math.PI; e.pitch = 0;
     e.alive = true; e.hp = 100; e.deathT = 0; e.flashT = 0; e.crouch = 0; e.height = STAND_H;
     e.plantT = 0; e.defuseT = 0; e.recoilIdx = 0; e.fireInacc = 0; e.punch.x = e.punch.y = 0; e.scoped = 0; e.reloadT = 0;
+    e.zoomed = false; e.burstLeft = 0; e.order = null; e.nextFire = 0;
     e.dmgBy.clear(); e.inv.bomb = false; e.trig = false;
     if (!e.inv.secondary) e.giveWeapon(e.team === 'T' ? 'glock' : 'usp');
     // eldeki silahların şarjörleri dolsun (CS: kalan cephane korunur, bu sürümde dolduruyoruz)
@@ -244,6 +247,7 @@ G.update = function (dt) {
     this.updateModel(e, dt);
   }
   this.updatePlayerAssist(dt);
+  this.separatePlayers();
   this.updateNades(dt);
   this.updateBomb(dt);
   this.updatePickups();
@@ -380,7 +384,7 @@ G.fireBullet = function (sh, o, d, def, first) {
   }
 };
 // Silahın delme gücü (metre "duvar eşdeğeri") ve en fazla delinebilen yüzey sayısı
-const PEN_POWER = { awp: 4.2, ssg08: 3.3, ak47: 3.0, sg553: 3.1, aug: 3.0, m4a4: 2.7, m4a1s: 2.6, galil: 2.6, famas: 2.5, m249: 3.0, negev: 2.6,
+const PEN_POWER = { g3sg1: 3.4, sg550: 3.2, mp5: 1.4, tmp: 1.0, p228: 1.2, elite: 1.0, m3: 0.3, awp: 4.2, ssg08: 3.3, ak47: 3.0, sg553: 3.1, aug: 3.0, m4a4: 2.7, m4a1s: 2.6, galil: 2.6, famas: 2.5, m249: 3.0, negev: 2.6,
   deagle: 2.5, fiveseven: 1.7, tec9: 1.6, p250: 1.2, usp: 1.0, p2000: 1.0, glock: 0.9, p90: 1.7, mp7: 1.5, ump45: 1.4, mp9: 1.2, mac10: 1.1, nova: 0.3, xm1014: 0.4 };
 const MAT_DENSITY = { crate: 0.3, crate2: 0.35, lowwall: 0.8, wall: 0.75, ceil: 0.9 };
 G.penetrate = function (o, d, range, def) {
@@ -443,16 +447,17 @@ G.knifeAttack = function (e) {
   if (wasAlive && !best.alive) this.onKill(best, e, WEAPONS.knife, false);
 };
 G.onShot = function (e, def) {
-  Audio3.shot(def, e.isPlayer ? null : e.eye());
+  const sil = e.isSilenced();
+  Audio3.shot(def, e.isPlayer ? null : e.eye(), sil);
   if (e.isPlayer) { this.vm.kick = 1; this.vm.flashT = 0.045; }
   else FX.muzzleFlash3P(this.muzzleWorld(e));
   // botlar duyar
-  const range = def.silenced ? 18 : 60;
+  const range = sil ? 18 : 60;
   for (const b of this.bots) {
     if (b.e === e || this.ally(b.e, e) || !b.e.alive) continue;
     if (dist2(b.e.pos, e.pos) < range) b.hear(e.pos, this.now, 'shot');
   }
-  if (!def.silenced) e.spottedUntil = Math.max(e.spottedUntil, this.now + 0.3); // radarda görünür
+  if (!sil) e.spottedUntil = Math.max(e.spottedUntil, this.now + 0.3); // radarda görünür
 };
 G.onFootstep = function (e) {
   if (!e.isPlayer) Audio3.footstep(e.pos, this.ally(e, this.player) ? 0.5 : 1);
@@ -507,6 +512,45 @@ G.onKill = function (v, k, def, hs, wallbang) {
   v.resetForDeath();
   if (v.model) Models.setCharGun(v.model, null);
   if (v.isPlayer) { UI.onPlayerDeath(k); this.spec = null; }
+};
+// Oyuncular birbirinin içinden geçemez (yumuşak itme, duvarlara saygılı)
+G.separatePlayers = function () {
+  const E = this.entities, R = 0.74;
+  for (let i = 0; i < E.length; i++) {
+    const a = E[i]; if (!a.alive) continue;
+    for (let j = i + 1; j < E.length; j++) {
+      const b = E[j]; if (!b.alive) continue;
+      const dx = b.pos.x - a.pos.x, dz = b.pos.z - a.pos.z;
+      if (Math.abs(dx) > R || Math.abs(dz) > R || Math.abs(a.pos.y - b.pos.y) > 1.5) continue;
+      const d = Math.hypot(dx, dz); if (d >= R) continue;
+      const nx = d > 0.001 ? dx / d : 1, nz = d > 0.001 ? dz / d : 0, push = (R - d) * 0.5;
+      Phys.moveBody(a, -nx * push, 0, -nz * push); Phys.moveBody(b, nx * push, 0, nz * push);
+    }
+  }
+};
+// ---- Telsiz komutları (oyuncu -> takım botları) ----
+G.radio = function (n) {
+  const p = this.player; if (!p || !p.alive || this.ffa || !this.running) return;
+  const mates = this.bots.filter(b => b.e.alive && b.e.team === p.team);
+  const now = this.now;
+  const texts = ['Beni takip edin!', 'Pozisyonu tutun!', 'Saldırın, git git git!', 'Geri çekilin, toplanın!', 'Düşman görüldü!', 'Rapor verin.'];
+  UI.chat(p, texts[n - 1]); Audio3.ui(520);
+  const reply = (list, opts) => list.slice(0, 2).forEach((b, i) => setTimeout(() => { if (b.e.alive) UI.chat(b.e, pick(opts)); }, 600 + i * 700));
+  if (n === 1) { mates.forEach(b => b.order = { type: 'follow', until: now + 30 }); reply(mates, ['anlaşıldı, arkandayım', 'tamam, geliyorum', 'takipteyim']); }
+  else if (n === 2) { mates.forEach(b => b.order = { type: 'hold', p: { x: b.e.pos.x, z: b.e.pos.z }, look: { x: p.pos.x - Math.sin(p.yaw) * 20, z: p.pos.z - Math.cos(p.yaw) * 20 }, until: now + 25 }); reply(mates, ['anlaşıldı, tutuyorum', 'pozisyondayım', 'tamam, bekliyorum']); }
+  else if (n === 3) { mates.forEach(b => { b.order = null; if (b.role) b.role.executeAt = now; if (b.e.team === 'CT') b.order = { type: 'push', until: now + 20 }; }); reply(mates, ['gidiyoruz!', 'anlaşıldı, giriyorum', 'hadi hadi!']); }
+  else if (n === 4) { mates.forEach(b => b.order = { type: 'follow', until: now + 12 }); reply(mates, ['geri çekiliyorum', 'tamam, toplanıyoruz', 'geliyorum']); }
+  else if (n === 5) {
+    const eye = p.eye(); let c = 0;
+    for (const e of this.entities) {
+      if (!e.alive || e.team === p.team) continue;
+      const head = { x: e.pos.x, y: e.pos.y + e.height - 0.12, z: e.pos.z };
+      const f = dirFromAngles(p.yaw, p.pitch), dx = head.x - eye.x, dy = head.y - eye.y, dz = head.z - eye.z, d = Math.hypot(dx, dy, dz);
+      if ((dx * f.x + dy * f.y + dz * f.z) / d > 0.6 && !Phys.blocked(eye, head)) { this.spot(e, p.team, now); c++; mates.forEach(b => { if (!b.target) { b.noise = { x: e.pos.x, y: e.pos.y, z: e.pos.z }; b.noiseT = now; } }); }
+    }
+    reply(mates, c ? ['gördüm, bakıyorum', 'anlaşıldı, dikkat'] : ['ben göremiyorum', 'nerede?']);
+  }
+  else if (n === 6) mates.forEach((b, i) => setTimeout(() => { if (b.e.alive) UI.chat(b.e, `${BotChat.zoneName(b.e.pos).replace(/'d[ae]$/, '')} — ${Math.ceil(b.e.hp)} can${b.e.inv.bomb ? ', bomba bende' : ''}`); }, 500 + i * 600));
 };
 // İzleyici: sıradaki canlı takım arkadaşına geç
 G.cycleSpec = function () {
@@ -603,6 +647,7 @@ G.buy = function (e, id, bot) {
     if (id === 'kevlar') e.armor = 100;
     if (id === 'helmet') { e.armor = 100; e.helmet = true; }
     if (id === 'kit') e.kit = true;
+    if (id === 'nvg') { if (e.nvg) return false; e.nvg = true; }
   } else if (def.slot === 'grenade') {
     if (!e.giveWeapon(id)) return false;
   } else {
@@ -1085,7 +1130,7 @@ G.sound = function (kind, e, f) {
 };
 
 // ================= ÖLÜM KALIM =================
-const DM_BOT_GUNS = ['ak47', 'ak47', 'm4a4', 'm4a1s', 'm4a1s', 'awp', 'galil', 'famas', 'sg553', 'aug', 'mp9', 'ump45', 'p90', 'mac10', 'ssg08', 'xm1014', 'mp7'];
+const DM_BOT_GUNS = ['mp5', 'm3', 'g3sg1', 'sg550', 'ak47', 'ak47', 'm4a4', 'm4a1s', 'm4a1s', 'awp', 'galil', 'famas', 'sg553', 'aug', 'mp9', 'ump45', 'p90', 'mac10', 'ssg08', 'xm1014', 'mp7'];
 G.dmLoadout = function (e) {
   e.resetForDeath();
   e.armor = 100; e.helmet = true; e.money = 16000;

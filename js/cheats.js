@@ -97,7 +97,9 @@ const Cheats = {
     return true;
   },
   animate(e, parts) {
+    if (e.isPlayer && e._spun && !this.c.spin) { e._spun = false; parts.armL.rotation.z = 0.62; parts.armR.rotation.z = -0.38; parts.head.rotation.x = 0; }
     if (!e.isPlayer || !this.c.spin || !e.alive) return;
+    e._spun = true;
     e.model.root.rotation.y = G.now * 22;
     parts.upper.rotation.x = -0.9 + Math.sin(G.now * 9) * 0.3;
     parts.head.rotation.x = -0.6;

@@ -54,7 +54,7 @@ class Entity {
       if (def.nade === 'fire' && this.inv.grenades.some(g => WEAPONS[g].nade === 'fire')) return false;
       this.inv.grenades.push(id); return true;
     }
-    const w = { def, mag: def.mag, reserve: def.reserve };
+    const w = { def, mag: def.mag, reserve: def.reserve, sil: true, burst: false };
     this.inv[def.slot] = w;
     return w;
   }
@@ -68,7 +68,7 @@ class Entity {
     if (!this.weapon(slot)) return;
     if (slot === this.slot && !force) return;
     if (this.slot !== slot) this.prevSlot = this.slot;
-    this.slot = slot; this.reloadT = 0; this.scoped = 0; this.rescopeAt = 0; this.zoomed = false;
+    this.slot = slot; this.reloadT = 0; this.scoped = 0; this.rescopeAt = 0; this.zoomed = false; this.burstLeft = 0;
     this.deployT = slot === 'knife' ? 0.5 : slot === 'bomb' ? 0.25 : (this.def.type === 'sniper' ? 1.1 : 0.85);
     this.plantT = 0;
     this.onEquip();
@@ -80,8 +80,10 @@ class Entity {
   }
   resetForDeath() {
     this.inv = { primary: null, secondary: null, knife: { def: WEAPONS.knife }, grenades: [], bomb: false };
-    this.armor = 0; this.helmet = false; this.kit = false;
+    this.armor = 0; this.helmet = false; this.kit = false; this.nvg = false; this.nvgOn = false;
+    this.zoomed = false; this.scoped = 0; this.burstLeft = 0;
   }
+  isSilenced() { const w = this.weapon(); return !!(w && w.def.silenced && w.sil !== false); }
   // ----- Hareket -----
   maxSpeed() {
     let sp = this.def.speed || 250;
@@ -197,7 +199,7 @@ class Entity {
     // tekrar dürbün
     if (this.rescopeAt && now >= this.rescopeAt) { this.scoped = this.rescopeLevel; this.rescopeAt = 0; }
     // tetik
-    if (this.trig) this.tryFire(now);
+    if (this.trig || this.burstLeft > 0) this.tryFire(now);
     else this.trigLatch = false;
     if (this.flashT > 0) this.flashT -= dt;
   }
@@ -224,11 +226,14 @@ class Entity {
     if (this.reloadT > 0) {
       if (d.shellReload && w.mag > 0) this.reloadT = 0; else return;
     }
-    if (!d.auto && this.trigLatch) return;
+    const midBurst = this.burstLeft > 0;
+    if (!midBurst && (w.burst || !d.auto) && this.trigLatch) return;
     this.trigLatch = true;
-    if (w.mag <= 0) { G.sound('click', this, 900); this.nextFire = now + 0.25; this.reload(); return; }
+    if (w.mag <= 0) { this.burstLeft = 0; G.sound('click', this, 900); this.nextFire = now + 0.25; this.reload(); return; }
+    if (w.burst && !midBurst) this.burstLeft = 3;
     if (!(this.isPlayer && Cheats.c.ammo)) w.mag--;
     this.nextFire = now + d.interval;
+    if (w.burst) { this.burstLeft--; this.nextFire = now + (this.burstLeft > 0 ? 0.055 : 0.42); }
     const inacc = (this.isPlayer && this.cheatShot) ? 0 : this.inaccuracy();
     const eye = this.eye();
     const pellets = d.pellets || 1;
@@ -252,7 +257,19 @@ class Entity {
     if (w.mag === 0 && w.reserve > 0) { this.autoReloadAt = now + 0.35; }
   }
   toggleScope() {
-    const d = this.def;
+    const d = this.def, w0 = this.weapon();
+    // ikincil ateş: susturucu / seri atış
+    if (d.alt === 'silencer' && w0) {
+      if (this.reloadT > 0 || this.deployT > 0) return;
+      w0.sil = !w0.sil; this.deployT = 1.3;
+      if (typeof G !== 'undefined') { G.sound('click', this, 1300); if (this.isPlayer) UI.toast(w0.sil ? 'Susturucu takıldı' : 'Susturucu çıkarıldı', 1.2); }
+      return;
+    }
+    if (d.alt === 'burst' && w0) {
+      w0.burst = !w0.burst; this.burstLeft = 0;
+      if (typeof G !== 'undefined') { G.sound('click', this, 1700); if (this.isPlayer) UI.toast(w0.burst ? "3'lü seri atış" : (d.auto ? 'Tam otomatik' : 'Tek atış'), 1.2); }
+      return;
+    }
     if (!d.scope) { if (d.mag) { this.zoomed = !this.zoomed; if (typeof G !== 'undefined') G.sound('click', this, 2000); } return; }
     if (this.reloadT > 0 || this.deployT > 0) return;
     this.rescopeAt = 0;

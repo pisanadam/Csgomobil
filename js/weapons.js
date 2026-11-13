@@ -59,7 +59,19 @@ const WEAPONS = {
   deagle: { id: 'deagle', name: 'Desert Eagle', slot: 'secondary', type: 'pistol', price: 700, damage: 63, pen: 0.932, rpm: 267, mag: 7, reserve: 35, reload: 2.2,
     speed: 230, rangeMod: 0.81, inacc: 0.6, crouchInacc: 0.45, moveInacc: 4.5, fireInacc: 5.0, recover: 0.45, recoil: 2.6, side: 'both', reward: 300,
     model: { kind: 'pistol', body: 0x9a9a9a, grip: 0x222222, len: 0.25 }, sound: { body: 1.2, pitch: 0.8 } },
+  p228: { id: 'p228', name: 'P228', slot: 'secondary', type: 'pistol', price: 600, damage: 32, pen: 0.625, rpm: 400, mag: 13, reserve: 52, reload: 2.7,
+    speed: 240, rangeMod: 0.8, inacc: 0.7, crouchInacc: 0.55, moveInacc: 2.2, fireInacc: 1.8, recover: 0.32, recoil: 1.05, side: 'both', reward: 300,
+    model: { kind: 'pistol', body: 0x4a4a48, grip: 0x1f1f1f, len: 0.18 }, sound: { body: 0.7, pitch: 1.15 } },
+  elite: { id: 'elite', name: 'Çift Beretta', slot: 'secondary', type: 'pistol', price: 800, damage: 36, pen: 0.52, rpm: 500, mag: 30, reserve: 120, reload: 4.3,
+    speed: 240, rangeMod: 0.79, inacc: 1.0, crouchInacc: 0.85, moveInacc: 2.4, fireInacc: 1.5, recover: 0.3, recoil: 1.0, side: 'T', reward: 300,
+    model: { kind: 'pistol', body: 0x8d8f92, grip: 0x3a2a1c, len: 0.2 }, sound: { body: 0.75, pitch: 1.1 } },
   // ---------- SMG ----------
+  mp5: { id: 'mp5', name: 'MP5', slot: 'primary', type: 'smg', price: 1500, damage: 26, pen: 0.6, rpm: 800, mag: 30, reserve: 120, reload: 2.6,
+    speed: 235, rangeMod: 0.84, inacc: 0.9, crouchInacc: 0.75, moveInacc: 2.2, fireInacc: 0.45, recover: 0.3, recoil: 0.7, side: 'both', reward: 600, auto: true,
+    model: { kind: 'smg', body: 0x2a2a2a, furn: 0x1c1c1c, len: 0.5 }, sound: { body: 0.75, pitch: 1.2 } },
+  tmp: { id: 'tmp', name: 'TMP', slot: 'primary', type: 'smg', price: 1250, damage: 20, pen: 0.5, rpm: 857, mag: 30, reserve: 120, reload: 2.1,
+    speed: 240, rangeMod: 0.84, inacc: 1.0, crouchInacc: 0.85, moveInacc: 2.2, fireInacc: 0.4, recover: 0.3, recoil: 0.6, side: 'CT', reward: 600, auto: true, silenced: true,
+    model: { kind: 'smg', body: 0x2e2e2e, furn: 0x151515, len: 0.34, silencer: true }, sound: { body: 0.6, pitch: 1.3 } },
   mac10: { id: 'mac10', name: 'MAC-10', slot: 'primary', type: 'smg', price: 1050, damage: 29, pen: 0.575, rpm: 800, mag: 30, reserve: 100, reload: 3.2,
     speed: 240, rangeMod: 0.8, inacc: 1.2, crouchInacc: 1.0, moveInacc: 2.4, fireInacc: 0.55, recover: 0.3, recoil: 0.75, side: 'T', reward: 600, auto: true,
     model: { kind: 'smg', body: 0x2a2a2a, furn: 0x1a1a1a, len: 0.34 }, sound: { body: 0.7, pitch: 1.3 } },
@@ -82,6 +94,9 @@ const WEAPONS = {
   xm1014: { id: 'xm1014', name: 'XM1014', slot: 'primary', type: 'shotgun', price: 2000, damage: 20, pellets: 6, pelletSpread: 4.2, pen: 0.8, rpm: 171, mag: 7, reserve: 32, reload: 0.45, shellReload: true,
     speed: 215, rangeMod: 0.7, inacc: 0.6, crouchInacc: 0.5, moveInacc: 1.5, fireInacc: 1.8, recover: 0.5, recoil: 2.2, side: 'both', reward: 900, auto: true,
     model: { kind: 'shotgun', body: 0x1e1e1e, furn: 0x1e1e1e, len: 1.0 }, sound: { body: 1.3, pitch: 0.8 } },
+  m3: { id: 'm3', name: 'M3 Super 90', slot: 'primary', type: 'shotgun', price: 1700, damage: 20, pellets: 9, pelletSpread: 3.6, pen: 0.5, rpm: 68, mag: 8, reserve: 32, reload: 0.5, shellReload: true,
+    speed: 220, rangeMod: 0.7, inacc: 0.5, crouchInacc: 0.4, moveInacc: 1.5, fireInacc: 2.0, recover: 0.6, recoil: 3.0, side: 'both', reward: 900, auto: false,
+    model: { kind: 'shotgun', body: 0x1c1c1c, furn: 0x2a2a2a, len: 1.0 }, sound: { body: 1.45, pitch: 0.72 } },
   negev: { id: 'negev', name: 'Negev', slot: 'primary', type: 'lmg', price: 1700, damage: 35, pen: 0.71, rpm: 800, mag: 150, reserve: 300, reload: 5.7,
     speed: 150, rangeMod: 0.9, inacc: 1.6, crouchInacc: 1.2, moveInacc: 7, fireInacc: 0.3, recover: 0.6, recoil: 0.6, side: 'both', reward: 300, auto: true,
     model: { kind: 'lmg', body: 0x2e3029, furn: 0x22241f, len: 1.0 }, sound: { body: 1.1, pitch: 0.95 } },
@@ -116,6 +131,12 @@ const WEAPONS = {
   awp: { id: 'awp', name: 'AWP', slot: 'primary', type: 'sniper', price: 4750, damage: 115, pen: 0.975, rpm: 41, mag: 5, reserve: 30, reload: 3.7,
     speed: 200, rangeMod: 0.99, inacc: 7.5, scopedInacc: 0.02, crouchInacc: 6.5, moveInacc: 12, fireInacc: 3, recover: 0.6, recoil: 3.0, side: 'both', reward: 100, auto: false, scope: [40, 10], bolt: true,
     model: { kind: 'sniper', body: 0x3d5233, furn: 0x3d5233, len: 1.15, heavy: true }, sound: { body: 1.6, pitch: 0.7 } },
+  g3sg1: { id: 'g3sg1', name: 'G3SG1', slot: 'primary', type: 'sniper', price: 5000, damage: 80, pen: 0.82, rpm: 240, mag: 20, reserve: 90, reload: 4.7,
+    speed: 210, rangeMod: 0.98, inacc: 3.5, scopedInacc: 0.18, crouchInacc: 3.0, moveInacc: 9, fireInacc: 1.6, recover: 0.5, recoil: 0.9, side: 'T', reward: 300, auto: true, scope: [40, 15],
+    model: { kind: 'sniper', body: 0x2c2c2a, furn: 0x3a3b30, len: 1.05 }, sound: { body: 1.3, pitch: 0.85 } },
+  sg550: { id: 'sg550', name: 'SG 550', slot: 'primary', type: 'sniper', price: 4200, damage: 70, pen: 0.8, rpm: 240, mag: 30, reserve: 90, reload: 3.8,
+    speed: 210, rangeMod: 0.98, inacc: 3.5, scopedInacc: 0.2, crouchInacc: 3.0, moveInacc: 9, fireInacc: 1.5, recover: 0.5, recoil: 0.85, side: 'CT', reward: 300, auto: true, scope: [40, 15],
+    model: { kind: 'sniper', body: 0x30332c, furn: 0x262822, len: 1.0 }, sound: { body: 1.25, pitch: 0.9 } },
   // ---------- BOMBALAR ----------
   he: { id: 'he', name: 'HE Bombası', slot: 'grenade', type: 'grenade', price: 300, side: 'both', reward: 300, speed: 245, nade: 'he', model: { kind: 'nade', color: 0x3d5a2a } },
   flash: { id: 'flash', name: 'Flaş Bombası', slot: 'grenade', type: 'grenade', price: 200, side: 'both', reward: 300, speed: 245, nade: 'flash', max: 2, model: { kind: 'nade', color: 0x8a8f99 } },
@@ -142,18 +163,23 @@ const WEAPONS = {
   }
 })();
 
+// İkincil ateş (alt) modları: susturucu tak/çıkar, 3'lü seri atış
+WEAPONS.m4a1s.alt = 'silencer'; WEAPONS.usp.alt = 'silencer';
+WEAPONS.glock.alt = 'burst'; WEAPONS.famas.alt = 'burst';
+
 const EQUIPMENT = {
   kevlar: { id: 'kevlar', name: 'Kevlar Yelek', price: 650, side: 'both' },
   helmet: { id: 'helmet', name: 'Kevlar + Kask', price: 1000, side: 'both' },
   kit: { id: 'kit', name: 'İmha Kiti', price: 400, side: 'CT' },
+  nvg: { id: 'nvg', name: 'Gece Görüşü', price: 1250, side: 'both' },
 };
 
 const BUY_MENU = [
-  { cat: 'Tabancalar', items: ['glock', 'usp', 'p2000', 'p250', 'tec9', 'fiveseven', 'deagle'] },
-  { cat: 'Ağır', items: ['nova', 'xm1014', 'negev', 'm249'] },
-  { cat: 'SMG', items: ['mac10', 'mp9', 'mp7', 'ump45', 'p90'] },
-  { cat: 'Tüfekler', items: ['galil', 'famas', 'ak47', 'm4a4', 'm4a1s', 'ssg08', 'sg553', 'aug', 'awp'] },
-  { cat: 'Ekipman', items: ['kevlar', 'helmet', 'kit'] },
+  { cat: 'Tabancalar', items: ['glock', 'usp', 'p2000', 'p228', 'p250', 'elite', 'tec9', 'fiveseven', 'deagle'] },
+  { cat: 'Ağır', items: ['nova', 'm3', 'xm1014', 'negev', 'm249'] },
+  { cat: 'SMG', items: ['mac10', 'tmp', 'mp9', 'mp5', 'mp7', 'ump45', 'p90'] },
+  { cat: 'Tüfekler', items: ['galil', 'famas', 'ak47', 'm4a4', 'm4a1s', 'ssg08', 'sg553', 'aug', 'awp', 'sg550', 'g3sg1'] },
+  { cat: 'Ekipman', items: ['kevlar', 'helmet', 'kit', 'nvg'] },
   { cat: 'Bombalar', items: ['flash', 'smoke', 'he', 'molotov', 'incendiary'] },
 ];
 
