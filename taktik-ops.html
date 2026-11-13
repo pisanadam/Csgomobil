@@ -1137,8 +1137,8 @@ const MAP_GRIDS = {
     "##uuuuu##########...........#####.....##",
     "##uuuuu##########...........#####.....##",
     "##uuuuu##########..x........#####.....##",
-    "##uuuuu##########......##########.....##",
-    "##uuuuuuuuuuuuuuu......##########.....##",
+    "##uuuuu##########.####.##########.....##",
+    "##uuuuuuuuuuuuuuu.###..##########.....##",
     "##uuuuuuuuuuuuuuu......############..###",
     "##uuuuu##########......############..###",
     "##.....##########....X.##########.....##",
@@ -1169,12 +1169,12 @@ const MAP_GRIDS = {
     "####...###########uuu############...####",
     "####...###########uuu############...####",
     "#TTTTTT###########uuu############CCCCCC#",
-    "#TTTTTT.......................x..CCCCCC#",
-    "#TTTTTT...XX............X........CCCCCC#",
-    "#TTxTTT..........x...............CCCCCC#",
-    "#TTTTTT....................XX....CCCxCC#",
-    "#TTTTTT.......X..................CCCCCC#",
-    "#TTTTTT..........................CCCCCC#",
+    "#TTTTTT.........#.............x..CCCCCC#",
+    "#TTTTTT...XX....#.......X........CCCCCC#",
+    "#TTxTTT.........#x.....#.........CCCCCC#",
+    "#TTTTTT.........#......#...XX....CCCxCC#",
+    "#TTTTTT.......X........#.........CCCCCC#",
+    "#TTTTTT................#.........CCCCCC#",
     "#TTTTTT#############uuu##########CCCCCC#",
     "####...#############uuu##########...####",
     "####...#############uuu##########...####",
@@ -1206,8 +1206,8 @@ const MAP_GRIDS = {
     "#BBBBBuuuuuuuuuuuuuuuuuuuuuuuuAAAAA#",
     "#####.....##uuXuuuuuuXuu##.....#####",
     "#####.....##uuuuuuuuuuuu##.....#####",
-    "#####.....##uuuuuxuuuuuu##.....#####",
-    "#####.....##uuuuuuuuuuuu##.....#####",
+    "#####.....##uuuu####uuuu##.....#####",
+    "#####.....##uuuu####uuuu##.....#####",
     "#####.....##uuXuuuuuuXuu##.....#####",
     "#####.....##uuuuuuuuuuuu##.....#####",
     "#####..x..##uuuuuuuuuuuu##.....#####",
@@ -3422,9 +3422,10 @@ G.update = function (dt) {
   // varlıklar
   for (const e of this.entities) {
     if (!e.alive) { this.animateDeath(e, dt); if (this.dm && e.respawnAt && now >= e.respawnAt && R.phase !== 'end') this.respawn(e); continue; }
-    if (frozen) { e.input.fwd = e.input.side = 0; e.input.jump = false; }
+    // hazırlık süresinde hareket ve ateş yok (CS'deki gibi)
+    if (frozen) { e.input.fwd = e.input.side = 0; e.input.jump = false; e.trig = false; }
     e.updateMovement(dt);
-    if (!frozen || e.def.type !== 'grenade') e.updateWeapon(dt, now);
+    e.updateWeapon(dt, now);
     this.updatePlantDefuse(e, dt);
     this.updateModel(e, dt);
   }

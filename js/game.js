@@ -236,9 +236,10 @@ G.update = function (dt) {
   // varlıklar
   for (const e of this.entities) {
     if (!e.alive) { this.animateDeath(e, dt); if (this.dm && e.respawnAt && now >= e.respawnAt && R.phase !== 'end') this.respawn(e); continue; }
-    if (frozen) { e.input.fwd = e.input.side = 0; e.input.jump = false; }
+    // hazırlık süresinde hareket ve ateş yok (CS'deki gibi)
+    if (frozen) { e.input.fwd = e.input.side = 0; e.input.jump = false; e.trig = false; }
     e.updateMovement(dt);
-    if (!frozen || e.def.type !== 'grenade') e.updateWeapon(dt, now);
+    e.updateWeapon(dt, now);
     this.updatePlantDefuse(e, dt);
     this.updateModel(e, dt);
   }
