@@ -80,7 +80,7 @@ const UI = {
       try { const de = document.documentElement; (de.requestFullscreen || de.webkitRequestFullscreen || (() => {})).call(de); } catch (e) {}
       try { screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {}); } catch (e) {}
     } else {
-      const c = document.querySelector('#game canvas'); c && c.requestPointerLock && c.requestPointerLock();
+      Input.lockPointer();
     }
     G.startMatch();
   },
@@ -98,7 +98,7 @@ const UI = {
     G.paused = on;
     $('pause').classList.toggle('hidden', !on);
     if (on) { Input.fireHeld = false; if (document.exitPointerLock) document.exitPointerLock(); }
-    else if (!Input.isMobile) { const c = document.querySelector('#game canvas'); c && c.requestPointerLock && c.requestPointerLock(); }
+    else Input.lockPointer();
   },
   onMatchStart() {
     this.cache = {}; $('killfeed').innerHTML = '';
@@ -198,7 +198,7 @@ const UI = {
     this.buyOpen = open;
     $('buyMenu').classList.toggle('hidden', !open);
     if (open) { Input.fireHeld = false; this.renderBuy(); if (document.exitPointerLock && !Input.isMobile) { this.relock = true; document.exitPointerLock(); } }
-    else if (this.relock && !Input.isMobile && G.running && !G.paused) { this.relock = false; const c = document.querySelector('#game canvas'); c && c.requestPointerLock && c.requestPointerLock(); }
+    else if (this.relock && !Input.isMobile && G.running && !G.paused) { this.relock = false; Input.lockPointer(); }
   },
   renderBuy() {
     const p = G.player;

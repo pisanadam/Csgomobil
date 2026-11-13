@@ -21,7 +21,7 @@ const Input = {
     const cv = document.getElementById('game');
     cv.addEventListener('mousedown', e => {
       if (!G.running || G.paused || UI.buyOpen) return;
-      if (!this.locked && !this.isMobile) { cv.querySelector('canvas').requestPointerLock && cv.querySelector('canvas').requestPointerLock(); return; }
+      if (!this.locked && !this.isMobile) { this.lockPointer(); return; }
       if (e.button === 0) this.fireHeld = true;
       if (e.button === 2 && G.player) G.player.toggleScope();
     });
@@ -42,6 +42,11 @@ const Input = {
       for (let k = 0; k < 5; k++) { i = (i + (e.deltaY > 0 ? 1 : 4)) % 5; if (p.weapon(order[i])) { p.switchTo(order[i]); break; } }
     });
     window.addEventListener('blur', () => { this.keys = {}; this.fireHeld = false; this.useHeld = false; });
+  },
+  lockPointer() {
+    if (this.isMobile || document.pointerLockElement) return;
+    const c = document.querySelector('#game canvas'); if (!c || !c.requestPointerLock) return;
+    try { const r = c.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (e) {}
   },
   applyButtonStyle() {
     document.documentElement.style.setProperty('--bs', S.btnScale);

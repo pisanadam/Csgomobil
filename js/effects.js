@@ -197,6 +197,9 @@ const FX = (function () {
     for (const f of fires) { scene.remove(f.grp); f.light.intensity = 0; f.light.userData.busy = false; } fires.length = 0;
     for (const h of holes) scene.remove(h); holes.length = 0;
     parts.length = 0;
+    for (const t of tracers) { scene.remove(t.l); t.l.geometry.dispose(); t.l.material.dispose(); } tracers.length = 0;
+    for (const f of flashSprites) { scene.remove(f.s); f.s.material.dispose(); } flashSprites.length = 0;
+    for (const b of blasts) { scene.remove(b.s); b.s.material.dispose(); } blasts.length = 0;
   }
   // görüş sisle engelleniyor mu
   function smokeBlocks(a, b) {

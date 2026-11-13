@@ -1589,7 +1589,16 @@ const Models = (function () {
     return mesh;
   }
   // ---------- SİLAH ----------
+  // Silah modelleri önbellekte tutulur; her çağrı paylaşılan geometriyle kopya döndürür (bellek sızıntısını önler)
+  const gunCache = {};
   function gun(def) {
+    const key = def.id || 'x';
+    if (!gunCache[key]) gunCache[key] = buildGun(def);
+    const g = gunCache[key].clone();
+    g.userData = {}; g.userData.muzzle = g.getObjectByName('muzzle');
+    return g;
+  }
+  function buildGun(def) {
     const g = new THREE.Group();
     const M = def.model || { kind: 'pistol' };
     const body = mat(M.body || 0x2a2a2a), furn = mat(M.furn || M.body || 0x2a2a2a), dark = mat(0x151515), metal = mat(0x5a5a5a);
@@ -1672,7 +1681,7 @@ const Models = (function () {
         break;
       }
     }
-    g.userData.muzzle = muzzle; g.add(muzzle);
+    muzzle.name = 'muzzle'; g.userData.muzzle = muzzle; g.add(muzzle);
     return g;
   }
 
@@ -1972,6 +1981,9 @@ const FX = (function () {
     for (const f of fires) { scene.remove(f.grp); f.light.intensity = 0; f.light.userData.busy = false; } fires.length = 0;
     for (const h of holes) scene.remove(h); holes.length = 0;
     parts.length = 0;
+    for (const t of tracers) { scene.remove(t.l); t.l.geometry.dispose(); t.l.material.dispose(); } tracers.length = 0;
+    for (const f of flashSprites) { scene.remove(f.s); f.s.material.dispose(); } flashSprites.length = 0;
+    for (const b of blasts) { scene.remove(b.s); b.s.material.dispose(); } blasts.length = 0;
   }
   // görüş sisle engelleniyor mu
   function smokeBlocks(a, b) {
@@ -2054,7 +2066,7 @@ class Entity {
     if (slot === this.slot && !force) return;
     if (this.slot !== slot) this.prevSlot = this.slot;
     this.slot = slot; this.reloadT = 0; this.scoped = 0; this.rescopeAt = 0; this.zoomed = false;
-    this.deployT = slot === 'knife' ? 0.5 : (this.def.type === 'sniper' ? 1.1 : 0.85);
+    this.deployT = slot === 'knife' ? 0.5 : slot === 'bomb' ? 0.25 : (this.def.type === 'sniper' ? 1.1 : 0.85);
     this.plantT = 0;
     this.onEquip();
   }
@@ -2547,8 +2559,15 @@ class Bot {
     this.turnTo(wantYaw, wantPitch, dt, D.turn);
     const yawErr = Math.abs(angDiff(e.yaw, wantYaw + ex * DEG)), pitchErr = Math.abs(e.pitch - (wantPitch - ey * DEG));
     const angErr = Math.hypot(yawErr, pitchErr);
-    // hareket: counter-strafe & ADAD
     const def = e.def;
+    // menzil dışı (tabanca/SMG/pompalı/bıçak): ateş etme, hedefe doğru yaklaş
+    const effR = { pistol: 42, smg: 50, shotgun: 20, knife: 2.2 }[def.type] || 1e9;
+    if (dist > effR) {
+      if (!(now < this.chaseAt)) { this.chaseAt = now + 0.6; this.path = MAP.findPath(e.pos.x, e.pos.z, t.pos.x, t.pos.z) || []; this.pi = 0; this.goalKey = 'chase'; }
+      this.followPath(dt, now);
+      return;
+    }
+    // hareket: counter-strafe & ADAD
     const wantShoot = now >= this.reactAt && now >= this.pauseUntil && e.flashT < 0.6;
     const stopForShot = Math.random() < D.counter || def.type === 'sniper';
     this.strafeT -= dt;
@@ -2761,7 +2780,7 @@ G.applyGraphics = function () {
 // ================= MAÇ =================
 G.startMatch = function () {
   // temizle
-  for (const e of this.entities) if (e.model) this.scene.remove(e.model.root);
+  for (const e of this.entities) if (e.model) this.disposeModel(e.model);
   for (const p of this.pickups) this.scene.remove(p.mesh);
   this.entities = []; this.bots = []; this.pickups = []; this.nades.forEach(n => this.scene.remove(n.mesh)); this.nades = [];
   let pt = S.playerTeam; if (pt === 'auto') pt = Math.random() < 0.5 ? 'T' : 'CT';
@@ -2788,7 +2807,7 @@ G.startMatch = function () {
   this.startRound();
 };
 G.makeModel = function (e) {
-  if (e.model) this.scene.remove(e.model.root);
+  if (e.model) this.disposeModel(e.model);
   e.model = Models.character(e.team);
   e.model.root.rotation.order = 'YXZ';
   // modele özel malzemeler (düşman vurgusu için)
@@ -3163,7 +3182,8 @@ G.updatePickups = function () {
       if (this.now - p.t < 0.8) continue;
       if (dist2(e.pos, p.pos) > 1.1) continue;
       const slot = p.w.def.slot;
-      let take = !e.inv[slot];
+      const cur = e.inv[slot];
+      let take = !cur || (e.bot && cur.def.mag && cur.mag + cur.reserve === 0);
       // botlar daha iyi silahı alır
       if (!take && e.bot && slot === 'primary' && e.inv.primary && p.w.def.price > e.inv.primary.def.price + 500) {
         this.spawnPickup(e.inv.primary, e.pos); take = true;
@@ -3754,6 +3774,14 @@ G.respawn = function (e) {
 
 G.ally = function (a, b) { return !this.ffa && a.team === b.team; };
 
+// Karakter modelini sahneden kaldır ve GPU belleğini boşalt (paylaşılan silah modelleri hariç)
+G.disposeModel = function (m) {
+  this.scene.remove(m.root);
+  const gunH = m.parts.gun;
+  const walk = o => { if (o === gunH) return; if (o.isMesh) { o.geometry.dispose(); if (o.material && o.material.emissive) o.material.dispose(); } o.children.forEach(walk); };
+  walk(m.root);
+};
+
 </script>
 <script>
 // Girdi: dokunmatik (joystick + bakış + tuşlar) ve klavye/fare
@@ -3779,7 +3807,7 @@ const Input = {
     const cv = document.getElementById('game');
     cv.addEventListener('mousedown', e => {
       if (!G.running || G.paused || UI.buyOpen) return;
-      if (!this.locked && !this.isMobile) { cv.querySelector('canvas').requestPointerLock && cv.querySelector('canvas').requestPointerLock(); return; }
+      if (!this.locked && !this.isMobile) { this.lockPointer(); return; }
       if (e.button === 0) this.fireHeld = true;
       if (e.button === 2 && G.player) G.player.toggleScope();
     });
@@ -3800,6 +3828,11 @@ const Input = {
       for (let k = 0; k < 5; k++) { i = (i + (e.deltaY > 0 ? 1 : 4)) % 5; if (p.weapon(order[i])) { p.switchTo(order[i]); break; } }
     });
     window.addEventListener('blur', () => { this.keys = {}; this.fireHeld = false; this.useHeld = false; });
+  },
+  lockPointer() {
+    if (this.isMobile || document.pointerLockElement) return;
+    const c = document.querySelector('#game canvas'); if (!c || !c.requestPointerLock) return;
+    try { const r = c.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (e) {}
   },
   applyButtonStyle() {
     document.documentElement.style.setProperty('--bs', S.btnScale);
@@ -4031,7 +4064,7 @@ const UI = {
       try { const de = document.documentElement; (de.requestFullscreen || de.webkitRequestFullscreen || (() => {})).call(de); } catch (e) {}
       try { screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {}); } catch (e) {}
     } else {
-      const c = document.querySelector('#game canvas'); c && c.requestPointerLock && c.requestPointerLock();
+      Input.lockPointer();
     }
     G.startMatch();
   },
@@ -4049,7 +4082,7 @@ const UI = {
     G.paused = on;
     $('pause').classList.toggle('hidden', !on);
     if (on) { Input.fireHeld = false; if (document.exitPointerLock) document.exitPointerLock(); }
-    else if (!Input.isMobile) { const c = document.querySelector('#game canvas'); c && c.requestPointerLock && c.requestPointerLock(); }
+    else Input.lockPointer();
   },
   onMatchStart() {
     this.cache = {}; $('killfeed').innerHTML = '';
@@ -4149,7 +4182,7 @@ const UI = {
     this.buyOpen = open;
     $('buyMenu').classList.toggle('hidden', !open);
     if (open) { Input.fireHeld = false; this.renderBuy(); if (document.exitPointerLock && !Input.isMobile) { this.relock = true; document.exitPointerLock(); } }
-    else if (this.relock && !Input.isMobile && G.running && !G.paused) { this.relock = false; const c = document.querySelector('#game canvas'); c && c.requestPointerLock && c.requestPointerLock(); }
+    else if (this.relock && !Input.isMobile && G.running && !G.paused) { this.relock = false; Input.lockPointer(); }
   },
   renderBuy() {
     const p = G.player;

@@ -69,7 +69,7 @@ class Entity {
     if (slot === this.slot && !force) return;
     if (this.slot !== slot) this.prevSlot = this.slot;
     this.slot = slot; this.reloadT = 0; this.scoped = 0; this.rescopeAt = 0; this.zoomed = false;
-    this.deployT = slot === 'knife' ? 0.5 : (this.def.type === 'sniper' ? 1.1 : 0.85);
+    this.deployT = slot === 'knife' ? 0.5 : slot === 'bomb' ? 0.25 : (this.def.type === 'sniper' ? 1.1 : 0.85);
     this.plantT = 0;
     this.onEquip();
   }

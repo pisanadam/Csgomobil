@@ -72,7 +72,7 @@ G.applyGraphics = function () {
 // ================= MAÇ =================
 G.startMatch = function () {
   // temizle
-  for (const e of this.entities) if (e.model) this.scene.remove(e.model.root);
+  for (const e of this.entities) if (e.model) this.disposeModel(e.model);
   for (const p of this.pickups) this.scene.remove(p.mesh);
   this.entities = []; this.bots = []; this.pickups = []; this.nades.forEach(n => this.scene.remove(n.mesh)); this.nades = [];
   let pt = S.playerTeam; if (pt === 'auto') pt = Math.random() < 0.5 ? 'T' : 'CT';
@@ -99,7 +99,7 @@ G.startMatch = function () {
   this.startRound();
 };
 G.makeModel = function (e) {
-  if (e.model) this.scene.remove(e.model.root);
+  if (e.model) this.disposeModel(e.model);
   e.model = Models.character(e.team);
   e.model.root.rotation.order = 'YXZ';
   // modele özel malzemeler (düşman vurgusu için)
@@ -474,7 +474,8 @@ G.updatePickups = function () {
       if (this.now - p.t < 0.8) continue;
       if (dist2(e.pos, p.pos) > 1.1) continue;
       const slot = p.w.def.slot;
-      let take = !e.inv[slot];
+      const cur = e.inv[slot];
+      let take = !cur || (e.bot && cur.def.mag && cur.mag + cur.reserve === 0);
       // botlar daha iyi silahı alır
       if (!take && e.bot && slot === 'primary' && e.inv.primary && p.w.def.price > e.inv.primary.def.price + 500) {
         this.spawnPickup(e.inv.primary, e.pos); take = true;
@@ -1064,3 +1065,11 @@ G.respawn = function (e) {
 };
 
 G.ally = function (a, b) { return !this.ffa && a.team === b.team; };
+
+// Karakter modelini sahneden kaldır ve GPU belleğini boşalt (paylaşılan silah modelleri hariç)
+G.disposeModel = function (m) {
+  this.scene.remove(m.root);
+  const gunH = m.parts.gun;
+  const walk = o => { if (o === gunH) return; if (o.isMesh) { o.geometry.dispose(); if (o.material && o.material.emissive) o.material.dispose(); } o.children.forEach(walk); };
+  walk(m.root);
+};

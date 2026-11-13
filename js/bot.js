@@ -275,8 +275,15 @@ class Bot {
     this.turnTo(wantYaw, wantPitch, dt, D.turn);
     const yawErr = Math.abs(angDiff(e.yaw, wantYaw + ex * DEG)), pitchErr = Math.abs(e.pitch - (wantPitch - ey * DEG));
     const angErr = Math.hypot(yawErr, pitchErr);
-    // hareket: counter-strafe & ADAD
     const def = e.def;
+    // menzil dışı (tabanca/SMG/pompalı/bıçak): ateş etme, hedefe doğru yaklaş
+    const effR = { pistol: 42, smg: 50, shotgun: 20, knife: 2.2 }[def.type] || 1e9;
+    if (dist > effR) {
+      if (!(now < this.chaseAt)) { this.chaseAt = now + 0.6; this.path = MAP.findPath(e.pos.x, e.pos.z, t.pos.x, t.pos.z) || []; this.pi = 0; this.goalKey = 'chase'; }
+      this.followPath(dt, now);
+      return;
+    }
+    // hareket: counter-strafe & ADAD
     const wantShoot = now >= this.reactAt && now >= this.pauseUntil && e.flashT < 0.6;
     const stopForShot = Math.random() < D.counter || def.type === 'sniper';
     this.strafeT -= dt;

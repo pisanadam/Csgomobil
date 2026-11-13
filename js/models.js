@@ -18,7 +18,16 @@ const Models = (function () {
     return mesh;
   }
   // ---------- SİLAH ----------
+  // Silah modelleri önbellekte tutulur; her çağrı paylaşılan geometriyle kopya döndürür (bellek sızıntısını önler)
+  const gunCache = {};
   function gun(def) {
+    const key = def.id || 'x';
+    if (!gunCache[key]) gunCache[key] = buildGun(def);
+    const g = gunCache[key].clone();
+    g.userData = {}; g.userData.muzzle = g.getObjectByName('muzzle');
+    return g;
+  }
+  function buildGun(def) {
     const g = new THREE.Group();
     const M = def.model || { kind: 'pistol' };
     const body = mat(M.body || 0x2a2a2a), furn = mat(M.furn || M.body || 0x2a2a2a), dark = mat(0x151515), metal = mat(0x5a5a5a);
@@ -101,7 +110,7 @@ const Models = (function () {
         break;
       }
     }
-    g.userData.muzzle = muzzle; g.add(muzzle);
+    muzzle.name = 'muzzle'; g.userData.muzzle = muzzle; g.add(muzzle);
     return g;
   }
 
