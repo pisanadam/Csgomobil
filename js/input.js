@@ -195,6 +195,8 @@ const Input = {
     p.input.crouch = !!(K.ControlLeft || K.KeyC) || this.crouchToggle;
     p.input.use = !!K.KeyE || this.useHeld;
     if (UI.buyOpen) { p.trig = false; return; }
+    // hileler aynı karede, güncel bakış açısıyla değerlendirilir (gecikmesiz)
+    if (G.running && !G.paused) Cheats.update(dt);
     p.trig = this.fireHeld || G.autoFiring || G.cheatFire;
     // hile atışı (triggerbot / aimbot kilitliyken): mermi tam nişangaha gider
     p.cheatShot = !!G.cheatFire || !!(Cheats.aimTarget && Cheats.c.aimbot);

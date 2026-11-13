@@ -244,7 +244,6 @@ G.update = function (dt) {
     this.updateModel(e, dt);
   }
   this.updatePlayerAssist(dt);
-  Cheats.update(dt);
   this.updateNades(dt);
   this.updateBomb(dt);
   this.updatePickups();

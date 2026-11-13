@@ -236,8 +236,10 @@ class Entity {
       const a = Math.random() * Math.PI * 2;
       const rr = d.pellets ? Math.sqrt(Math.random()) * d.pelletSpread + Math.random() * inacc * 0.5 : Math.random() * inacc;
       const sx = Math.cos(a) * rr, sy = Math.sin(a) * rr;
-      const yaw = this.yaw - (this.punch.x + sx) * DEG;
-      const pitch = this.pitch + (this.punch.y + sy) * DEG;
+      // hile atışı: geri tepme ve dağılma yok, mermi tam bakılan yere gider
+      const cs = this.isPlayer && this.cheatShot;
+      const yaw = this.yaw - ((cs ? 0 : this.punch.x) + sx) * DEG;
+      const pitch = this.pitch + ((cs ? 0 : this.punch.y) + sy) * DEG;
       G.fireBullet(this, eye, dirFromAngles(yaw, pitch), d, i === 0);
     }
     this.lastShot = now;

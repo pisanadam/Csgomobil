@@ -34,10 +34,10 @@ const Cheats = {
     const eye = p.eye();
     // --- Aimbot ---
     if (c.aimbot && (c.aimKey === 'always' || p.trig || Input.fireHeld)) {
-      const f = dirFromAngles(p.yaw - p.punch.x * DEG, p.pitch + p.punch.y * DEG);
+      const f = dirFromAngles(p.yaw, p.pitch);
       let best = null, bestA = c.aimFov * DEG / 2, bestPt = null;
       for (const e of G.entities) {
-        if (!this.enemy(e)) continue;
+        if (!this.enemy(e) || (e.protectUntil && G.now < e.protectUntil)) continue;
         const pt = this.aimPoint(e);
         if (!c.aimWalls && (Phys.blocked(eye, pt) || FX.smokeBlocks(eye, pt))) continue;
         const dx = pt.x - eye.x, dy = pt.y - eye.y, dz = pt.z - eye.z, d = Math.hypot(dx, dy, dz);
@@ -47,11 +47,12 @@ const Cheats = {
       if (best) {
         this.aimTarget = best;
         const dx = bestPt.x - eye.x, dy = bestPt.y - eye.y, dz = bestPt.z - eye.z;
-        const wy = Math.atan2(-dx, -dz) + p.punch.x * DEG;
-        const wp = Math.atan2(dy, Math.hypot(dx, dz)) - p.punch.y * DEG;
+        // hile atışları geri tepmesiz olduğundan doğrudan hedefe bak (yere bakmaz)
+        const wy = Math.atan2(-dx, -dz);
+        const wp = Math.max(-1.2, Math.min(1.2, Math.atan2(dy, Math.max(0.6, Math.hypot(dx, dz)))));
         const k = c.aimSmooth <= 0.01 ? 1 : Math.min(1, dt * (1 - c.aimSmooth) * 28);
         p.yaw += angDiff(p.yaw, wy) * k;
-        p.pitch += (wp - p.pitch) * k;
+        p.pitch = Math.max(-1.5, Math.min(1.5, p.pitch + (wp - p.pitch) * k));
       }
     }
     // --- Triggerbot ---
@@ -60,13 +61,18 @@ const Cheats = {
       const ok = d.mag || d.type === 'knife';
       let onTarget = false;
       if (ok) {
-        const dir = dirFromAngles(p.yaw - p.punch.x * DEG, p.pitch + p.punch.y * DEG);
+        const dir = dirFromAngles(p.yaw, p.pitch); // hile atışı tam bu yöne gider
         const wall = Phys.raycast(eye, dir, 200);
         const maxT = d.type === 'knife' ? 1.6 : (wall ? wall.t : 200);
         for (const e of G.entities) {
-          if (!this.enemy(e)) continue;
-          if (G.hitTestEntity(e, eye, dir, maxT)) { onTarget = true; break; }
+          if (!this.enemy(e) || (e.protectUntil && G.now < e.protectUntil)) continue;
+          const h = G.hitTestEntity(e, eye, dir, maxT);
+          if (!h) continue;
+          const hp = { x: eye.x + dir.x * h.t, y: eye.y + dir.y * h.t, z: eye.z + dir.z * h.t };
+          if (FX.smokeBlocks(eye, hp)) continue; // sis içine boşa sıkma
+          onTarget = true; break;
         }
+        if (onTarget) this.lastOn = G.now;
       }
       if (onTarget) {
         if (!this.trigSince) this.trigSince = G.now;
@@ -74,7 +80,7 @@ const Cheats = {
           this.flip = !this.flip;
           if (d.auto || d.type === 'knife' || this.flip) G.cheatFire = true;
         }
-      } else this.trigSince = 0;
+      } else if (!(this.trigSince && G.now - (this.lastOn || 0) < 0.12)) this.trigSince = 0; // kısa titremede gecikme sayacı sıfırlanmaz, ama ateş edilmez
     }
   },
   // ---------- görsel ----------
