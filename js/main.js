@@ -5,7 +5,7 @@
   Input.init();
   UI.init();
   Cheats.init();
-  Skins.loadAll(); Music.bind(); Music.init(); BotSongs.bind(); BotSongs.init();
+  Skins.loadAll(); Music.bind(); Music.init(); BotSongs.bind(); BotSongs.init().then(() => Catalog.render()); Catalog.bind();
   UI.applySettings();
   let last = performance.now(), fpsAcc = 0, fpsN = 0;
   function frame(t) {

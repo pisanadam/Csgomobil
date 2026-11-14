@@ -59,6 +59,7 @@ body.mobile #mvp{top:48%;padding:6px 14px 6px 10px}body.mobile #mvp .mvS{font-si
 .amRow img{width:40px;height:40px;border-radius:5px;flex:none;background:#222}
 .amT{flex:1;min-width:0;display:flex;flex-direction:column}.amT b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.amT span{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .amMsg{font-size:12px;color:var(--dim);padding:6px}
+.ctTag{flex:none;width:30px;text-align:center;font-size:10px;font-weight:800;padding:3px 0;border-radius:5px}.ctTag.tr{background:#5a1f1f;color:#ffc9c9}.ctTag.en{background:#1f3a5a;color:#c9e2ff}
 #skinEditor{position:fixed;inset:0;z-index:25}
 body.skinning #touch,body.skinning #hud{display:none!important}
 body.mobile #skTop>b{display:none}
@@ -409,6 +410,14 @@ input[type=range]{width:100%;accent-color:#e9a83a}
         <div id="mvpName" style="font-weight:700;font-size:13px">Yüklü müzik yok</div>
         <input type="file" id="mvpFile" accept="audio/*,video/mp4,video/*,.mp3,.mp4,.m4v,.mov,.ogg,.wav,.m4a,.aac,.flac,.opus,.webm" style="display:none">
         <div class="row"><button class="btn sm pri" id="mvpPick">🎵 Müzik / MP4 yükle</button><button class="btn sm" id="mvpTest">▶ Dene</button><button class="btn sm" id="mvpStop">■ Durdur</button><button class="btn sm" id="mvpSave">⬇ MP3 indir</button><button class="btn sm" id="mvpClear">Kaldır</button></div>
+        <button class="btn sm" id="ctOpen" style="align-self:flex-start">📚 Hazır katalogdan seç (Türkçe + İngilizce, 57 şarkı)</button>
+        <div id="ctWrap" class="amBox hidden">
+          <div class="row" style="flex-wrap:nowrap"><input id="ctQuery" type="search" placeholder="Katalogda ara…" autocomplete="off" style="flex:1;min-width:0;background:#1f232a;color:#fff;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:14px;user-select:text;-webkit-user-select:text"></div>
+          <div class="seg" id="ctTabs"><button data-f="all" class="sel">Hepsi</button><button data-f="tr">Türkçe</button><button data-f="en">İngilizce</button></div>
+          <div id="ctList" style="display:flex;flex-direction:column;gap:4px;max-height:240px;overflow:auto"></div>
+          <div id="ctMsg" style="font-size:12px;font-weight:700;color:#7fe08a;min-height:16px"></div>
+          <div style="font-size:11px;color:var(--dim)">▶ ile dinle, <b>Seç</b> ile raundun oyuncusu müziğin yap. Müzikli sürümde şarkılar dosyanın içinde hazır; diğerinde "internetten" yazanlar ilk seçimde indirilir.</div>
+        </div>
         <div class="amBox"><label style="font-size:12px;color:var(--dim);font-weight:700">🍎 APPLE MUSIC'TEN ŞARKI SEÇ (30 SANİYELİK ÖNİZLEME)</label>
           <div class="row" style="flex-wrap:nowrap"><input id="amQuery" type="search" placeholder="Şarkı ya da sanatçı ara…" autocomplete="off"><button class="btn sm pri" id="amGo">Ara</button></div>
           <div id="amResults"></div>

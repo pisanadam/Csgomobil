@@ -454,3 +454,68 @@ const BotSongs = {
     d.onclick = () => this.downloadAll(); c.onclick = () => this.clearAll();
   },
 };
+
+// ====================== HAZIR KATALOG: kendi raundun oyuncusu müziğini listeden seç ======================
+const Catalog = {
+  filter: 'all', q: '', playing: null, audio: null,
+  all() { const o = []; BotSongs.LIST.tr.forEach(s => o.push({ a: s[0], t: s[1], l: 'tr' })); BotSongs.LIST.en.forEach(s => o.push({ a: s[0], t: s[1], l: 'en' })); return o; },
+  has(s) { const k = BotSongs.key(s.a, s.t); return !!(BotSongs.embedded && BotSongs.embedded[k]) || BotSongs.saved.has(k); },
+  title(s) { const k = BotSongs.key(s.a, s.t), e = BotSongs.embedded && BotSongs.embedded[k], r = BotSongs.saved.get(k); return e ? { t: e.t, a: e.a } : r ? { t: r.title, a: r.artist } : { t: s.t, a: s.a }; },
+  async urlFor(s) {
+    const info = await BotSongs.resolve(s.a, s.t);
+    if (info) return info.url;
+    return null;
+  },
+  async blobFor(s) {
+    const k = BotSongs.key(s.a, s.t);
+    if (BotSongs.embedded && BotSongs.embedded[k]) { const u = BotSongs.embUrl(k); return (await fetch(u)).blob(); }
+    if (!BotSongs.saved.has(k)) { if (!(await BotSongs.download(s.a, s.t))) return null; }
+    const r = BotSongs.saved.get(k); return r ? r.blob : null;
+  },
+  stopPreview() { if (this.audio) { try { this.audio.pause(); } catch (e) {} this.audio = null; } this.playing = null; document.querySelectorAll('.ctP').forEach(b => b.textContent = '▶'); },
+  async preview(s, btn) {
+    const key = BotSongs.key(s.a, s.t);
+    if (this.playing === key) { this.stopPreview(); return; }
+    this.stopPreview(); Music.stop();
+    btn.textContent = '…';
+    const url = await this.urlFor(s);
+    if (!url) { btn.textContent = '✗'; document.getElementById('ctMsg').textContent = 'Şarkı bulunamadı (internet gerekebilir)'; return; }
+    const a = this.audio = new Audio(url); a.volume = Math.min(1, S.volume);
+    this.playing = key; btn.textContent = '■';
+    a.onended = () => this.stopPreview();
+    const p = a.play(); if (p && p.catch) p.catch(() => this.stopPreview());
+  },
+  async pick(s) {
+    const msg = document.getElementById('ctMsg'); this.stopPreview();
+    msg.textContent = '⏳ Seçiliyor…';
+    const blob = await this.blobFor(s);
+    if (!blob) { msg.textContent = '✗ İndirilemedi (internet gerekebilir)'; return; }
+    const tt = this.title(s);
+    const name = `${tt.a} - ${tt.t} (30sn).m4a`.replace(/[\\/:*?"<>|]/g, '');
+    await Music.set(new File([blob], name, { type: 'audio/mp4' }));
+    msg.textContent = `✓ Seçildi: ${tt.a} — ${tt.t}`; this.render();
+  },
+  render() {
+    const box = document.getElementById('ctList'); if (!box) return;
+    const q = this.q.trim().toLowerCase();
+    const list = this.all().filter(s => (this.filter === 'all' || s.l === this.filter) && (!q || (s.t + ' ' + s.a).toLowerCase().includes(q)));
+    box.innerHTML = '';
+    const cur = Music.name || '';
+    list.forEach(s => {
+      const tt = this.title(s), row = document.createElement('div'); row.className = 'amRow';
+      const chosen = cur && cur.indexOf(tt.t) >= 0 && cur.indexOf(tt.a) >= 0;
+      row.innerHTML = `<div class="ctTag ${s.l}">${s.l === 'tr' ? 'TR' : 'EN'}</div><div class="amT"><b></b><span></span></div><button class="btn sm ctP">▶</button><button class="btn sm ${chosen ? '' : 'pri'} ctS">${chosen ? '✓ Seçili' : 'Seç'}</button>`;
+      row.querySelector('b').textContent = tt.t; row.querySelector('span').textContent = tt.a + (this.has(s) ? '' : ' • internetten');
+      row.querySelector('.ctP').onclick = ev => { ev.stopPropagation(); this.preview(s, ev.currentTarget); };
+      row.querySelector('.ctS').onclick = ev => { ev.stopPropagation(); this.pick(s); };
+      box.appendChild(row);
+    });
+    if (!list.length) box.innerHTML = '<div class="amMsg">Sonuç yok</div>';
+  },
+  bind() {
+    const q = document.getElementById('ctQuery'); if (!q) return;
+    q.oninput = () => { this.q = q.value; this.render(); }; q.onkeydown = q.onkeyup = q.onkeypress = e => e.stopPropagation();
+    document.querySelectorAll('#ctTabs button').forEach(b => b.onclick = () => { this.filter = b.dataset.f; document.querySelectorAll('#ctTabs button').forEach(x => x.classList.toggle('sel', x === b)); this.render(); });
+    document.getElementById('ctOpen').onclick = () => { const w = document.getElementById('ctWrap'); w.classList.toggle('hidden'); if (!w.classList.contains('hidden')) this.render(); else this.stopPreview(); };
+  },
+};
