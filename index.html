@@ -50,6 +50,7 @@ table.aimT{width:100%;border-collapse:collapse;font-size:16px}table.aimT td{padd
 #mvp small{display:block;font-size:11px;letter-spacing:2px;color:#e9c46a;font-weight:800}
 #mvp b{display:block;font-size:24px;font-weight:900}#mvp b.T{color:var(--t)}#mvp b.CT{color:var(--ct)}
 #mvp span{font-size:13px;color:#ddd;font-weight:600}
+#mvp .mvSong{display:block;color:#ffd98a;font-size:12px;margin-top:2px}
 body.mobile #mvp{top:48%;padding:6px 14px 6px 10px}body.mobile #mvp .mvS{font-size:30px}body.mobile #mvp b{font-size:18px}
 .amBox{display:flex;flex-direction:column;gap:6px;padding:8px;border:1px dashed rgba(255,255,255,.18);border-radius:8px}
 #amQuery{flex:1;min-width:0;background:#1f232a;color:#fff;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:14px;user-select:text;-webkit-user-select:text}
@@ -409,6 +410,9 @@ input[type=range]{width:100%;accent-color:#e9a83a}
           <div class="row" style="flex-wrap:nowrap"><input id="amQuery" type="search" placeholder="Şarkı ya da sanatçı ara…" autocomplete="off"><button class="btn sm pri" id="amGo">Ara</button></div>
           <div id="amResults"></div>
           <div style="font-size:11px;color:var(--dim)">Apple'ın herkese açık arama servisi kullanılır; her şarkının Apple'ın sunduğu ilk 30 saniyelik önizlemesi seçilir ve cihazında MP3 olarak saklanır. Sadece kişisel kullanım içindir.</div></div>
+        <div style="font-size:12px;color:var(--dim);font-weight:700;margin-top:6px">BOTLARIN ŞARKILARI (APPLE MUSIC 30 SN ÖNİZLEME)</div>
+        <div class="seg" data-set="botMusic" data-opts='[["both","Türkçe + İngilizce"],["tr","Sadece Türkçe"],["en","Sadece İngilizce"],["off","Kapalı"]]'></div>
+        <div style="font-size:12px;color:var(--dim)">Her bota rastgele bir şarkı atanır. Bot raundun oyuncusu olunca şarkısı çalar ve ekranda şarkı adı görünür. İnternet gerekir; yoksa normal raunt sesi çalar.</div>
         <div class="seg" data-set="mvpWhen" data-opts='[["me","Ben olunca çal"],["always","Her raunt sonunda çal"],["off","Kapalı"]]'></div>
         <div class="rgm"><span style="font-size:12px;color:var(--dim)">Müzik sesi <span class="val" data-val="musicVol"></span></span><input type="range" min="0" max="1" step="0.05" data-set="musicVol"></div>
         <div style="font-size:12px;color:var(--dim)">MP3, OGG, WAV, M4A gibi sesler ya da <b>MP4</b> video seçebilirsin: MP4'ün sesi otomatik olarak MP3'e çevrilip kaydedilir (en fazla ilk 6 dakika). Dosya bu cihazda saklanır; raunt sonunda ~9 saniye çalar.</div></div>

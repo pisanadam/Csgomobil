@@ -135,13 +135,13 @@ const UI = {
     $('specInfo').classList.add('hidden');
     if (Input.isMobile || true) this.cache.slots = null;
   },
-  roundEnd(win, reason, pw, mvp, why) {
+  roundEnd(win, reason, pw, mvp, why, song) {
     const names = { T: 'SALDIRI TİMİ KAZANDI', CT: 'SAVUNMA TİMİ KAZANDI' };
     const rs = { elim: 'Karşı takım yok edildi', bomb: 'Bomba patladı', defuse: 'Bomba imha edildi', time: 'Süre doldu' }[reason];
     this.message(`<span style="color:${win === 'T' ? 'var(--t)' : 'var(--ct)'}">${names[win]}</span>`, 4.5, rs);
     const mv = $('mvp');
     if (mvp) {
-      mv.innerHTML = `<div class="mvS">★</div><div><small>RAUNDUN OYUNCUSU</small><b class="${mvp.team}">${mvp.isPlayer ? 'SEN' : mvp.name}</b><span>${why}${Music.url && S.mvpWhen !== 'off' && (S.mvpWhen === 'always' || mvp.isPlayer) ? ' • ♪ ' + Music.name.replace(/</g, '&lt;').slice(0, 28) : ''}</span></div>`;
+      mv.innerHTML = `<div class="mvS">★</div><div><small>RAUNDUN OYUNCUSU</small><b class="${mvp.team}">${mvp.isPlayer ? 'SEN' : mvp.name}</b><span>${why}${song && song.own ? ' • ♪ ' + Music.name.replace(/</g, '&lt;').slice(0, 28) : ''}</span>${song && !song.own ? `<span class="mvSong">♪ ${String(song.artist).replace(/</g, '&lt;')} — ${String(song.title).replace(/</g, '&lt;')}</span>` : ''}</div>`;
       mv.classList.remove('hidden'); clearTimeout(this.mvpT); this.mvpT = setTimeout(() => mv.classList.add('hidden'), 4800);
     }
     this.toggleBuy(false);

@@ -300,10 +300,12 @@ const Music = {
     this.refreshUI();
     try { const db = await this.db(); db.transaction('files', 'readwrite').objectStore('files').delete('mvp'); } catch (e) {}
   },
-  play(seconds) {
-    if (!this.url) return false;
+  play(seconds, urlOverride, startAt) {
+    const src = urlOverride || this.url;
+    if (!src) return false;
     this.stop();
-    const a = this.audio = new Audio(this.url);
+    const a = this.audio = new Audio(src);
+    if (startAt) { try { a.addEventListener('loadedmetadata', () => { if (a.duration > startAt + 6) a.currentTime = startAt; }, { once: true }); } catch (e) {} }
     const vol = Math.max(0, Math.min(1, S.volume * (S.musicVol === undefined ? 0.8 : S.musicVol)));
     a.volume = vol;
     const p = a.play(); if (p && p.catch) p.catch(() => {});
@@ -330,5 +332,50 @@ const Music = {
     document.getElementById('mvpTest').onclick = () => { Audio3.init(); if (!this.play(8)) UI.toast && (document.getElementById('mvpName').textContent = 'Önce bir müzik dosyası seç'); };
     document.getElementById('mvpStop').onclick = () => this.stop();
     document.getElementById('mvpClear').onclick = () => this.clear();
+  },
+};
+
+// ====================== BOTLARIN ŞARKILARI (Apple Music 30 sn önizleme) ======================
+// Her bota Türkçe/İngilizce bir şarkı atanır; bot raundun oyuncusu olunca şarkısının ilk 30 saniyesinden bir bölüm çalar.
+const BotSongs = {
+  LIST: { tr: [["Tarkan","Kuzu Kuzu"],["Tarkan","Şımarık"],["Sezen Aksu","Hadi Bakalım"],["Sertab Erener","Everyway That I Can"],["Hadise","Düm Tek Tek"],["Mabel Matiz","Aşk Bu Mu"],["Duman","Her Şeyi Yak"],["Mor ve Ötesi","Bir Derdim Var"],["Teoman","Paramparça"],["Athena","Senden Daha Güzel"],["maNga","Fly to Stay Alive"],["Ceza","Neyim Var Ki"],["Ezhel","Geceler"],["Murat Boz","Aşkı Bulamam"],["Hande Yener","Kış Güneşi"],["Barış Manço","Gülpembe"],["Kenan Doğulu","Shake It Up Şekerim"],["Şebnem Ferah","Sil Baştan"],["Yüksek Sadakat","Belki Üstümüzden Bir Kuş Geçer"],["Emre Aydın","Beni Biraz Anla"],["Müslüm Gürses","Nilüfer"],["Sagopa Kajmer","Bir Pesimistin Gözyaşları"],["Sıla","Yolun Sonu"],["Cem Adrian","Sen Aşkı Bana Sor"],["Kolpa","Aşkın Nur Hali"],["Norm Ender","Bi Dakika"],["Mustafa Sandal","Araba"]], en: [["Queen","We Will Rock You"],["Eminem","Lose Yourself"],["Daft Punk","Harder, Better, Faster, Stronger"],["The Weeknd","Blinding Lights"],["Survivor","Eye of the Tiger"],["Linkin Park","In the End"],["AC/DC","Thunderstruck"],["Imagine Dragons","Believer"],["Rick Astley","Never Gonna Give You Up"],["Kendrick Lamar","HUMBLE."],["Dua Lipa","Levitating"],["Metallica","Enter Sandman"],["Michael Jackson","Beat It"],["Lady Gaga","Bad Romance"],["Coldplay","Viva La Vida"],["Skrillex","Scary Monsters and Nice Sprites"],["Rage Against the Machine","Killing in the Name"],["Guns N' Roses","Sweet Child O' Mine"],["Britney Spears","Toxic"],["Kanye West","Stronger"],["Foo Fighters","Everlong"],["Nirvana","Smells Like Teen Spirit"],["Gorillaz","Feel Good Inc."],["Avicii","Wake Me Up"],["Post Malone","Rockstar"],["Travis Scott","SICKO MODE"],["Billie Eilish","bad guy"],["Pharrell Williams","Happy"],["Bon Jovi","It's My Life"],["Red Hot Chili Peppers","Can't Stop"]] },
+  cache: {}, loaded: false,
+  load() {
+    if (this.loaded) return; this.loaded = true;
+    try { this.cache = JSON.parse(localStorage.getItem('taktikops_songcache') || '{}'); } catch (e) { this.cache = {}; }
+  },
+  persist() { try { localStorage.setItem('taktikops_songcache', JSON.stringify(this.cache)); } catch (e) {} },
+  key(a, t) { return a + '|' + t; },
+  async resolve(a, t) {
+    this.load();
+    const k = this.key(a, t), c = this.cache[k];
+    if (c && Date.now() - c.at < 6 * 24 * 3600 * 1000) return c.info;   // önizleme bağlantıları zamanla değişebilir: 6 gün
+    try {
+      const r = await fetch('https://itunes.apple.com/search?media=music&entity=song&limit=6&country=TR&term=' + encodeURIComponent(a + ' ' + t));
+      if (!r.ok) throw new Error('http');
+      const first = a.toLowerCase().replace(/'/g, '').split(' ')[0];
+      const res = ((await r.json()).results || []).filter(x => x.previewUrl && x.artistName.toLowerCase().replace(/'/g, '').indexOf(first) >= 0);
+      if (!res.length) return null;
+      const x = res[0], info = { url: x.previewUrl, title: x.trackName, artist: x.artistName };
+      this.cache[k] = { at: Date.now(), info }; this.persist();
+      return info;
+    } catch (e) { return null; }
+  },
+  // bot varlıklarına şarkı ata ve bağlantılarını arka planda çöz
+  assign(entities) {
+    this.load();
+    const mode = S.botMusic || 'both';
+    for (const e of entities) { e.song = null; }
+    if (mode === 'off' || !navigator.onLine && !Object.keys(this.cache).length) return;
+    const pool = [];
+    if (mode !== 'en') this.LIST.tr.forEach(s => pool.push(s));
+    if (mode !== 'tr') this.LIST.en.forEach(s => pool.push(s));
+    pool.sort(() => Math.random() - 0.5);
+    let i = 0;
+    for (const e of entities) {
+      if (e.isPlayer) continue;
+      const s = pool[i++ % pool.length]; e.song = { a: s[0], t: s[1], info: null };
+      this.resolve(s[0], s[1]).then(info => { if (e.song && e.song.a === s[0]) e.song.info = info; });
+    }
   },
 };

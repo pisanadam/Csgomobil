@@ -116,6 +116,7 @@ G.startMatch = function () {
     }
   }
   for (const e of this.entities) this.makeModel(e);
+  if (this.aim) { for (const e of this.entities) e.song = null; } else BotSongs.assign(this.entities);
   this.round.num = 0;
   this.running = true; this.paused = false;
   this.matchOver = false;
@@ -970,8 +971,13 @@ G.endRound = function (win, reason) {
   }
   if (mvp) mvp.stats.mvp = (mvp.stats.mvp || 0) + 1;
   const pw = win === this.player.team;
-  if (mvp && Music.url && S.mvpWhen !== 'off' && (S.mvpWhen === 'always' || mvp.isPlayer)) Music.play(9); else Audio3.roundEnd(pw);
-  UI.roundEnd(win, reason, pw, mvp, why);
+  let song = null;
+  if (mvp && Music.url && S.mvpWhen !== 'off' && (S.mvpWhen === 'always' || mvp.isPlayer)) { Music.play(9); song = { own: true }; }
+  else if (mvp && !mvp.isPlayer && S.botMusic !== 'off' && mvp.song && mvp.song.info) {
+    // botun kendi şarkısı: 30 sn'lik önizlemenin başından (nakarata yakın kısım için 6. sn'den) çalar
+    Music.play(10, mvp.song.info.url, 4); song = mvp.song.info;
+  } else Audio3.roundEnd(pw);
+  UI.roundEnd(win, reason, pw, mvp, why, song);
   BotChat.roundEnd(win);
   // hayatta kalan T bombayı tutar mı? (sonraki raunt yeni dağıtılır)
 };
