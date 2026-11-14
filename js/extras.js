@@ -341,6 +341,15 @@ const Music = {
 const BotSongs = {
   LIST: { tr: [["Tarkan","Kuzu Kuzu"],["Tarkan","Şımarık"],["Sezen Aksu","Hadi Bakalım"],["Sertab Erener","Everyway That I Can"],["Hadise","Düm Tek Tek"],["Mabel Matiz","Aşk Bu Mu"],["Duman","Her Şeyi Yak"],["Mor ve Ötesi","Bir Derdim Var"],["Teoman","Paramparça"],["Athena","Senden Daha Güzel"],["maNga","Fly to Stay Alive"],["Ceza","Neyim Var Ki"],["Ezhel","Geceler"],["Murat Boz","Aşkı Bulamam"],["Hande Yener","Kış Güneşi"],["Barış Manço","Gülpembe"],["Kenan Doğulu","Shake It Up Şekerim"],["Şebnem Ferah","Sil Baştan"],["Yüksek Sadakat","Belki Üstümüzden Bir Kuş Geçer"],["Emre Aydın","Beni Biraz Anla"],["Müslüm Gürses","Nilüfer"],["Sagopa Kajmer","Bir Pesimistin Gözyaşları"],["Sıla","Yolun Sonu"],["Cem Adrian","Sen Aşkı Bana Sor"],["Kolpa","Aşkın Nur Hali"],["Norm Ender","Bi Dakika"],["Mustafa Sandal","Araba"]], en: [["Queen","We Will Rock You"],["Eminem","Lose Yourself"],["Daft Punk","Harder, Better, Faster, Stronger"],["The Weeknd","Blinding Lights"],["Survivor","Eye of the Tiger"],["Linkin Park","In the End"],["AC/DC","Thunderstruck"],["Imagine Dragons","Believer"],["Rick Astley","Never Gonna Give You Up"],["Kendrick Lamar","HUMBLE."],["Dua Lipa","Levitating"],["Metallica","Enter Sandman"],["Michael Jackson","Beat It"],["Lady Gaga","Bad Romance"],["Coldplay","Viva La Vida"],["Skrillex","Scary Monsters and Nice Sprites"],["Rage Against the Machine","Killing in the Name"],["Guns N' Roses","Sweet Child O' Mine"],["Britney Spears","Toxic"],["Kanye West","Stronger"],["Foo Fighters","Everlong"],["Nirvana","Smells Like Teen Spirit"],["Gorillaz","Feel Good Inc."],["Avicii","Wake Me Up"],["Post Malone","Rockstar"],["Travis Scott","SICKO MODE"],["Billie Eilish","bad guy"],["Pharrell Williams","Happy"],["Bon Jovi","It's My Life"],["Red Hot Chili Peppers","Can't Stop"]] },
   cache: {}, loaded: false, saved: new Map(), urls: new Map(), prefetching: new Set(),
+  embedded: (typeof SONG_DATA !== 'undefined') ? SONG_DATA : null,
+  embUrl(k) {
+    const e = this.embedded && this.embedded[k]; if (!e) return null;
+    if (!this.urls.has('emb:' + k)) {
+      const bin = atob(e.d), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      this.urls.set('emb:' + k, URL.createObjectURL(new Blob([u8], { type: 'audio/mp4' })));
+    }
+    return this.urls.get('emb:' + k);
+  },
   async init() {
     if (this.loaded) return; this.loaded = true;
     try { this.cache = JSON.parse(localStorage.getItem('taktikops_songcache') || '{}'); } catch (e) { this.cache = {}; }
@@ -385,6 +394,7 @@ const BotSongs = {
   // çalınacak bilgi: önce cihazdaki kopya (internetsiz), yoksa Apple bağlantısı
   async resolve(a, t) {
     const k = this.key(a, t);
+    if (this.embedded && this.embedded[k]) { const e = this.embedded[k]; return { url: this.embUrl(k), title: e.t, artist: e.a, local: true }; }
     const u = this.blobUrl(k); if (u) { const r = this.saved.get(k); return { url: u, title: r.title, artist: r.artist, local: true }; }
     if (!navigator.onLine) return null;
     try { return await this.search(a, t); } catch (e) { return null; }
@@ -398,7 +408,8 @@ const BotSongs = {
     if (mode !== 'en') this.LIST.tr.forEach(s => pool.push(s));
     if (mode !== 'tr') this.LIST.en.forEach(s => pool.push(s));
     // internet yoksa yalnızca cihazdaki şarkılardan seç
-    let use = navigator.onLine ? pool : pool.filter(s => this.saved.has(this.key(s[0], s[1])));
+    let use = this.embedded ? pool.filter(s => this.embedded[this.key(s[0], s[1])])
+      : navigator.onLine ? pool : pool.filter(s => this.saved.has(this.key(s[0], s[1])));
     if (!use.length) return;
     // indirilmiş şarkıları tercih et (daha hızlı, veri harcamaz)
     use = use.slice().sort(() => Math.random() - 0.5);
@@ -409,7 +420,7 @@ const BotSongs = {
       const s = use[i++ % use.length]; e.song = { a: s[0], t: s[1], info: null };
       this.resolve(s[0], s[1]).then(info => { if (e.song && e.song.a === s[0]) e.song.info = info; });
       // arka planda cihaza kaydet (bir sonraki sefer internetsiz çalsın)
-      if (navigator.onLine && !this.saved.has(this.key(s[0], s[1])) && !this.prefetching.has(this.key(s[0], s[1]))) {
+      if (!this.embedded && navigator.onLine && !this.saved.has(this.key(s[0], s[1])) && !this.prefetching.has(this.key(s[0], s[1]))) {
         const kk = this.key(s[0], s[1]); this.prefetching.add(kk);
         this.download(s[0], s[1]).then(() => { this.prefetching.delete(kk); this.refreshUI(); });
       }
@@ -419,6 +430,7 @@ const BotSongs = {
   total() { return this.LIST.tr.length + this.LIST.en.length; },
   refreshUI() {
     const el = document.getElementById('songStat'); if (!el) return;
+    if (this.embedded) { el.textContent = `Oyuna gömülü: ${Object.keys(this.embedded).length} şarkı — internet gerekmez`; return; }
     let mb = 0; this.saved.forEach(r => { mb += r.size; });
     el.textContent = `Cihazda: ${this.saved.size}/${this.total()} şarkı (${(mb / 1048576).toFixed(1)} MB)`;
   },
