@@ -131,8 +131,9 @@ body.mobile #touch{display:block}
 /* üst */
 #bBuy{left:calc(112px + var(--sl));top:calc(6px + var(--st));width:56px;height:40px;border-radius:9px;font-size:11px;background:rgba(40,130,60,.7);opacity:.9}
 #bMenu{right:calc(8px + var(--sr));top:calc(6px + var(--st));width:40px;height:40px;border-radius:9px;font-size:16px}
-#bRadio{right:calc(54px + var(--sr));top:calc(6px + var(--st));width:40px;height:40px;border-radius:9px;font-size:17px}
-#bNvg{right:calc(100px + var(--sr));top:calc(6px + var(--st));width:40px;height:40px;border-radius:9px;font-size:12px;color:#7dff8a}
+#bFs{right:calc(54px + var(--sr));top:calc(6px + var(--st));width:40px;height:40px;border-radius:9px;font-size:20px}
+#bRadio{right:calc(100px + var(--sr));top:calc(6px + var(--st));width:40px;height:40px;border-radius:9px;font-size:17px}
+#bNvg{right:calc(146px + var(--sr));top:calc(6px + var(--st));width:40px;height:40px;border-radius:9px;font-size:12px;color:#7dff8a}
 body.pdead #bFire,body.pdead #bFire2,body.pdead #bJump,body.pdead #bCrouch,body.pdead #bReload,body.pdead #bScope,body.pdead #bUse,body.pdead #slots,body.pdead #joyHint,body.pdead #bBuy{display:none!important}
 #radio{position:fixed;z-index:14;left:max(8px,env(safe-area-inset-left));top:50%;transform:translateY(-50%);background:rgba(10,12,16,.85);border:1px solid var(--line);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:4px;min-width:210px}
 #radio b{font-size:12px;color:var(--accent);letter-spacing:1px;margin-bottom:2px}
@@ -299,6 +300,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
   <div class="tb" id="bWalk" data-b="walk">YÜRÜ</div>
   <div class="tb" id="bBuy" data-b="buy">SATIN<br>AL</div>
   <div class="tb" id="bMenu" data-b="menu">❚❚</div>
+  <div class="tb" id="bFs" data-b="fs" data-fs="icon">⛶</div>
   <div class="tb hidden" id="bRadio" data-b="radio">📻</div>
   <div class="tb hidden" id="bNvg" data-b="nvg">GG</div>
   <div class="tb" id="bScore" data-b="score"></div>
@@ -357,6 +359,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
       <button class="btn pri" id="btnPlay" style="flex:1;min-width:180px;font-size:18px;padding:16px">▶ OYNA</button>
       <button class="btn" id="btnSettings">⚙ AYARLAR</button>
       <button class="btn" id="btnHelp">? NASIL OYNANIR</button>
+      <button class="btn" id="btnFs" data-fsbtn data-fs="btn">⛶ TAM EKRAN</button>
       <button class="btn" id="btnSkins" style="background:#2a2440;border-color:#7a5ad0">🎨 SKİNLER</button>
       <button class="btn" id="btnCheats" style="background:#3a1f22;border-color:#a33">🧪 HİLE SİMÜLASYONU</button>
     </div>
@@ -444,7 +447,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
     <p><b>Ekonomi:</b> Her raunt kazanç/kayıp parası ve öldürme ödülleri alırsın. Raunt başında doğma bölgesindeyken <b>SATIN AL</b> ile silah, zırh, kit ve bomba al. Hayatta kalırsan eşyaların sonraki raunta geçer.</p>
     <p><b>İsabet:</b> Koşarken atış isabetsizdir. Durarak (veya eğilerek) ateş et, uzun mesafede kısa seri at. Sprey deseni sabittir — aşağı çekerek kontrol edebilirsin. Kafa vuruşu 4x hasar.</p>
     <p><b>Mobil:</b> Sol yarıya dokunup sürükle = yürü/koş (az itersen sessiz yürür). Sağ yarıyı kaydır = etrafa bak. Ateş tuşuna basılıyken parmağını kaydırarak nişan alabilirsin. Üstteki skora basılı tut = skor tablosu. Silah değiştirmek için alttaki silah kutularına dokun. Bomba bölgesinde <b>KUR</b>, bombanın yanında <b>İMHA</b> tuşuna basılı tut.</p>
-    <p><b>Masaüstü:</b> <kbd>WASD</kbd> hareket, <kbd>Fare</kbd> nişan/ateş, <kbd>Sağ tık</kbd> dürbün, <kbd>Boşluk</kbd> zıpla, <kbd>Ctrl</kbd>/<kbd>C</kbd> eğil, <kbd>Shift</kbd> yürü (sessiz), <kbd>R</kbd> doldur, <kbd>E</kbd> kur/imha/silah al, <kbd>G</kbd> bırak, <kbd>B</kbd> satın al, <kbd>1-5</kbd> silahlar, <kbd>Q</kbd> son silah, <kbd>Z</kbd> telsiz, <kbd>N</kbd> gece görüşü, <kbd>Tab</kbd> skor, <kbd>Esc</kbd> menü.</p>
+    <p><b>Masaüstü:</b> <kbd>WASD</kbd> hareket, <kbd>Fare</kbd> nişan/ateş, <kbd>Sağ tık</kbd> dürbün, <kbd>Boşluk</kbd> zıpla, <kbd>Ctrl</kbd>/<kbd>C</kbd> eğil, <kbd>Shift</kbd> yürü (sessiz), <kbd>R</kbd> doldur, <kbd>E</kbd> kur/imha/silah al, <kbd>G</kbd> bırak, <kbd>F</kbd> tam ekran, <kbd>B</kbd> satın al, <kbd>1-5</kbd> silahlar, <kbd>Q</kbd> son silah, <kbd>Z</kbd> telsiz, <kbd>N</kbd> gece görüşü, <kbd>Tab</kbd> skor, <kbd>Esc</kbd> menü.</p>
     <p><b>Duvar arkasından vurma:</b> Tahta kasalar ve tek kat (ince) duvarlar delinebilir. Delme gücü silaha göre değişir: AWP, AK-47, SG 553, AUG ve Desert Eagle en iyisidir; tabancalar ve SMG'ler çoğunlukla sadece kasaları deler. Her delinen yüzey hasarı düşürür.</p>
     <p><b>İkincil ateş:</b> NİŞAN/sağ tık silaha göre değişir: dürbünlü silahlarda dürbün, M4A1-S ve USP-S'te susturucu tak/çıkar, Glock ve FAMAS'ta 3'lü seri atış, diğerlerinde hafif yakınlaştırma.</p>
     <p><b>Telsiz:</b> 📻 (ya da <kbd>Z</kbd>) ile takım botlarına komut ver: takip et, pozisyon tut, saldır, geri çekil, düşman bildir, rapor iste.</p>
@@ -458,6 +461,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
     <h2 style="margin:4px 0 14px">DURAKLATILDI</h2>
     <div style="display:flex;flex-direction:column;gap:10px">
       <button class="btn pri" id="pResume">DEVAM ET</button>
+      <button class="btn" id="pFs" data-fsbtn data-fs="btn">⛶ TAM EKRAN</button>
       <button class="btn" id="pCheats" style="background:#3a1f22;border-color:#a33">🧪 HİLE SİMÜLASYONU</button>
       <button class="btn" id="pSettings">AYARLAR</button>
       <button class="btn" id="pScore">SKOR TABLOSU</button>
@@ -5146,6 +5150,7 @@ const Input = {
   },
   pressButton(b, el, down) {
     const p = G.player;
+    if (b === 'fs') { if (!down) UI.toggleFullscreen(); return; }   // tam ekran: dokunma bırakılınca (tarayıcı izni için)
     if (b === 'fire') { this.fireTouches = (this.fireTouches || 0) + (down ? 1 : -1); this.fireHeld = this.fireTouches > 0; el.classList.toggle('on', down); return; }
     if (b === 'use') { this.useHeld = down; el.classList.toggle('on', down); if (down && p && UI.useMode === 'pick') G.playerSwapPickup(); return; }
     if (b === 'score') { this.scoreHeld = down; UI.showScore(down); return; }
@@ -5183,6 +5188,7 @@ const Input = {
       case 'KeyR': p.reload(); break;
       case 'KeyB': UI.toggleBuy(); break;
       case 'KeyG': G.dropWeapon(); break;
+      case 'KeyF': UI.toggleFullscreen(); break;
       case 'KeyE': if (UI.useMode === 'pick') G.playerSwapPickup(); break;
       case 'KeyQ': p.switchTo(p.prevSlot); break;
       case 'KeyZ': UI.toggleRadio(); break;
@@ -5252,6 +5258,9 @@ const UI = {
     $('meAgain').onclick = () => { $('matchEnd').classList.add('hidden'); this.play(); };
     $('meMenu').onclick = () => { $('matchEnd').classList.add('hidden'); this.quit(); };
     $('buyClose').onclick = () => this.toggleBuy(false);
+    document.querySelectorAll('[data-fsbtn]').forEach(b => b.onclick = () => this.toggleFullscreen());
+    ['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, () => this.fsRefresh()));
+    this.fsRefresh();
     $('btnSkins').onclick = () => { Audio3.init(); Skins.open(); };
     document.querySelectorAll('#radio button').forEach(b => { const go = ev => { ev.preventDefault(); ev.stopPropagation(); G.radio(parseInt(b.dataset.r)); this.toggleRadio(false); }; b.addEventListener('touchstart', go, { passive: false }); b.addEventListener('click', go); });
     $('buyMenu').addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
@@ -5319,6 +5328,27 @@ const UI = {
       Input.lockPointer();
     }
     G.startMatch();
+  },
+  // ---- Tam ekran ----
+  fsActive() { return !!(document.fullscreenElement || document.webkitFullscreenElement); },
+  toggleFullscreen() {
+    const de = document.documentElement;
+    const req = de.requestFullscreen || de.webkitRequestFullscreen || de.msRequestFullscreen;
+    const exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+    if (!req) { this.fsNote('Bu tarayıcı tam ekranı desteklemiyor. iPhone: Paylaş → "Ana Ekrana Ekle" ile tam ekran açılır.'); return; }
+    try {
+      if (this.fsActive()) { const r = exit.call(document); if (r && r.catch) r.catch(() => {}); }
+      else {
+        const r = req.call(de); if (r && r.catch) r.catch(() => this.fsNote('Tam ekran açılamadı'));
+        if (Input.isMobile) { try { screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} }
+      }
+    } catch (e) { this.fsNote('Tam ekran açılamadı'); }
+  },
+  fsNote(t) { if (G.running) this.toast(t, 3); else { alert(t); } },
+  fsRefresh() {
+    const on = this.fsActive();
+    document.querySelectorAll('[data-fs]').forEach(el => { el.textContent = (el.dataset.fs === 'btn' ? (on ? '⛶ TAM EKRANDAN ÇIK' : '⛶ TAM EKRAN') : (on ? '🗗' : '⛶')); });
+    document.body.classList.toggle('isfs', on);
   },
   quit() {
     G.running = false; G.paused = false; Trainer.cleanup();

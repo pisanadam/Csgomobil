@@ -22,6 +22,9 @@ const UI = {
     $('meAgain').onclick = () => { $('matchEnd').classList.add('hidden'); this.play(); };
     $('meMenu').onclick = () => { $('matchEnd').classList.add('hidden'); this.quit(); };
     $('buyClose').onclick = () => this.toggleBuy(false);
+    document.querySelectorAll('[data-fsbtn]').forEach(b => b.onclick = () => this.toggleFullscreen());
+    ['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, () => this.fsRefresh()));
+    this.fsRefresh();
     $('btnSkins').onclick = () => { Audio3.init(); Skins.open(); };
     document.querySelectorAll('#radio button').forEach(b => { const go = ev => { ev.preventDefault(); ev.stopPropagation(); G.radio(parseInt(b.dataset.r)); this.toggleRadio(false); }; b.addEventListener('touchstart', go, { passive: false }); b.addEventListener('click', go); });
     $('buyMenu').addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
@@ -89,6 +92,27 @@ const UI = {
       Input.lockPointer();
     }
     G.startMatch();
+  },
+  // ---- Tam ekran ----
+  fsActive() { return !!(document.fullscreenElement || document.webkitFullscreenElement); },
+  toggleFullscreen() {
+    const de = document.documentElement;
+    const req = de.requestFullscreen || de.webkitRequestFullscreen || de.msRequestFullscreen;
+    const exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+    if (!req) { this.fsNote('Bu tarayıcı tam ekranı desteklemiyor. iPhone: Paylaş → "Ana Ekrana Ekle" ile tam ekran açılır.'); return; }
+    try {
+      if (this.fsActive()) { const r = exit.call(document); if (r && r.catch) r.catch(() => {}); }
+      else {
+        const r = req.call(de); if (r && r.catch) r.catch(() => this.fsNote('Tam ekran açılamadı'));
+        if (Input.isMobile) { try { screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} }
+      }
+    } catch (e) { this.fsNote('Tam ekran açılamadı'); }
+  },
+  fsNote(t) { if (G.running) this.toast(t, 3); else { alert(t); } },
+  fsRefresh() {
+    const on = this.fsActive();
+    document.querySelectorAll('[data-fs]').forEach(el => { el.textContent = (el.dataset.fs === 'btn' ? (on ? '⛶ TAM EKRANDAN ÇIK' : '⛶ TAM EKRAN') : (on ? '🗗' : '⛶')); });
+    document.body.classList.toggle('isfs', on);
   },
   quit() {
     G.running = false; G.paused = false; Trainer.cleanup();

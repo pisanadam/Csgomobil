@@ -131,6 +131,7 @@ const Input = {
   },
   pressButton(b, el, down) {
     const p = G.player;
+    if (b === 'fs') { if (!down) UI.toggleFullscreen(); return; }   // tam ekran: dokunma bırakılınca (tarayıcı izni için)
     if (b === 'fire') { this.fireTouches = (this.fireTouches || 0) + (down ? 1 : -1); this.fireHeld = this.fireTouches > 0; el.classList.toggle('on', down); return; }
     if (b === 'use') { this.useHeld = down; el.classList.toggle('on', down); if (down && p && UI.useMode === 'pick') G.playerSwapPickup(); return; }
     if (b === 'score') { this.scoreHeld = down; UI.showScore(down); return; }
@@ -168,6 +169,7 @@ const Input = {
       case 'KeyR': p.reload(); break;
       case 'KeyB': UI.toggleBuy(); break;
       case 'KeyG': G.dropWeapon(); break;
+      case 'KeyF': UI.toggleFullscreen(); break;
       case 'KeyE': if (UI.useMode === 'pick') G.playerSwapPickup(); break;
       case 'KeyQ': p.switchTo(p.prevSlot); break;
       case 'KeyZ': UI.toggleRadio(); break;
