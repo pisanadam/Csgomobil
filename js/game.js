@@ -62,6 +62,7 @@ G.init = function () {
 // Harita ortamı: sis, gökyüzü rengi, ışık tonları
 G.applyMapEnv = function () {
   const env = MAP.env(), R = Tex.RETRO;
+  Audio3.setEnv(MAP.info.theme); if (this.running) Audio3.ambStart(MAP.info.theme);
   this.scene.fog.color.setHex(R ? env.fogR : env.fog);
   this.scene.background.setHex(env.bg);
   this.hemi.color.setHex(R && MAP.info.theme === 'desert' ? 0xfff2d8 : env.hemiSky);
@@ -121,6 +122,7 @@ G.startMatch = function () {
   this.running = true; this.paused = false;
   this.matchOver = false;
   UI.onMatchStart();
+  Audio3.ambStart(MAP.info.theme);
   this.startRound();
 };
 G.makeModel = function (e) {
@@ -361,6 +363,7 @@ G.fireBullet = function (sh, o, d, def, first) {
     const th = Trainer.rayHit(o, d, vh ? Math.min(endT, vh.t) : endT);
     if (th) { Trainer.hit(th); if (first) FX.tracer(this.muzzleWorld(sh), th.point); return; }
   }
+  if (!sh.isPlayer && first) Audio3.whiz(o, d, vh ? vh.t : endT);          // yanından geçen mermi vızıltısı
   // kurbandan önceki duvarlara göre hasar azalır
   let dmgScale = 1;
   if (victim) for (const w of penWalls) if (w.t < vh.t) dmgScale = w.scaleAfter;
@@ -374,6 +377,7 @@ G.fireBullet = function (sh, o, d, def, first) {
     victim.takeDamage(dmg, sh, def, vh.group, d, this.now);
     FX.blood(hp, d, vh.group === 'head');
     if (victim.bot) victim.bot.onDamaged(sh, this.now);
+    if (!victim.isPlayer && victim.alive) Audio3.voice(victim.pos, 'pain', victim.id * 0.37);
     if (victim.isPlayer) this.onPlayerHurt(sh, dmg);
     if (isPl) { UI.hitmarker(vh.group === 'head', !victim.alive); Audio3.hit(vh.group === 'head'); if (this.aim) Trainer.onDummyHit(vh.group === 'head'); }
     const wb = pens > 0 && penWalls.some(w => w.t < vh.t);
@@ -384,6 +388,7 @@ G.fireBullet = function (sh, o, d, def, first) {
   } else {
     const end = endHit ? endHit.point : { x: o.x + d.x * range, y: o.y + d.y * range, z: o.z + d.z * range };
     if (endHit) {
+      Audio3.impact(endHit.point, endHit.box ? endHit.box.kind : 'ground');
       FX.impact(endHit.point, endHit.normal, endHit.box ? endHit.box.kind : 'ground');
       FX.hole(endHit.point, endHit.normal);
     }
@@ -449,7 +454,7 @@ G.knifeAttack = function (e) {
   const dmg = 999; // yakın mesafede tek vuruşta öldürür
   const wasAlive = best.alive;
   best.takeDamage(dmg, e, { pen: 0.85 }, 'chest', d, this.now);
-  FX.blood({ x: o.x + d.x * bt, y: o.y + d.y * bt, z: o.z + d.z * bt }, d, back);
+  FX.blood({ x: o.x + d.x * bt, y: o.y + d.y * bt, z: o.z + d.z * bt }, d, back); Audio3.stab(best.pos);
   if (best.bot) best.bot.onDamaged(e, this.now);
   if (best.isPlayer) this.onPlayerHurt(e, dmg);
   if (e.isPlayer) UI.hitmarker(false, !best.alive);
@@ -482,13 +487,13 @@ G.onLand = function (e, vy) {
   if (e.isPlayer) Audio3.land(null); else Audio3.land(e.pos);
 };
 G.onPlayerHurt = function (att, dmg) {
-  Audio3.hurt();
+  Audio3.hurt(dmg);
   UI.damage(att ? att.pos : null, dmg);
   this.hurtPunch = Math.min(4, (this.hurtPunch || 0) + 1.5);
 };
 G.onKill = function (v, k, def, hs, wallbang) {
   v.alive = false; v.hp = 0;
-  v.stats.deaths++;
+  v.stats.deaths++; if (!v.isPlayer) Audio3.death(v.pos);
   v.deathDir = Math.random() < 0.5 ? 1 : -1;
   v.plantT = 0; v.defuseT = 0;
   if (this.bomb.defuser === v) this.bomb.defuser = null;
@@ -693,7 +698,7 @@ G.updatePlantDefuse = function (e, dt) {
     e.defuseT += dt;
     if (e.defuseT >= (e.kit ? 5 : 10)) {
       B.state = 'defused'; B.defuser = null; e.defuseT = 0;
-      this.addMoney(e, ECON.defuseReward); B.defusedBy = e;
+      this.addMoney(e, ECON.defuseReward); B.defusedBy = e; Audio3.defused(B.pos);
       this.endRound('CT', 'defuse');
     }
   } else {
@@ -771,7 +776,7 @@ G.throwGrenade = function (e, def, strength) {
     vel: { x: d.x * sp + e.vel.x * 0.6, y: d.y * sp + e.vel.y * 0.3, z: d.z * sp + e.vel.z * 0.6 },
   };
   this.nades.push(nd);
-  Audio3.knife(e.isPlayer ? null : e.pos);
+  Audio3.nadeThrow(e.isPlayer ? null : e.pos);
   if (e.isPlayer) this.vm.kick = 1;
   e.trigLatch = true;
   if (e.inv.grenades.length) { e.deployT = 0.6; e.onEquip(); } else e.switchTo(e.bestSlot(), true);
@@ -1152,7 +1157,7 @@ G.animateViewmodel = function (dt) {
 G.sound = function (kind, e, f) {
   const pos = e && !e.isPlayer ? e.pos : null;
   if (kind === 'click') Audio3.click(pos, f);
-  else if (kind === 'reload') Audio3.reload(pos);
+  else if (kind === 'reload') Audio3.reload(pos, e && e.def);
 };
 
 // ================= ÖLÜM KALIM =================

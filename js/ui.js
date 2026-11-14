@@ -115,7 +115,7 @@ const UI = {
     document.body.classList.toggle('isfs', on);
   },
   quit() {
-    G.running = false; G.paused = false; Trainer.cleanup();
+    G.running = false; G.paused = false; Trainer.cleanup(); Audio3.ambStop(); Audio3.resume();
     $('pause').classList.add('hidden'); $('hud').classList.add('hidden');
     this.toggleBuy(false); this.showScore(false);
     document.body.classList.remove('ingame');
@@ -125,7 +125,7 @@ const UI = {
   },
   pause(on) {
     if (!G.running) return;
-    G.paused = on;
+    G.paused = on; if (on) Audio3.suspend(); else Audio3.resume();
     $('pause').classList.toggle('hidden', !on);
     if (on) { Input.fireHeld = false; if (document.exitPointerLock) document.exitPointerLock(); }
     else Input.lockPointer();
@@ -176,6 +176,7 @@ const UI = {
   },
   aimEnd(rows, cfg, isBest) {
     $('hud').classList.add('hidden');
+    Audio3.ambStop();
     if (document.exitPointerLock) document.exitPointerLock();
     G.running = false; G.matchOver = true;
     $('meTitle').textContent = isBest ? '🏆 YENİ REKOR!' : 'ANTRENMAN BİTTİ';
@@ -185,6 +186,7 @@ const UI = {
   },
   matchEnd(a, b) {
     $('hud').classList.add('hidden');
+    Audio3.ambStop();
     if (document.exitPointerLock) document.exitPointerLock();
     let won = a > b, draw = a === b;
     const rank = G.entities.slice().sort((x, y) => y.stats.kills - x.stats.kills);
@@ -211,7 +213,8 @@ const UI = {
   chat(e, text, all) {
     const p = G.player; if (!p) return;
     const mate = !G.ffa && e.team === p.team;
-    if (!mate && !all) return; // rakip takımın telsizini duyamazsın
+    if (!mate && !all) return;
+    if (!e.isPlayer) Audio3.radio(); // rakip takımın telsizini duyamazsın
     const box = $('chat'); if (!box) return;
     const el = document.createElement('div'); el.className = 'cm';
     const tag = all && !mate ? '[TÜMÜ] ' : (e.alive ? '' : '[ÖLÜ] ');

@@ -13,6 +13,7 @@ Mobilde ve masaüstünde tarayıcıda oynanan, 5v5 bomba kurma / imha modlu takt
 - Ekonomi: başlangıç $800, öldürme ödülleri silaha göre, kazanma/kaybetme bonusları, kayıp serisi
 - 30+ silah: tabancalar, SMG'ler, pompalılar, makineli tüfekler, tüfekler, sürgülü ve otomatik keskin nişancı tüfekleri; susturucu tak/çıkar ve 3'lü seri atış modları
 - Her botun kendine özel Türkçe/İngilizce şarkısı (Apple Music 30 sn önizleme); bot raundun oyuncusu olunca çalar, şarkılar bir kez indirilip cihazda saklanır (internetsiz çalar)
+- Gerçekçi ses motoru: mesafe gecikmesi ve filtre, duvar arkası boğuklaşma, ortama göre yankı, malzemeye göre ayak sesi, ayrıntılı silah/şarjör/patlama sesleri, ortam sesi
 - Hazır müzik kataloğu (57 şarkı): ayarlardan dinle ve raundun oyuncusu müziği olarak seç
 - Tam ekran düğmesi (menü, duraklatma ve oyun içi; bilgisayarda F tuşu)
 - 🎯 Nişan Antrenmanı modu: Grid Shot, Flick, Tracking, Hareketli Manken; süre/boyut/hız ayarı, rekor kaydı
