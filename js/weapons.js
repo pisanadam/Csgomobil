@@ -163,6 +163,47 @@ const WEAPONS = {
   }
 })();
 
+// ================= CS2 tarzı sabit tarama (sprey) desenleri =================
+// Desen: kümülatif geri tepme (derece). x: eksi = sol, artı = sağ; y: yukarı. İlk mermi her zaman (0,0).
+// Ekran görüntüsü, mermi sapmasının %45'ini izler (CS'deki view_recoil_tracking); oyuncu aşağı-ters yönde çekerek telafi eder.
+// Not: CS2'nin birebir verileri değil; her silah için aynı şekil ve his (AK: yukarı, sola, sağa, sola "7" deseni).
+const SPRAY = (function () {
+  // AK-47: ilk ~8 mermi düz yukarı, sonra sola, sağa ve tekrar sola
+  const AK = [[0, 0], [0, 1.0], [0.1, 2.4], [0.2, 4.2], [0.4, 6.4], [0.4, 8.5], [0.2, 10.4], [-0.4, 12.0], [-1.4, 13.3], [-2.8, 14.2], [-4.4, 14.9], [-5.6, 15.4], [-6.2, 15.8], [-5.5, 16.2], [-3.8, 16.4],
+    [-1.4, 16.6], [1.2, 16.8], [3.4, 17.0], [4.8, 17.2], [5.4, 17.3], [4.6, 17.4], [2.6, 17.5], [-0.2, 17.6], [-3.2, 17.7], [-5.6, 17.8], [-6.8, 17.8], [-6.2, 17.9], [-4.0, 17.9], [-1.0, 18.0], [2.0, 18.0]];
+  // diğer silahlar: yukarı çıkış (üstel) + ilk "düz" mermilerden sonra başlayan yatay salınım
+  function arche(n, o) {
+    const p = [[0, 0]];
+    for (let i = 1; i < n; i++) {
+      const y = o.Y * (1 - Math.exp(-(i + 0.4) / o.k)), j = Math.max(0, i - o.straight), g = 1 - Math.exp(-j / 2.4);
+      p.push([(o.dir || -1) * o.A * g * Math.sin(o.w * j + (o.ph || 0)) + (o.drift || 0) * j * g, y]);
+    }
+    return p;
+  }
+  function ext(base, n, A, w) { const p = base.slice(); const l = base[base.length - 1]; for (let i = base.length; i < n; i++) p.push([l[0] * Math.cos(0.2 * (i - base.length + 1)) + A * Math.sin(w * i), l[1] + 0.02 * (i - base.length)]); return p; }
+  const R = (Y, k, st, A, w, dir, extra) => Object.assign({ Y, k, straight: st, A, w, dir }, extra || {});
+  const P = {
+    m4a4: R(12.2, 9, 4, 2.6, 0.42, -1), m4a1s: R(10.2, 9, 4, 2.0, 0.40, -1), galil: R(14.5, 10, 4, 4.0, 0.38, -1), famas: R(11.5, 8, 4, 3.0, 0.5, 1),
+    sg553: R(13.4, 9, 4, 3.4, 0.40, -1), aug: R(12, 9, 4, 2.8, 0.42, 1),
+    mp9: R(9.5, 6, 3, 1.6, 0.7, -1), mac10: R(10.5, 5, 3, 2.4, 0.6, -1), mp7: R(9.6, 6, 3, 1.7, 0.6, 1), ump45: R(10.4, 7, 3, 2.1, 0.5, -1), p90: R(8.4, 6, 3, 1.9, 0.9, 1), mp5: R(9.2, 6, 3, 1.6, 0.6, -1), tmp: R(8.6, 6, 3, 1.5, 0.7, 1),
+    negev: R(15.5, 12, 6, 5.5, 0.25, -1), m249: R(12, 10, 5, 3.8, 0.28, 1),
+    g3sg1: R(9, 6, 2, 1.6, 0.5, -1), sg550: R(8.2, 6, 2, 1.5, 0.5, 1),
+    glock: R(6.5, 4, 2, 1.1, 0.8, 1), usp: R(5.2, 3.5, 2, 0.9, 0.8, -1), p2000: R(5.4, 3.5, 2, 0.9, 0.8, -1), p228: R(5.8, 3.8, 2, 1.0, 0.8, 1), p250: R(6.0, 3.8, 2, 1.0, 0.8, -1),
+    fiveseven: R(5.6, 3.8, 2, 1.0, 0.8, 1), tec9: R(7.0, 4.2, 2, 1.4, 0.8, -1), elite: R(6.2, 4, 2, 1.2, 0.9, 1), deagle: R(5.0, 2.2, 1, 0.8, 0.9, 1),
+    nova: R(3.2, 1.2, 1, 0.4, 0.5, 1), m3: R(3.4, 1.2, 1, 0.4, 0.5, 1), xm1014: R(3.0, 1.5, 1, 0.5, 0.5, 1), ssg08: R(3.0, 1.2, 1, 0.3, 0.5, 1), awp: R(4.0, 1.2, 1, 0.3, 0.5, 1),
+  };
+  return { AK, arche, ext, P };
+})();
+(function () {
+  for (const k in WEAPONS) {
+    const w = WEAPONS[k]; if (!w.mag) continue;
+    const n = Math.max(w.mag, 30);
+    if (k === 'ak47') w.pattern = SPRAY.ext(SPRAY.AK, n, 0.8, 0.5);
+    else if (SPRAY.P[k]) w.pattern = SPRAY.arche(n, SPRAY.P[k]);
+    w.csPattern = true;
+  }
+})();
+
 // İkincil ateş (alt) modları: susturucu tak/çıkar, 3'lü seri atış
 WEAPONS.m4a1s.alt = 'silencer'; WEAPONS.usp.alt = 'silencer';
 WEAPONS.glock.alt = 'burst'; WEAPONS.famas.alt = 'burst';

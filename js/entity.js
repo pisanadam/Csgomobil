@@ -171,7 +171,7 @@ class Entity {
     const d = this.def;
     // geri tepme toparlanma
     if (now - this.lastShot > (d.interval || 0.1) * 1.2) {
-      this.recoilIdx = Math.max(0, this.recoilIdx - dt * (this.recoilIdx * 3.5 + 5));
+      this.recoilIdx = Math.max(0, this.recoilIdx - dt * (this.recoilIdx * 2.6 + 6));   // CS2: ~0,4-0,5 sn'de desen sıfırlanır
     }
     this.fireInacc *= Math.exp(-dt * 3 / (d.recover || 0.35));
     const pat = d.pattern;
