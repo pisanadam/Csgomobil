@@ -412,7 +412,9 @@ input[type=range]{width:100%;accent-color:#e9a83a}
           <div style="font-size:11px;color:var(--dim)">Apple'ın herkese açık arama servisi kullanılır; her şarkının Apple'ın sunduğu ilk 30 saniyelik önizlemesi seçilir ve cihazında MP3 olarak saklanır. Sadece kişisel kullanım içindir.</div></div>
         <div style="font-size:12px;color:var(--dim);font-weight:700;margin-top:6px">BOTLARIN ŞARKILARI (APPLE MUSIC 30 SN ÖNİZLEME)</div>
         <div class="seg" data-set="botMusic" data-opts='[["both","Türkçe + İngilizce"],["tr","Sadece Türkçe"],["en","Sadece İngilizce"],["off","Kapalı"]]'></div>
-        <div style="font-size:12px;color:var(--dim)">Her bota rastgele bir şarkı atanır. Bot raundun oyuncusu olunca şarkısı çalar ve ekranda şarkı adı görünür. İnternet gerekir; yoksa normal raunt sesi çalar.</div>
+        <div class="row"><button class="btn sm pri" id="songDl">⬇ Tüm şarkıları indir (çevrimdışı)</button><button class="btn sm" id="songClear">Sil</button></div>
+        <div id="songStat" style="font-size:12px;font-weight:700">Cihazda: 0 şarkı</div>
+        <div style="font-size:12px;color:var(--dim)">Her bota rastgele bir şarkı atanır; bot raundun oyuncusu olunca şarkısı çalar ve ekranda adı görünür. Şarkılar (≈1 MB/şarkı) bir kez indirilip cihazda saklanır; sonra internetsiz çalar. Maçta atanan şarkılar kendiliğinden de indirilir.</div>
         <div class="seg" data-set="mvpWhen" data-opts='[["me","Ben olunca çal"],["always","Her raunt sonunda çal"],["off","Kapalı"]]'></div>
         <div class="rgm"><span style="font-size:12px;color:var(--dim)">Müzik sesi <span class="val" data-val="musicVol"></span></span><input type="range" min="0" max="1" step="0.05" data-set="musicVol"></div>
         <div style="font-size:12px;color:var(--dim)">MP3, OGG, WAV, M4A gibi sesler ya da <b>MP4</b> video seçebilirsin: MP4'ün sesi otomatik olarak MP3'e çevrilip kaydedilir (en fazla ilk 6 dakika). Dosya bu cihazda saklanır; raunt sonunda ~9 saniye çalar.</div></div>
@@ -6330,47 +6332,110 @@ const Music = {
 };
 
 // ====================== BOTLARIN ŞARKILARI (Apple Music 30 sn önizleme) ======================
-// Her bota Türkçe/İngilizce bir şarkı atanır; bot raundun oyuncusu olunca şarkısının ilk 30 saniyesinden bir bölüm çalar.
+// Her bota Türkçe/İngilizce bir şarkı atanır; bot raundun oyuncusu olunca şarkısı çalar.
+// Şarkılar bir kez indirilip cihazda (IndexedDB) saklanır; sonrasında internetsiz de çalar.
 const BotSongs = {
   LIST: { tr: [["Tarkan","Kuzu Kuzu"],["Tarkan","Şımarık"],["Sezen Aksu","Hadi Bakalım"],["Sertab Erener","Everyway That I Can"],["Hadise","Düm Tek Tek"],["Mabel Matiz","Aşk Bu Mu"],["Duman","Her Şeyi Yak"],["Mor ve Ötesi","Bir Derdim Var"],["Teoman","Paramparça"],["Athena","Senden Daha Güzel"],["maNga","Fly to Stay Alive"],["Ceza","Neyim Var Ki"],["Ezhel","Geceler"],["Murat Boz","Aşkı Bulamam"],["Hande Yener","Kış Güneşi"],["Barış Manço","Gülpembe"],["Kenan Doğulu","Shake It Up Şekerim"],["Şebnem Ferah","Sil Baştan"],["Yüksek Sadakat","Belki Üstümüzden Bir Kuş Geçer"],["Emre Aydın","Beni Biraz Anla"],["Müslüm Gürses","Nilüfer"],["Sagopa Kajmer","Bir Pesimistin Gözyaşları"],["Sıla","Yolun Sonu"],["Cem Adrian","Sen Aşkı Bana Sor"],["Kolpa","Aşkın Nur Hali"],["Norm Ender","Bi Dakika"],["Mustafa Sandal","Araba"]], en: [["Queen","We Will Rock You"],["Eminem","Lose Yourself"],["Daft Punk","Harder, Better, Faster, Stronger"],["The Weeknd","Blinding Lights"],["Survivor","Eye of the Tiger"],["Linkin Park","In the End"],["AC/DC","Thunderstruck"],["Imagine Dragons","Believer"],["Rick Astley","Never Gonna Give You Up"],["Kendrick Lamar","HUMBLE."],["Dua Lipa","Levitating"],["Metallica","Enter Sandman"],["Michael Jackson","Beat It"],["Lady Gaga","Bad Romance"],["Coldplay","Viva La Vida"],["Skrillex","Scary Monsters and Nice Sprites"],["Rage Against the Machine","Killing in the Name"],["Guns N' Roses","Sweet Child O' Mine"],["Britney Spears","Toxic"],["Kanye West","Stronger"],["Foo Fighters","Everlong"],["Nirvana","Smells Like Teen Spirit"],["Gorillaz","Feel Good Inc."],["Avicii","Wake Me Up"],["Post Malone","Rockstar"],["Travis Scott","SICKO MODE"],["Billie Eilish","bad guy"],["Pharrell Williams","Happy"],["Bon Jovi","It's My Life"],["Red Hot Chili Peppers","Can't Stop"]] },
-  cache: {}, loaded: false,
-  load() {
+  cache: {}, loaded: false, saved: new Map(), urls: new Map(), prefetching: new Set(),
+  async init() {
     if (this.loaded) return; this.loaded = true;
     try { this.cache = JSON.parse(localStorage.getItem('taktikops_songcache') || '{}'); } catch (e) { this.cache = {}; }
+    try {
+      const db = await Music.db();
+      await new Promise(res => {
+        const st = db.transaction('files').objectStore('files'), q = st.openCursor();
+        q.onsuccess = () => { const c = q.result; if (!c) return res(); if (String(c.key).indexOf('song:') === 0 && c.value && c.value.blob) this.saved.set(String(c.key).slice(5), { title: c.value.title, artist: c.value.artist, size: c.value.blob.size, blob: c.value.blob }); c.continue(); };
+        q.onerror = () => res();
+      });
+    } catch (e) {}
+    this.refreshUI();
   },
   persist() { try { localStorage.setItem('taktikops_songcache', JSON.stringify(this.cache)); } catch (e) {} },
   key(a, t) { return a + '|' + t; },
-  async resolve(a, t) {
-    this.load();
+  blobUrl(k) { const r = this.saved.get(k); if (!r) return null; if (!this.urls.has(k)) this.urls.set(k, URL.createObjectURL(r.blob)); return this.urls.get(k); },
+  async search(a, t) {
     const k = this.key(a, t), c = this.cache[k];
-    if (c && Date.now() - c.at < 6 * 24 * 3600 * 1000) return c.info;   // önizleme bağlantıları zamanla değişebilir: 6 gün
-    try {
-      const r = await fetch('https://itunes.apple.com/search?media=music&entity=song&limit=6&country=TR&term=' + encodeURIComponent(a + ' ' + t));
-      if (!r.ok) throw new Error('http');
-      const first = a.toLowerCase().replace(/'/g, '').split(' ')[0];
-      const res = ((await r.json()).results || []).filter(x => x.previewUrl && x.artistName.toLowerCase().replace(/'/g, '').indexOf(first) >= 0);
-      if (!res.length) return null;
-      const x = res[0], info = { url: x.previewUrl, title: x.trackName, artist: x.artistName };
-      this.cache[k] = { at: Date.now(), info }; this.persist();
-      return info;
-    } catch (e) { return null; }
+    if (c && Date.now() - c.at < 6 * 24 * 3600 * 1000) return c.info;
+    const r = await fetch('https://itunes.apple.com/search?media=music&entity=song&limit=6&country=TR&term=' + encodeURIComponent(a + ' ' + t));
+    if (!r.ok) throw new Error('http');
+    const first = a.toLowerCase().replace(/'/g, '').split(' ')[0];
+    const res = ((await r.json()).results || []).filter(x => x.previewUrl && x.artistName.toLowerCase().replace(/'/g, '').indexOf(first) >= 0);
+    if (!res.length) return null;
+    const x = res[0], info = { url: x.previewUrl, title: x.trackName, artist: x.artistName };
+    this.cache[k] = { at: Date.now(), info }; this.persist();
+    return info;
   },
-  // bot varlıklarına şarkı ata ve bağlantılarını arka planda çöz
+  // indirip cihaza kaydet
+  async download(a, t) {
+    const k = this.key(a, t); if (this.saved.has(k)) return true;
+    try {
+      const info = await this.search(a, t); if (!info) return false;
+      const r = await fetch(info.url); if (!r.ok) return false;
+      const blob = await r.blob();
+      const db = await Music.db();
+      await new Promise((res, rej) => { const tx = db.transaction('files', 'readwrite'); tx.objectStore('files').put({ blob, title: info.title, artist: info.artist }, 'song:' + k); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+      this.saved.set(k, { title: info.title, artist: info.artist, size: blob.size, blob });
+      return true;
+    } catch (e) { return false; }
+  },
+  // çalınacak bilgi: önce cihazdaki kopya (internetsiz), yoksa Apple bağlantısı
+  async resolve(a, t) {
+    const k = this.key(a, t);
+    const u = this.blobUrl(k); if (u) { const r = this.saved.get(k); return { url: u, title: r.title, artist: r.artist, local: true }; }
+    if (!navigator.onLine) return null;
+    try { return await this.search(a, t); } catch (e) { return null; }
+  },
+  // bot varlıklarına şarkı ata
   assign(entities) {
-    this.load();
     const mode = S.botMusic || 'both';
-    for (const e of entities) { e.song = null; }
-    if (mode === 'off' || !navigator.onLine && !Object.keys(this.cache).length) return;
+    for (const e of entities) e.song = null;
+    if (mode === 'off') return;
     const pool = [];
     if (mode !== 'en') this.LIST.tr.forEach(s => pool.push(s));
     if (mode !== 'tr') this.LIST.en.forEach(s => pool.push(s));
-    pool.sort(() => Math.random() - 0.5);
+    // internet yoksa yalnızca cihazdaki şarkılardan seç
+    let use = navigator.onLine ? pool : pool.filter(s => this.saved.has(this.key(s[0], s[1])));
+    if (!use.length) return;
+    // indirilmiş şarkıları tercih et (daha hızlı, veri harcamaz)
+    use = use.slice().sort(() => Math.random() - 0.5);
+    if (navigator.onLine) use.sort((x, y) => (this.saved.has(this.key(y[0], y[1])) ? 1 : 0) - (this.saved.has(this.key(x[0], x[1])) ? 1 : 0) + (Math.random() - 0.5) * 1.2);
     let i = 0;
     for (const e of entities) {
       if (e.isPlayer) continue;
-      const s = pool[i++ % pool.length]; e.song = { a: s[0], t: s[1], info: null };
+      const s = use[i++ % use.length]; e.song = { a: s[0], t: s[1], info: null };
       this.resolve(s[0], s[1]).then(info => { if (e.song && e.song.a === s[0]) e.song.info = info; });
+      // arka planda cihaza kaydet (bir sonraki sefer internetsiz çalsın)
+      if (navigator.onLine && !this.saved.has(this.key(s[0], s[1])) && !this.prefetching.has(this.key(s[0], s[1]))) {
+        const kk = this.key(s[0], s[1]); this.prefetching.add(kk);
+        this.download(s[0], s[1]).then(() => { this.prefetching.delete(kk); this.refreshUI(); });
+      }
     }
+  },
+  // ---- ayarlar ekranı ----
+  total() { return this.LIST.tr.length + this.LIST.en.length; },
+  refreshUI() {
+    const el = document.getElementById('songStat'); if (!el) return;
+    let mb = 0; this.saved.forEach(r => { mb += r.size; });
+    el.textContent = `Cihazda: ${this.saved.size}/${this.total()} şarkı (${(mb / 1048576).toFixed(1)} MB)`;
+  },
+  async downloadAll() {
+    const btn = document.getElementById('songDl'), el = document.getElementById('songStat');
+    if (this.busy) return; this.busy = true; btn.disabled = true;
+    const all = [].concat(this.LIST.tr, this.LIST.en); let done = 0, fail = 0;
+    for (const s of all) {
+      if (!navigator.onLine) { el.textContent = '✗ İnternet yok'; break; }
+      if (!this.saved.has(this.key(s[0], s[1]))) { const ok = await this.download(s[0], s[1]); if (!ok) fail++; }
+      done++; el.textContent = `⏳ İndiriliyor… ${done}/${all.length}` + (fail ? ` (${fail} bulunamadı)` : '');
+    }
+    this.busy = false; btn.disabled = false; this.refreshUI();
+  },
+  async clearAll() {
+    try { const db = await Music.db(); await new Promise(res => { const tx = db.transaction('files', 'readwrite'), st = tx.objectStore('files'); this.saved.forEach((_, k) => st.delete('song:' + k)); tx.oncomplete = res; tx.onerror = res; }); } catch (e) {}
+    this.urls.forEach(u => URL.revokeObjectURL(u)); this.urls.clear(); this.saved.clear(); this.refreshUI();
+  },
+  bind() {
+    const d = document.getElementById('songDl'), c = document.getElementById('songClear'); if (!d) return;
+    d.onclick = () => this.downloadAll(); c.onclick = () => this.clearAll();
   },
 };
 
@@ -6831,7 +6896,7 @@ const Cheats = {
   Input.init();
   UI.init();
   Cheats.init();
-  Skins.loadAll(); Music.bind(); Music.init();
+  Skins.loadAll(); Music.bind(); Music.init(); BotSongs.bind(); BotSongs.init();
   UI.applySettings();
   let last = performance.now(), fpsAcc = 0, fpsN = 0;
   function frame(t) {
