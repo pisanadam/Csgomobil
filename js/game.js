@@ -207,10 +207,22 @@ G.assignRoles = function () {
   const P = MAP.POS, plan = this.round.plan;
   const Tbots = this.bots.filter(b => b.e.team === 'T');
   const base = this.now + this.FREEZE + 8 + Math.random() * 22;
+  const other = plan === 'A' ? 'B' : 'A';
+  // saldırı stratejisi: hızlı baskın (rush) / standart / çift bölge (sahte) — her raunt değişir
+  const sr = Math.random(), strat = sr < 0.28 ? 'rush' : sr < 0.8 ? 'default' : 'split';
+  this.tStrat = strat;
   Tbots.forEach((b, i) => {
-    // çoğunluk planlanan siteye, bazıları ayrı rotadan
-    const stage = i === 0 && Tbots.length > 2 ? pick(P.tStage.mid) : pick(P.tStage[plan]);
-    b.roundStart({ stage, executeAt: base + (i % 2) * 2 + Math.random() * 3 });
+    let style = 'default';
+    if (strat === 'rush') style = 'rush';
+    else if (strat === 'split' && i % 2 === 1 && P.tStage[other] && P.tStage[other].length) style = 'fake';
+    else if (i === Tbots.length - 1 && Tbots.length > 2 && Math.random() < 0.55) style = 'lurk';
+    let stage = i === 0 && Tbots.length > 2 ? pick(P.tStage.mid) : pick(P.tStage[plan]);
+    if (style === 'fake') stage = pick(P.tStage[other]);
+    let executeAt = base + (i % 2) * 2 + Math.random() * 3;
+    if (style === 'rush') executeAt = this.now + this.FREEZE + 0.3 + Math.random() * 2.5;
+    else if (style === 'fake') executeAt = base + 8 + Math.random() * 6;
+    else if (style === 'lurk') executeAt = base + 10 + Math.random() * 8;
+    b.roundStart({ stage, executeAt, style, startAt: this.now + this.FREEZE });
   });
   const CTbots = this.bots.filter(b => b.e.team === 'CT');
   const order = ['A', 'B', 'A', 'B', 'mid'];
@@ -219,7 +231,7 @@ G.assignRoles = function () {
     const site = order[i % order.length];
     const holds = P.ctHold[site];
     const hold = holds[used[site]++ % holds.length];
-    b.roundStart({ site: site === 'mid' ? (Math.random() < 0.5 ? 'A' : 'B') : site, hold, rotate: site === 'mid' || i >= 3 || Math.random() < 0.5 });
+    b.roundStart({ site: site === 'mid' ? (Math.random() < 0.5 ? 'A' : 'B') : site, hold, holds, rotate: site === 'mid' || i >= 3 || Math.random() < 0.5 });
   });
 };
 

@@ -40,6 +40,27 @@ class Bot {
     this.holdUntil = 0; this.roam = null;
     this.checked.clear(); this.lookPt = null; this.retreatUntil = 0; this.dodge = null; this.trade = null;
     this.knifeRunning = false; this.rotSince = 0; this.rotSiteSeen = null; this.hpCalled = false; this.wallbang = null;
+    this.micro = null; this.microNext = 0; this.holdCur = null; this.holdSwitch = 0; this.siteMove = 0; this.guardMove = 0; this.creepPath = undefined; this.creepKey = '';
+  }
+  // Tutuş noktasında bekleyen botun mikro hareketleri: sağa-sola sallanma, eğilme, köşeden kafa uzatma
+  microMove(now, g) {
+    const e = this.e, inp = e.input;
+    if (this.micro && now < this.micro.until) {
+      const m = this.micro, h = (now - m.t0) / (m.until - m.t0), first = h < 0.5;
+      if (m.kind === 'jiggle') inp.side = first ? m.dir : -m.dir;
+      else if (m.kind === 'peek') inp.fwd = first ? 1 : -1;
+      else if (m.kind === 'crouch') inp.crouch = true;
+      else if (m.kind === 'shuffle') { inp.side = m.dir * 0.8; }
+      if (this.threatNear(now, 18)) inp.walk = true;
+      return;
+    }
+    if (!this.microNext) this.microNext = now + rnd(0.8, 2.5);
+    if (now < this.microNext || this.lvl < 1) return;
+    const r = Math.random(), thr = this.threatNear(now, 22);
+    this.microNext = now + rnd(1.3, 3.4) / (0.7 + this.pers.aggr * 0.7) * (thr ? 1.4 : 1);
+    const kind = r < 0.34 ? 'jiggle' : r < 0.54 ? 'crouch' : (r < 0.8 && g && g.look) ? 'peek' : 'shuffle';
+    const dur = kind === 'crouch' ? rnd(0.7, 1.5) : kind === 'peek' ? rnd(0.9, 1.4) : rnd(0.7, 1.1);
+    this.micro = { kind, t0: now, until: now + dur, dir: Math.random() < 0.5 ? -1 : 1 };
   }
   // ----- İnsan benzeri yardımcılar -----
   pathRemaining() {
@@ -174,7 +195,10 @@ class Bot {
   onDamaged(att, now) {
     if (!att || att === this.e || G.ally(att, this.e)) return;
     if (this.e.alive && this.e.hp < 35 && !this.hpCalled && Math.random() < this.pers.chatty) { this.hpCalled = true; BotChat.say(this.e, pick([`canım ${Math.ceil(this.e.hp)}, destek!`, `vuruldum, ${Math.ceil(this.e.hp)} kaldı`, 'az canım var, geri çekiliyorum']), now); }
-    if (!this.target) { this.noise = { x: att.pos.x, y: att.pos.y, z: att.pos.z }; this.noiseT = now + 0.5; }
+    if (!this.target) {
+      this.noise = { x: att.pos.x, y: att.pos.y, z: att.pos.z }; this.noiseT = now + 0.5;
+      if (this.lvl >= 1 && Math.random() < 0.7) this.dodge = { fwd: rnd(-0.5, 0.3), side: Math.random() < 0.5 ? -1 : 1, until: now + rnd(0.4, 0.9), look: { x: att.pos.x, z: att.pos.z } };   // hemen yer değiştir
+    }
   }
   // ----- Hedef seçimi (strateji) -----
   decideGoal(now) {
@@ -202,6 +226,11 @@ class Bot {
       if (od.type === 'push') { const kp = this.knownEnemyPoint(now); if (kp) return { key: 'push', p: kp }; const st = MAP.POS.tStage.mid[0]; return { key: 'push', p: st }; }
     } else if (od) this.order = null;
     if (this.trade && now < this.tradeUntil && B.state !== 'planted') return { key: 'trade', p: this.trade };
+    // saldırgan botlar az önce gördüğü, kaçan rakibin peşine takılır
+    if (this.lvl >= 1 && this.pers.aggr > 0.55 && this.lastSeen && B.state !== 'planted' && !(e.inv.bomb) && !this.saving) {
+      const since = now - this.lastSeenT, dd = dist2(e.pos, this.lastSeen);
+      if (since > 0.35 && since < 2.4 && dd < 16 && dd > 2) return { key: 'chase', p: this.lastSeen };
+    }
     if (e.team === 'T') {
       if (B.state === 'dropped') {
         let closest = null, cd = 1e9;
@@ -209,7 +238,7 @@ class Bot {
         if (closest === e) return { key: 'bomb', p: B.pos };
       }
       if (B.state === 'planted') {
-        if (!this.guardSpot) this.guardSpot = G.randomNear(B.pos, 5, 12);
+        if (!this.guardSpot || now > this.guardMove) { this.guardSpot = G.randomNear(B.pos, 5, 12); this.guardMove = now + rnd(6, 12); }
         return { key: 'guard', p: this.guardSpot, look: B.pos, hold: true };
       }
       const site = R.plan;
@@ -220,8 +249,18 @@ class Bot {
           if (!this.siteSpot) this.siteSpot = pick(MAP.POS.plant[site]);
           return { key: 'plant', p: this.siteSpot, plant: true };
         }
-        if (!this.siteSpot) this.siteSpot = G.randomNear(MAP.POS.site[site], 2, 9, site);
+        if (!this.siteSpot || (now > this.siteMove && !this.threatNear(now, 14))) { this.siteSpot = G.randomNear(MAP.POS.site[site], 2, 9, site); this.siteMove = now + rnd(7, 14); }
         return { key: 'site', p: this.siteSpot, look: pick(MAP.POS.entries[site]), hold: true };
+      }
+      // bekleme noktasında dururken yavaşça siteye doğru ilerle (sürünme); hızlı baskın hemen yürür
+      const rl = this.role;
+      if (rl.style !== 'fake' && rl.style !== 'lurk' && rl.startAt !== undefined && rl.executeAt > rl.startAt + 3) {
+        if (this.creepPath === undefined) { const en = pick(MAP.POS.entries[site]); this.creepPath = MAP.findPath(rl.stage.x, rl.stage.z, en.x, en.z) || null; }
+        if (this.creepPath && this.creepPath.length) {
+          const frac = Math.min(0.5, Math.max(0, (now - rl.startAt) / (rl.executeAt - rl.startAt)) * 0.55), q = Math.floor(frac / 0.1) * 0.1;
+          const pt = pointAlong(this.creepPath, rl.stage, q);
+          return { key: 'stage' + q.toFixed(1), p: pt, look: MAP.POS.site[site], hold: true };
+        }
       }
       return { key: 'stage', p: this.role.stage, look: MAP.POS.site[site], hold: true };
     } else {
@@ -240,7 +279,15 @@ class Bot {
         if (!this.rotSpot || this.rotSite !== k.site) { this.rotSite = k.site; this.rotSpot = pick(MAP.POS.ctHold[k.site]); }
         return { key: 'rot' + k.site, p: this.rotSpot.p, look: this.rotSpot.look, hold: true };
       }
-      const h = this.role.hold;
+      let h = this.role.hold;
+      const hs = this.role.holds;
+      if (hs && hs.length > 1 && this.lvl >= 1) {
+        if (!this.holdCur) { this.holdCur = h; this.holdSwitch = now + rnd(12, 24); }
+        if (now > this.holdSwitch && !this.threatNear(now, 25) && now - this.lastSeenT > 5) {
+          const alt = hs.filter(x => x !== this.holdCur); this.holdCur = pick(alt.length ? alt : hs); this.holdSwitch = now + rnd(12, 26) / (0.7 + this.pers.aggr * 0.6);
+        }
+        h = this.holdCur;
+      }
       return { key: 'hold', p: h.p, look: h.look, hold: true };
     }
   }
@@ -314,6 +361,7 @@ class Bot {
       return;
     }
     if (!atGoal) this.followPath(dt, now);
+    else if (g.hold && !g.plant && !g.defuse && G.round.phase === 'live') this.microMove(now, g);
     // sessiz yürüme: tehlike yakınsa ya da son kalan oyuncuysa
     if (!atGoal && !this.knifeRunning && this.lvl >= 1 && (this.threatNear(now, 16) || (this.isLastAlive() && this.pers.patience > 0.3)) && !(g.defuse && G.bomb.timer < 15)) inp.walk = true;
     // bakış (nişangah yerleşimi: kafa hizası)
@@ -449,6 +497,8 @@ class Bot {
     } else {
       inp.side = dist > 4 ? this.strafeDir : 0;
       if (def.type === 'knife' || (def.type === 'shotgun' && dist > 8)) inp.fwd = 1;
+      if (this.pers.aggr > 0.5 && dist > 5 && dist < 24 && (t.hp < 55 || this.burst > 8) && this.lvl >= 1 && !(def.type === 'sniper')) inp.fwd = 0.8;          // rakibe baskı kur
+      if (this.lvl >= 2 && dist < 10 && dist > 3 && Math.random() < 0.004 && e.onGround) inp.jump = true;                                                    // yakın mesafede zıplayarak sür
       if (def.type === 'smg' && dist > 15) inp.side = this.strafeDir * 0.6;
     }
     // AWP dürbün
@@ -556,6 +606,14 @@ class Bot {
   }
 }
 
+// yol üzerinde 'frac' oranında nokta (0..1)
+function pointAlong(path, from, frac) {
+  const pts = [from].concat(path || []); let L = 0; const seg = [];
+  for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].z - pts[i - 1].z); seg.push(d); L += d; }
+  let t = L * frac;
+  for (let i = 1; i < pts.length; i++) { if (t <= seg[i - 1]) { const u = seg[i - 1] ? t / seg[i - 1] : 0; return { x: pts[i - 1].x + (pts[i].x - pts[i - 1].x) * u, z: pts[i - 1].z + (pts[i].z - pts[i - 1].z) * u }; } t -= seg[i - 1]; }
+  return pts[pts.length - 1];
+}
 // ----- Bot satın alma -----
 function botBuy(e, pistolRound, teamAvg) {
   const T = e.team === 'T'; e._eco = false;
