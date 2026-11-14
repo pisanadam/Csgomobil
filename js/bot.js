@@ -610,6 +610,7 @@ const BotChat = {
     return 'ortada';
   },
   say(e, text, now, all) {
+    if (G.aim) return;
     now = now === undefined ? G.now : now;
     const b = e.bot;
     if (b && now - b.lastChat < 3.5) return;

@@ -69,7 +69,7 @@ G.applyMapEnv = function () {
   this.sun.color.setHex(R && MAP.info.theme === 'desert' ? 0xffe6b8 : env.sun);
 };
 G.loadMap = function (id) {
-  if (id === 'random') id = MAP_LIST[Math.floor(Math.random() * MAP_LIST.length)].id;
+  if (id === 'random') { const L = MAP_LIST.filter(m => !m.hidden); id = L[Math.floor(Math.random() * L.length)].id; }
   if (MAP.current === id) return;
   MAP.load(id);
   MAP.build(this.scene);
@@ -94,12 +94,14 @@ G.startMatch = function () {
   for (const e of this.entities) if (e.model) this.disposeModel(e.model);
   for (const p of this.pickups) this.scene.remove(p.mesh);
   this.entities = []; this.bots = []; this.pickups = []; this.nades.forEach(n => this.scene.remove(n.mesh)); this.nades = [];
-  this.loadMap(S.map === 'random' ? 'random' : (S.map || 'dust'));
+  this.aim = S.mode === 'aim'; Trainer.cleanup();
+  this.loadMap(this.aim ? 'range' : (S.map === 'random' ? 'random' : (S.map || 'dust')));
   let pt = S.playerTeam; if (pt === 'auto') pt = Math.random() < 0.5 ? 'T' : 'CT';
+  if (this.aim) pt = 'T';
   this.sideOfGroup = [pt, pt === 'T' ? 'CT' : 'T'];
   this.score = [0, 0]; this.lossStreak = { T: 0, CT: 0 };
-  this.dm = S.mode === 'dm'; this.ffa = this.dm;
-  this.FREEZE = this.dm ? 3 : (S.freezeTime || 6); this.ROUND_TIME = this.dm ? S.dmTime : (S.roundTime || 115);
+  this.dm = S.mode === 'dm' || this.aim; this.ffa = this.dm;
+  this.FREEZE = this.dm ? 3 : (S.freezeTime || 6); this.ROUND_TIME = this.aim ? (S.aimTime || 60) : this.dm ? S.dmTime : (S.roundTime || 115);
   this.BOMB_TIME = S.c4Time || 40; ECON.start = S.startMoney || 800;
   document.body.classList.toggle('hudclassic', S.hudStyle === 'classic');
   const names = BOT_NAMES.slice().sort(() => Math.random() - 0.5);
@@ -107,7 +109,7 @@ G.startMatch = function () {
   const pl = this.player = new Entity('Sen', pt, true); pl.group = 0;
   this.entities.push(pl);
   for (let g = 0; g < 2; g++) {
-    const cnt = g === 0 ? n - 1 : n;
+    const cnt = this.aim ? (g === 1 && S.aimScenario === 'strafe' ? 1 : 0) : (g === 0 ? n - 1 : n);
     for (let i = 0; i < cnt; i++) {
       const e = new Entity(names.pop() || ('Bot' + i), this.sideOfGroup[g], false);
       e.group = g; new Bot(e); this.entities.push(e); this.bots.push(e.bot);
@@ -171,6 +173,7 @@ G.startRound = function () {
     this.bombMesh.visible = false; this.bombLight.intensity = 0;
     for (const e of this.entities) { this.dmLoadout(e); e.respawnAt = 0; e.protectUntil = this.now + this.FREEZE + 1.5; }
     for (const b of this.bots) b.roundStart({});
+    if (this.aim) Trainer.roundSetup();
     this.spec = null;
     UI.onRoundStart(R.num, false);
     Audio3.roundStart();
@@ -246,7 +249,7 @@ G.update = function (dt) {
     this.updatePlantDefuse(e, dt);
     this.updateModel(e, dt);
   }
-  this.updatePlayerAssist(dt);
+  if (this.aim) Trainer.update(dt); else this.updatePlayerAssist(dt);
   this.separatePlayers();
   this.updateNades(dt);
   this.updateBomb(dt);
@@ -352,6 +355,11 @@ G.fireBullet = function (sh, o, d, def, first) {
     const r = this.hitTestEntity(e, o, d, endT);
     if (r && (!vh || r.t < vh.t)) { vh = r; victim = e; }
   }
+  // antrenman hedefleri (küreler)
+  if (this.aim && sh.isPlayer) {
+    const th = Trainer.rayHit(o, d, vh ? Math.min(endT, vh.t) : endT);
+    if (th) { Trainer.hit(th); if (first) FX.tracer(this.muzzleWorld(sh), th.point); return; }
+  }
   // kurbandan önceki duvarlara göre hasar azalır
   let dmgScale = 1;
   if (victim) for (const w of penWalls) if (w.t < vh.t) dmgScale = w.scaleAfter;
@@ -366,7 +374,7 @@ G.fireBullet = function (sh, o, d, def, first) {
     FX.blood(hp, d, vh.group === 'head');
     if (victim.bot) victim.bot.onDamaged(sh, this.now);
     if (victim.isPlayer) this.onPlayerHurt(sh, dmg);
-    if (isPl) { UI.hitmarker(vh.group === 'head', !victim.alive); Audio3.hit(vh.group === 'head'); }
+    if (isPl) { UI.hitmarker(vh.group === 'head', !victim.alive); Audio3.hit(vh.group === 'head'); if (this.aim) Trainer.onDummyHit(vh.group === 'head'); }
     const wb = pens > 0 && penWalls.some(w => w.t < vh.t);
     if (wb) for (const w of penWalls) if (w.t < vh.t) { FX.hole(w.point, w.normal); FX.impact(w.point, w.normal, w.box.kind); FX.hole(w.exit, w.exitN); }
     if (wb && isPl && victim.alive) UI.toast('Duvar arkasından isabet!', 0.8);
@@ -447,6 +455,7 @@ G.knifeAttack = function (e) {
   if (wasAlive && !best.alive) this.onKill(best, e, WEAPONS.knife, false);
 };
 G.onShot = function (e, def) {
+  if (this.aim && e.isPlayer) Trainer.onShot();
   const sil = e.isSilenced();
   Audio3.shot(def, e.isPlayer ? null : e.eye(), sil);
   if (e.isPlayer) { this.vm.kick = 1; this.vm.flashT = 0.045; }
@@ -485,6 +494,7 @@ G.onKill = function (v, k, def, hs, wallbang) {
   if (k && k !== v) {
     if (!this.ally(k, v)) {
       k.stats.kills++; if (hs) k.stats.hs++; k.roundKills = (k.roundKills || 0) + 1;
+      if (this.aim && k.isPlayer) Trainer.onDummyKill(hs);
       if (this.dm) {
         this.score[k.group]++;
         if (k.isPlayer) UI.toast(`+1  ${v.name} öldürüldü`, 1.2, 'money');
@@ -904,6 +914,7 @@ G.checkWin = function () {
   const R = this.round, B = this.bomb;
   if (this.dm) {
     if (R.timeLeft <= 0) {
+      if (this.aim) { Trainer.finish(); return; }
       R.phase = 'end'; R.timer = this.END_TIME; R.endReason = 'dmtime';
       if (this.ffa) {
         const rank = this.entities.slice().sort((a, b) => b.stats.kills - a.stats.kills);

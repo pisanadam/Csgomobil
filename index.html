@@ -42,6 +42,9 @@ html,body{margin:0;height:100%;overflow:hidden;background:#000;color:var(--txt);
 .kf.me{border-color:#d33}
 .kf .w{color:#ddd;font-weight:500;margin:0 6px;font-size:12px}
 .kf .T{color:var(--t)}.kf .CT{color:var(--ct)}
+#aimHud{position:absolute;left:50%;top:calc(max(6px,env(safe-area-inset-top)) + 46px);transform:translateX(-50%);padding:3px 12px;border-radius:6px;background:rgba(0,0,0,.45);font-size:13px;font-weight:800;color:#bff3ff;white-space:nowrap;text-shadow:0 1px 2px #000}
+body.mobile #aimHud{font-size:11px;top:calc(max(6px,env(safe-area-inset-top)) + 40px)}
+table.aimT{width:100%;border-collapse:collapse;font-size:16px}table.aimT td{padding:7px 10px;border-top:1px solid rgba(255,255,255,.08)}table.aimT td:last-child{text-align:right;color:#bff3ff}
 #mvp{position:absolute;left:50%;top:44%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:10px 20px 10px 14px;border-radius:10px;background:linear-gradient(90deg,rgba(60,45,5,.92),rgba(20,18,12,.88));border:1px solid #e9b23a;box-shadow:0 0 24px rgba(255,190,60,.35)}
 #mvp .mvS{font-size:44px;color:#ffcf4a;text-shadow:0 0 14px rgba(255,200,60,.8);line-height:1}
 #mvp small{display:block;font-size:11px;letter-spacing:2px;color:#e9c46a;font-weight:800}
@@ -261,6 +264,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
   <div id="fps" class="hidden"></div>
   <div id="killfeed"></div>
   <div id="chat"></div>
+  <div id="aimHud" class="hidden"></div>
   <div id="mvp" class="hidden"></div>
   <div id="scope"></div>
   <div id="crosshair"></div>
@@ -329,14 +333,19 @@ input[type=range]{width:100%;accent-color:#e9a83a}
     <h1 class="title">TAKTİK OPS</h1>
     <div class="sub">4 Harita • 5v5 Bomba Kurma / İmha • Ölüm Kalım • Mobil & Masaüstü</div>
     <div class="menuGrid">
-      <div class="field" style="grid-column:1/-1"><label>Harita</label><div class="seg" data-set="map" data-opts='[["dust","🏜 Kum Vadisi"],["harbor","⚓ Liman"],["snow","❄ Karlı Üs"],["town","🏘 Eski Kasaba"],["random","🎲 Rastgele"]]'></div></div>
-      <div class="field" style="grid-column:1/-1"><label>Oyun Modu</label><div class="seg" data-set="mode" data-opts='[["comp","Rekabetçi (Bomba)"],["dm","Ölüm Kalım"]]'></div></div>
-      <div class="field"><label>Takım</label><div class="seg" data-set="playerTeam" data-opts='[["auto","Otomatik"],["T","Saldırı"],["CT","Savunma"]]'></div></div>
-      <div class="field"><label>Rakip Takım Zorluğu</label><div class="seg" data-set="botDifficulty" data-opts='[[0,"Kolay"],[1,"Normal"],[2,"Zor"],[3,"Uzman"]]'></div></div>
-      <div class="field"><label>Kendi Takımının Zorluğu</label><div class="seg" data-set="botDiffAlly" data-opts='[[0,"Kolay"],[1,"Normal"],[2,"Zor"],[3,"Uzman"]]'></div></div>
-      <div class="field"><label>Takım Boyutu</label><div class="seg" data-set="teamSize" data-opts='[[1,"1v1"],[2,"2v2"],[3,"3v3"],[4,"4v4"],[5,"5v5"]]'></div></div>
-      <div class="field"><label>Maç Uzunluğu</label><div class="seg" data-set="maxRounds" data-opts='[[8,"Kısa (8)"],[16,"Normal (16)"],[30,"Rekabetçi (30)"]]'></div></div>
-      <div class="field"><label>Ölüm Kalım Süresi</label><div class="seg" data-set="dmTime" data-opts='[[180,"3 dk"],[300,"5 dk"],[600,"10 dk"]]'></div></div>
+      <div class="field notAim" style="grid-column:1/-1"><label>Harita</label><div class="seg" data-set="map" data-opts='[["dust","🏜 Kum Vadisi"],["harbor","⚓ Liman"],["snow","❄ Karlı Üs"],["town","🏘 Eski Kasaba"],["random","🎲 Rastgele"]]'></div></div>
+      <div class="field" style="grid-column:1/-1"><label>Oyun Modu</label><div class="seg" data-set="mode" data-opts='[["comp","Rekabetçi (Bomba)"],["dm","Ölüm Kalım"],["aim","🎯 Nişan Antrenmanı"]]'></div></div>
+      <div class="field aimOnly hidden" style="grid-column:1/-1"><label>Antrenman Senaryosu</label><div class="seg" data-set="aimScenario" data-opts='[["grid","Grid Shot"],["flick","Flick"],["track","Tracking"],["strafe","Hareketli Manken"]]'></div>
+        <div style="font-size:12px;color:var(--dim)">Grid Shot: 3 hedefi hızla vur • Flick: beliren hedefe dön • Tracking: hareketli hedefi takip et • Manken: kaçan oyuncuyu vur. Silahı oyun içinde satın alma menüsünden seçebilirsin; mermi sınırsız, rekorların kaydedilir.</div></div>
+      <div class="field aimOnly hidden"><label>Süre</label><div class="seg" data-set="aimTime" data-opts='[[30,"30 sn"],[60,"60 sn"],[120,"2 dk"]]'></div></div>
+      <div class="field aimOnly hidden"><label>Hedef Boyutu</label><div class="seg" data-set="aimSize" data-opts='[[2,"Büyük"],[1,"Orta"],[0,"Küçük"]]'></div></div>
+      <div class="field aimOnly hidden"><label>Hedef Hızı</label><div class="seg" data-set="aimSpeed" data-opts='[[0,"Yavaş"],[1,"Normal"],[2,"Hızlı"]]'></div></div>
+      <div class="field notAim"><label>Takım</label><div class="seg" data-set="playerTeam" data-opts='[["auto","Otomatik"],["T","Saldırı"],["CT","Savunma"]]'></div></div>
+      <div class="field notAim"><label>Rakip Takım Zorluğu</label><div class="seg" data-set="botDifficulty" data-opts='[[0,"Kolay"],[1,"Normal"],[2,"Zor"],[3,"Uzman"]]'></div></div>
+      <div class="field notAim"><label>Kendi Takımının Zorluğu</label><div class="seg" data-set="botDiffAlly" data-opts='[[0,"Kolay"],[1,"Normal"],[2,"Zor"],[3,"Uzman"]]'></div></div>
+      <div class="field notAim"><label>Takım Boyutu</label><div class="seg" data-set="teamSize" data-opts='[[1,"1v1"],[2,"2v2"],[3,"3v3"],[4,"4v4"],[5,"5v5"]]'></div></div>
+      <div class="field notAim"><label>Maç Uzunluğu</label><div class="seg" data-set="maxRounds" data-opts='[[8,"Kısa (8)"],[16,"Normal (16)"],[30,"Rekabetçi (30)"]]'></div></div>
+      <div class="field notAim"><label>Ölüm Kalım Süresi</label><div class="seg" data-set="dmTime" data-opts='[[180,"3 dk"],[300,"5 dk"],[600,"10 dk"]]'></div></div>
       <div class="field"><label>Nişan Yardımı</label><div class="seg" data-set="aimAssist" data-opts='[[0,"Kapalı"],[1,"Düşük"],[2,"Orta"],[3,"Yüksek"]]'></div></div>
       <div class="field"><label>Tarama Yardımı</label><div class="seg" data-set="sprayAssist" data-opts='[[0,"Kapalı"],[1,"Düşük"],[2,"Orta"],[3,"Yüksek"]]'></div></div>
       <div class="field"><label>Grafik</label><div class="seg" data-set="graphics" data-opts='[[0,"Düşük"],[1,"Orta"],[2,"Yüksek"]]' data-reload="1"></div></div>
@@ -517,6 +526,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
 <script src="js/ui.js"></script>
 <script src="lib/lame.min.js"></script>
 <script src="js/extras.js"></script>
+<script src="js/trainer.js"></script>
 <script src="js/cheats.js"></script>
 <script src="js/main.js"></script>
 </body>

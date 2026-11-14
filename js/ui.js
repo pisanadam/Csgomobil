@@ -51,6 +51,8 @@ const UI = {
     this.refreshSettings();
   },
   refreshSettings() {
+    document.querySelectorAll('.aimOnly').forEach(el => el.classList.toggle('hidden', S.mode !== 'aim'));
+    document.querySelectorAll('.notAim').forEach(el => el.classList.toggle('hidden', S.mode === 'aim'));
     document.querySelectorAll('[data-set]').forEach(el => {
       const key = el.dataset.set, v = S[key];
       if (el.classList.contains('seg')) el.querySelectorAll('button').forEach(b => b.classList.toggle('sel', JSON.stringify(v) === b.dataset.v));
@@ -89,7 +91,7 @@ const UI = {
     G.startMatch();
   },
   quit() {
-    G.running = false; G.paused = false;
+    G.running = false; G.paused = false; Trainer.cleanup();
     $('pause').classList.add('hidden'); $('hud').classList.add('hidden');
     this.toggleBuy(false); this.showScore(false);
     document.body.classList.remove('ingame');
@@ -119,6 +121,10 @@ const UI = {
     $('specInfo').classList.add('hidden');
   },
   onRoundStart(n, pistol) {
+    if (G.aim) {
+      this.message('NİŞAN ANTRENMANI', 3, `${Trainer.SCEN[Trainer.scen].name} • ${S.aimTime || 60} sn — ${Trainer.SCEN[Trainer.scen].desc}`);
+      $('specInfo').classList.add('hidden'); this.cache.slots = null; return;
+    }
     if (G.dm) {
       this.message('ÖLÜM KALIM', 3, `${Math.round(S.dmTime / 60)} dakika • Herkes herkese karşı • Satın alma ücretsiz ve her zaman açık`);
       $('specInfo').classList.add('hidden'); this.cache.slots = null; return;
@@ -143,6 +149,15 @@ const UI = {
   onPlayerDeath(k) {
     this.toggleBuy(false);
     this.message('<span style="color:var(--danger)">ÖLDÜN</span>', 2.5, k && k !== G.player ? `${k.name} tarafından (${k.hp} CP kaldı)` : '');
+  },
+  aimEnd(rows, cfg, isBest) {
+    $('hud').classList.add('hidden');
+    if (document.exitPointerLock) document.exitPointerLock();
+    G.running = false; G.matchOver = true;
+    $('meTitle').textContent = isBest ? '🏆 YENİ REKOR!' : 'ANTRENMAN BİTTİ';
+    $('meSub').textContent = cfg;
+    $('meBoard').innerHTML = '<table class="aimT">' + rows.map(r => `<tr><td>${r[0]}</td><td><b>${r[1]}</b></td></tr>`).join('') + '</table>';
+    $('matchEnd').classList.remove('hidden');
   },
   matchEnd(a, b) {
     $('hud').classList.add('hidden');
@@ -296,7 +311,8 @@ const UI = {
     const p = G.player, R = G.round;
     const view = !p.alive && G.spec ? G.spec : p;
     // skor & zaman
-    if (G.ffa) {
+    if (G.aim) { this.set('scL', String(Trainer.score)); this.set('scR', String(Math.max(Trainer.best, Trainer.score))); }
+    else if (G.ffa) {
       let best = 0; for (const e of G.entities) if (e !== p) best = Math.max(best, e.stats.kills);
       this.set('scL', String(p.stats.kills)); this.set('scR', String(best));
     } else {
@@ -311,14 +327,15 @@ const UI = {
     if (this.cache.timerCls !== bombCls) { this.cache.timerCls = bombCls; $('timer').className = bombCls; }
     // canlı göstergeleri
     const aliveStr = team => G.entities.filter(e => e.team === team).map(e => `<i class="${e.alive ? '' : 'dead'}"></i>`).join('');
-    const aL = G.ffa ? '<b style="font-size:11px;color:#fff">SEN</b>' : aliveStr('CT'), aR = G.ffa ? '<b style="font-size:11px;color:#fff">LİDER</b>' : aliveStr('T');
+    const aL = G.ffa ? `<b style="font-size:11px;color:#fff">${G.aim ? 'PUAN' : 'SEN'}</b>` : aliveStr('CT'), aR = G.ffa ? `<b style="font-size:11px;color:#fff">${G.aim ? 'REKOR' : 'LİDER'}</b>` : aliveStr('T');
     if (this.cache.aL !== aL) { this.cache.aL = aL; $('aliveL').innerHTML = aL; }
     if (this.cache.aR !== aR) { this.cache.aR = aR; $('aliveR').innerHTML = aR; }
     // oyuncu
     this.set('hp', String(Math.ceil(view.hp))); this.set('ar', String(Math.ceil(view.armor)) + (view.helmet ? '+' : ''));
     const lowCls = view.hp <= 25 ? 'hudbox low' : 'hudbox';
     if (this.cache.hpCls !== lowCls) { this.cache.hpCls = lowCls; $('hpBox').className = lowCls; }
-    this.set('money', G.dm ? `Öldürme: ${p.stats.kills}` : '$' + p.money);
+    this.set('money', G.aim ? 'ANTRENMAN' : G.dm ? `Öldürme: ${p.stats.kills}` : '$' + p.money);
+    const ah = $('aimHud'); if (G.aim) { ah.classList.remove('hidden'); this.set('aimHud', Trainer.hudText()); } else ah.classList.add('hidden');
     const inBuy = G.canBuy(p);
     if (this.cache.buyz !== inBuy) { this.cache.buyz = inBuy; $('money').className = 'hudbox' + (inBuy ? ' buyzone' : ''); $('bBuy').classList.toggle('hidden', !inBuy); if (!inBuy && this.buyOpen) this.toggleBuy(false); }
     const w = view.weapon();

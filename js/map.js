@@ -148,11 +148,38 @@ const MAP_GRIDS = {
     "########################################",
   ],
 };
+MAP_GRIDS.range = [
+    "########################",
+    "#........CCCCCC........#",
+    "#........CCCCCC........#",
+    "#..x.....CCCCCC.....x..#",
+    "#......................#",
+    "#......................#",
+    "#......................#",
+    "#......................#",
+    "#......................#",
+    "#BBBB..............AAAA#",
+    "#BBBB..............AAAA#",
+    "#BBBB..............AAAA#",
+    "#BBBB..............AAAA#",
+    "#BBBB..............AAAA#",
+    "#......................#",
+    "#......................#",
+    "#......................#",
+    "#......................#",
+    "#......................#",
+    "#......................#",
+    "#..x.....TTTTTT.....x..#",
+    "#........TTTTTT........#",
+    "#........TTTTTT........#",
+    "########################",
+];
 const MAP_LIST = [
   { id: 'dust', name: 'Kum Vadisi', theme: 'desert' },
   { id: 'harbor', name: 'Liman', theme: 'harbor' },
   { id: 'snow', name: 'Karlı Üs', theme: 'snow' },
   { id: 'town', name: 'Eski Kasaba', theme: 'town' },
+  { id: 'range', name: 'Antrenman Alanı', theme: 'harbor', hidden: true },
 ];
 const MAP = (function () {
   const CELL = 3, CEIL_Y = 3.4;
@@ -324,7 +351,7 @@ const MAP = (function () {
     }
     for (const k in mats) if (!B[k]) { if (mats[k].map) mats[k].map.dispose(); mats[k].dispose(); }
     // site harfleri: siteye bakan en yakın duvar yüzüne
-    for (const s of ['A', 'B']) {
+    if (!M.info.hidden) for (const s of ['A', 'B']) {
       const cen = M.POS.site[s]; const [cc, cr] = w2c(cen.x, cen.z);
       const cands = [];
       for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
