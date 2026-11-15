@@ -81,6 +81,8 @@ body.mobile #skHint{font-size:10px;bottom:3px}
 #skTools label{font-size:11px;color:var(--dim);font-weight:700;display:flex;flex-direction:column}
 #skHint{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:12px;color:#cfd5dc;text-shadow:0 1px 2px #000;pointer-events:none}
 .rgm{display:flex;flex-direction:column}
+.numRow{display:flex;gap:8px;align-items:center}.numRow input[type=range]{flex:1;min-width:0}
+.numIn{width:84px;flex:none;background:#1f232a;color:#fff;border:1px solid var(--line);border-radius:6px;padding:7px 8px;font-size:15px;font-weight:800;text-align:right;user-select:text;-webkit-user-select:text}
 #chat{position:absolute;left:max(8px,env(safe-area-inset-left));bottom:calc(max(8px,env(safe-area-inset-bottom)) + 60px);display:flex;flex-direction:column;gap:2px;max-width:46vw}
 #chat .cm{background:rgba(0,0,0,.45);padding:2px 7px;border-radius:4px;font-size:13px;font-weight:600;transition:opacity 1s;text-shadow:0 1px 2px #000}
 #chat .cm span{font-weight:800}#chat .T{color:var(--t)}#chat .CT{color:var(--ct)}
@@ -385,12 +387,14 @@ input[type=range]{width:100%;accent-color:#e9a83a}
         <div style="font-size:12px;color:var(--dim)">Mobilde kolay oynanış için. Rekabetçi his için kapalı tutun.</div></div>
     </div>
     <div class="menuGrid tabc hidden" data-tab="ctrl">
-      <div class="field"><label>Dokunmatik Hassasiyet <span class="val" data-val="touchSens"></span></label><input type="range" min="0.2" max="3" step="0.05" data-set="touchSens"></div>
-      <div class="field"><label>Fare Hassasiyeti (CS2 ölçüsü) <span class="val" data-val="mouseSens"></span></label><input type="range" min="0.05" max="10" step="0.01" data-set="mouseSens">
-        <label style="margin-top:6px">Fare DPI <span class="val" data-val="mouseDpi"></span></label><input type="range" min="400" max="3200" step="50" data-set="mouseDpi">
+      <div class="field"><label>Dokunmatik Hassasiyet</label><div class="numRow"><input type="range" min="0.2" max="3" step="0.01" data-set="touchSens"><input type="number" class="numIn" min="0.05" max="10" step="0.01" data-set="touchSens" inputmode="decimal"></div></div>
+      <div class="field"><label>Fare Hassasiyeti (CS2 ölçüsü)</label>
+        <div class="numRow"><input type="range" min="0.05" max="10" step="0.01" data-set="mouseSens"><input type="number" class="numIn" min="0.01" max="50" step="0.01" data-set="mouseSens" inputmode="decimal"></div>
+        <label style="margin-top:6px">Fare DPI</label>
+        <div class="numRow"><input type="range" min="400" max="3200" step="50" data-set="mouseDpi"><input type="number" class="numIn" min="100" max="32000" step="50" data-set="mouseDpi" inputmode="numeric"></div>
         <div id="sensInfo" style="font-size:12px;color:#ffd98a;font-weight:700"></div>
-        <div style="font-size:11px;color:var(--dim)">CS2'deki hassasiyet değerini aynen gir (aynı DPI ile aynı his). eDPI = hassasiyet × DPI.</div></div>
-      <div class="field"><label>Dürbün Hassasiyeti (CS2: zoom_sensitivity_ratio, varsayılan 1.0) <span class="val" data-val="scopeSens"></span></label><input type="range" min="0.2" max="1.5" step="0.05" data-set="scopeSens"></div>
+        <div style="font-size:11px;color:var(--dim)">CS2'deki hassasiyet değerini aynen gir (aynı DPI ile aynı his); sağdaki kutuya rakam yazarak 0,01 hassasiyetle ayarlayabilirsin. Varsayılan 5.73 = önceki oyunla aynı his. eDPI = hassasiyet × DPI.</div></div>
+      <div class="field"><label>Dürbün Hassasiyeti (CS2: zoom_sensitivity_ratio, varsayılan 1.0)</label><div class="numRow"><input type="range" min="0.2" max="1.5" step="0.01" data-set="scopeSens"><input type="number" class="numIn" min="0.05" max="3" step="0.01" data-set="scopeSens" inputmode="decimal"></div></div>
       <div class="field"><label>Tuş Boyutu <span class="val" data-val="btnScale"></span></label><input type="range" min="0.7" max="1.5" step="0.05" data-set="btnScale"></div>
       <div class="field"><label>Tuş Opaklığı <span class="val" data-val="btnOpacity"></span></label><input type="range" min="0.2" max="1" step="0.05" data-set="btnOpacity"></div>
       <div class="field"><label>Eğilme Tuşu (Bilgisayar)</label><div class="seg" data-set="crouchKey" data-opts='[["both","Ctrl + C"],["c","Sadece C"],["ctrl","Sadece Ctrl"]]'></div>

@@ -48,19 +48,24 @@ const UI = {
         });
       } else if (el.type === 'range') {
         el.oninput = () => { S[key] = parseFloat(el.value); Settings.save(); this.refreshSettings(); this.applySettings(key); };
+      } else if (el.type === 'number') {
+        el.oninput = () => { let v = parseFloat(el.value); if (!isFinite(v)) return; v = Math.max(parseFloat(el.min) || 0, Math.min(parseFloat(el.max) || 1e9, v)); S[key] = v; Settings.save(); this.refreshSettings(el); this.applySettings(key); };
+        el.onkeydown = el.onkeyup = el.onkeypress = ev => ev.stopPropagation();
+        el.onchange = () => { el.value = S[key]; };   // sınıra çekilen değeri kutuda göster
       } else if (el.type === 'checkbox') {
         el.onchange = () => { S[key] = el.checked; Settings.save(); this.applySettings(key); if (el.dataset.reload) this.needReload = true; };
       }
     });
     this.refreshSettings();
   },
-  refreshSettings() {
+  refreshSettings(except) {
     document.querySelectorAll('.aimOnly').forEach(el => el.classList.toggle('hidden', S.mode !== 'aim'));
     document.querySelectorAll('.notAim').forEach(el => el.classList.toggle('hidden', S.mode === 'aim'));
     document.querySelectorAll('[data-set]').forEach(el => {
       const key = el.dataset.set, v = S[key];
       if (el.classList.contains('seg')) el.querySelectorAll('button').forEach(b => b.classList.toggle('sel', JSON.stringify(v) === b.dataset.v));
       else if (el.type === 'range') el.value = v;
+      else if (el.type === 'number') { if (el !== except && document.activeElement !== el) el.value = v; }
       else if (el.type === 'checkbox') el.checked = !!v;
     });
     const si = $('sensInfo'); if (si) { const e = S.mouseSens * S.mouseDpi, cm = 360 / (0.022 * S.mouseSens) / S.mouseDpi * 2.54; si.textContent = `eDPI ${Math.round(e)}  •  360° dönüş ≈ ${cm.toFixed(1)} cm`; }

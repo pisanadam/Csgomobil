@@ -81,6 +81,8 @@ body.mobile #skHint{font-size:10px;bottom:3px}
 #skTools label{font-size:11px;color:var(--dim);font-weight:700;display:flex;flex-direction:column}
 #skHint{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:12px;color:#cfd5dc;text-shadow:0 1px 2px #000;pointer-events:none}
 .rgm{display:flex;flex-direction:column}
+.numRow{display:flex;gap:8px;align-items:center}.numRow input[type=range]{flex:1;min-width:0}
+.numIn{width:84px;flex:none;background:#1f232a;color:#fff;border:1px solid var(--line);border-radius:6px;padding:7px 8px;font-size:15px;font-weight:800;text-align:right;user-select:text;-webkit-user-select:text}
 #chat{position:absolute;left:max(8px,env(safe-area-inset-left));bottom:calc(max(8px,env(safe-area-inset-bottom)) + 60px);display:flex;flex-direction:column;gap:2px;max-width:46vw}
 #chat .cm{background:rgba(0,0,0,.45);padding:2px 7px;border-radius:4px;font-size:13px;font-weight:600;transition:opacity 1s;text-shadow:0 1px 2px #000}
 #chat .cm span{font-weight:800}#chat .T{color:var(--t)}#chat .CT{color:var(--ct)}
@@ -385,12 +387,14 @@ input[type=range]{width:100%;accent-color:#e9a83a}
         <div style="font-size:12px;color:var(--dim)">Mobilde kolay oynanış için. Rekabetçi his için kapalı tutun.</div></div>
     </div>
     <div class="menuGrid tabc hidden" data-tab="ctrl">
-      <div class="field"><label>Dokunmatik Hassasiyet <span class="val" data-val="touchSens"></span></label><input type="range" min="0.2" max="3" step="0.05" data-set="touchSens"></div>
-      <div class="field"><label>Fare Hassasiyeti (CS2 ölçüsü) <span class="val" data-val="mouseSens"></span></label><input type="range" min="0.05" max="10" step="0.01" data-set="mouseSens">
-        <label style="margin-top:6px">Fare DPI <span class="val" data-val="mouseDpi"></span></label><input type="range" min="400" max="3200" step="50" data-set="mouseDpi">
+      <div class="field"><label>Dokunmatik Hassasiyet</label><div class="numRow"><input type="range" min="0.2" max="3" step="0.01" data-set="touchSens"><input type="number" class="numIn" min="0.05" max="10" step="0.01" data-set="touchSens" inputmode="decimal"></div></div>
+      <div class="field"><label>Fare Hassasiyeti (CS2 ölçüsü)</label>
+        <div class="numRow"><input type="range" min="0.05" max="10" step="0.01" data-set="mouseSens"><input type="number" class="numIn" min="0.01" max="50" step="0.01" data-set="mouseSens" inputmode="decimal"></div>
+        <label style="margin-top:6px">Fare DPI</label>
+        <div class="numRow"><input type="range" min="400" max="3200" step="50" data-set="mouseDpi"><input type="number" class="numIn" min="100" max="32000" step="50" data-set="mouseDpi" inputmode="numeric"></div>
         <div id="sensInfo" style="font-size:12px;color:#ffd98a;font-weight:700"></div>
-        <div style="font-size:11px;color:var(--dim)">CS2'deki hassasiyet değerini aynen gir (aynı DPI ile aynı his). eDPI = hassasiyet × DPI.</div></div>
-      <div class="field"><label>Dürbün Hassasiyeti (CS2: zoom_sensitivity_ratio, varsayılan 1.0) <span class="val" data-val="scopeSens"></span></label><input type="range" min="0.2" max="1.5" step="0.05" data-set="scopeSens"></div>
+        <div style="font-size:11px;color:var(--dim)">CS2'deki hassasiyet değerini aynen gir (aynı DPI ile aynı his); sağdaki kutuya rakam yazarak 0,01 hassasiyetle ayarlayabilirsin. Varsayılan 5.73 = önceki oyunla aynı his. eDPI = hassasiyet × DPI.</div></div>
+      <div class="field"><label>Dürbün Hassasiyeti (CS2: zoom_sensitivity_ratio, varsayılan 1.0)</label><div class="numRow"><input type="range" min="0.2" max="1.5" step="0.01" data-set="scopeSens"><input type="number" class="numIn" min="0.05" max="3" step="0.01" data-set="scopeSens" inputmode="decimal"></div></div>
       <div class="field"><label>Tuş Boyutu <span class="val" data-val="btnScale"></span></label><input type="range" min="0.7" max="1.5" step="0.05" data-set="btnScale"></div>
       <div class="field"><label>Tuş Opaklığı <span class="val" data-val="btnOpacity"></span></label><input type="range" min="0.2" max="1" step="0.05" data-set="btnOpacity"></div>
       <div class="field"><label>Eğilme Tuşu (Bilgisayar)</label><div class="seg" data-set="crouchKey" data-opts='[["both","Ctrl + C"],["c","Sadece C"],["ctrl","Sadece Ctrl"]]'></div>
@@ -562,7 +566,7 @@ const DEFAULT_SETTINGS = {
   autoFire: false,       // nişangah düşmana gelince otomatik ateş
   // Kontroller
   touchSens: 1.0,
-  mouseSens: 0.17,       // CS2 ölçüsü (m_yaw 0.022°/birim); varsayılan = eski varsayılanın (1.0) CS2 karşılığı, his değişmez
+  mouseSens: 5.73,       // CS2 ölçüsü (m_yaw 0.022°/birim). 5.73 = eski varsayılanla (0.126°/birim) aynı his
   mouseDpi: 800,
   scopeSens: 0.8,
   invertY: false,
@@ -606,7 +610,7 @@ const DEFAULT_SETTINGS = {
   volume: 0.8,
   texStyle: 'retro',     // 'retro' (eski okul, piksel) veya 'modern'
   layoutV: 3,
-  sensV: 2,
+  sensV: 3,
 };
 
 const Settings = {
@@ -617,7 +621,9 @@ const Settings = {
       if (raw) {
         const d = JSON.parse(raw);
         if (!d.layoutV) { d.leftFire = false; d.btnScale = 1; d.btnOpacity = 0.6; d.layoutV = 2; }
-        if (!d.sensV) { if (typeof d.mouseSens === 'number') d.mouseSens = Math.max(0.05, Math.round(d.mouseSens * 0.1745 * 100) / 100); d.sensV = 2; }   // eski ölçekten CS2 ölçüsüne
+        // hassasiyet ölçeği: eski ölçek 0.126°/birim, CS2 0.022°/birim -> eski değer x 5.73 = CS2 değeri
+        if (!d.sensV) { if (typeof d.mouseSens === 'number') d.mouseSens = Math.max(0.05, Math.round(d.mouseSens * 5.73 * 100) / 100); d.sensV = 3; }
+        else if (d.sensV === 2) { if (typeof d.mouseSens === 'number' && d.mouseSens <= 0.5) d.mouseSens = d.mouseSens === 0.17 ? 5.73 : Math.round(d.mouseSens / 0.1745 * 5.73 * 100) / 100; d.sensV = 3; }   // 2. sürümde ters çevrilmişti: düzelt
         if (d.layoutV < 3) { if (d.fov === 74) d.fov = 66; d.layoutV = 3; }
         Object.assign(this.data, d);
       }
@@ -5628,19 +5634,24 @@ const UI = {
         });
       } else if (el.type === 'range') {
         el.oninput = () => { S[key] = parseFloat(el.value); Settings.save(); this.refreshSettings(); this.applySettings(key); };
+      } else if (el.type === 'number') {
+        el.oninput = () => { let v = parseFloat(el.value); if (!isFinite(v)) return; v = Math.max(parseFloat(el.min) || 0, Math.min(parseFloat(el.max) || 1e9, v)); S[key] = v; Settings.save(); this.refreshSettings(el); this.applySettings(key); };
+        el.onkeydown = el.onkeyup = el.onkeypress = ev => ev.stopPropagation();
+        el.onchange = () => { el.value = S[key]; };   // sınıra çekilen değeri kutuda göster
       } else if (el.type === 'checkbox') {
         el.onchange = () => { S[key] = el.checked; Settings.save(); this.applySettings(key); if (el.dataset.reload) this.needReload = true; };
       }
     });
     this.refreshSettings();
   },
-  refreshSettings() {
+  refreshSettings(except) {
     document.querySelectorAll('.aimOnly').forEach(el => el.classList.toggle('hidden', S.mode !== 'aim'));
     document.querySelectorAll('.notAim').forEach(el => el.classList.toggle('hidden', S.mode === 'aim'));
     document.querySelectorAll('[data-set]').forEach(el => {
       const key = el.dataset.set, v = S[key];
       if (el.classList.contains('seg')) el.querySelectorAll('button').forEach(b => b.classList.toggle('sel', JSON.stringify(v) === b.dataset.v));
       else if (el.type === 'range') el.value = v;
+      else if (el.type === 'number') { if (el !== except && document.activeElement !== el) el.value = v; }
       else if (el.type === 'checkbox') el.checked = !!v;
     });
     const si = $('sensInfo'); if (si) { const e = S.mouseSens * S.mouseDpi, cm = 360 / (0.022 * S.mouseSens) / S.mouseDpi * 2.54; si.textContent = `eDPI ${Math.round(e)}  •  360° dönüş ≈ ${cm.toFixed(1)} cm`; }

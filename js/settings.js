@@ -7,7 +7,7 @@ const DEFAULT_SETTINGS = {
   autoFire: false,       // nişangah düşmana gelince otomatik ateş
   // Kontroller
   touchSens: 1.0,
-  mouseSens: 0.17,       // CS2 ölçüsü (m_yaw 0.022°/birim); varsayılan = eski varsayılanın (1.0) CS2 karşılığı, his değişmez
+  mouseSens: 5.73,       // CS2 ölçüsü (m_yaw 0.022°/birim). 5.73 = eski varsayılanla (0.126°/birim) aynı his
   mouseDpi: 800,
   scopeSens: 0.8,
   invertY: false,
@@ -51,7 +51,7 @@ const DEFAULT_SETTINGS = {
   volume: 0.8,
   texStyle: 'retro',     // 'retro' (eski okul, piksel) veya 'modern'
   layoutV: 3,
-  sensV: 2,
+  sensV: 3,
 };
 
 const Settings = {
@@ -62,7 +62,9 @@ const Settings = {
       if (raw) {
         const d = JSON.parse(raw);
         if (!d.layoutV) { d.leftFire = false; d.btnScale = 1; d.btnOpacity = 0.6; d.layoutV = 2; }
-        if (!d.sensV) { if (typeof d.mouseSens === 'number') d.mouseSens = Math.max(0.05, Math.round(d.mouseSens * 0.1745 * 100) / 100); d.sensV = 2; }   // eski ölçekten CS2 ölçüsüne
+        // hassasiyet ölçeği: eski ölçek 0.126°/birim, CS2 0.022°/birim -> eski değer x 5.73 = CS2 değeri
+        if (!d.sensV) { if (typeof d.mouseSens === 'number') d.mouseSens = Math.max(0.05, Math.round(d.mouseSens * 5.73 * 100) / 100); d.sensV = 3; }
+        else if (d.sensV === 2) { if (typeof d.mouseSens === 'number' && d.mouseSens <= 0.5) d.mouseSens = d.mouseSens === 0.17 ? 5.73 : Math.round(d.mouseSens / 0.1745 * 5.73 * 100) / 100; d.sensV = 3; }   // 2. sürümde ters çevrilmişti: düzelt
         if (d.layoutV < 3) { if (d.fov === 74) d.fov = 66; d.layoutV = 3; }
         Object.assign(this.data, d);
       }
