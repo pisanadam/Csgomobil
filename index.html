@@ -223,6 +223,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
 .bi{padding:9px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:#22262e;color:#fff;text-align:left;cursor:pointer;font-weight:800;font-size:14px;display:flex;flex-direction:column;gap:3px}
 .bi span{font-size:12px;color:#7fe08a;font-weight:800}
 .bi em{font-style:normal;font-size:11px;color:var(--dim);font-weight:600}
+.bi{position:relative}.bi .sell{position:absolute;right:6px;top:6px;font-style:normal;font-size:11px;font-weight:800;background:#7a2b2b;color:#fff;border-radius:5px;padding:3px 7px;cursor:pointer}
 .bi.no{opacity:.35}
 .bi.own{border-color:#5d9be0}
 .bi:active{transform:scale(.97)}
@@ -318,7 +319,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
 <!-- ============ SATIN ALMA ============ -->
 <div id="buyMenu" class="hidden">
   <div id="buyPanel">
-    <div id="buyHead"><div><b style="font-size:18px">SATIN ALMA</b> <span id="buyTime" style="color:var(--dim);font-size:13px"></span></div><div id="buyMoney">$800</div><button class="btn sm" id="buyClose">KAPAT ✕</button></div>
+    <div id="buyHead"><div><b style="font-size:18px">SATIN ALMA</b> <span id="buyTime" style="color:var(--dim);font-size:13px"></span></div><div id="buyMoney">$800</div><button class="btn sm hidden" id="buyUndo">↩ Son alımı geri al</button><button class="btn sm" id="buyClose">KAPAT ✕</button></div>
     <div id="buyCats"></div>
     <div id="buyItems"></div>
   </div>

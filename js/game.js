@@ -164,7 +164,7 @@ G.startRound = function () {
     e.alive = true; e.hp = 100; e.deathT = 0; e.flashT = 0; e.crouch = 0; e.height = STAND_H;
     e.plantT = 0; e.defuseT = 0; e.recoilIdx = 0; e.fireInacc = 0; e.punch.x = e.punch.y = 0; e.scoped = 0; e.reloadT = 0;
     e.zoomed = false; e.burstLeft = 0; e.order = null; e.nextFire = 0; e.roundKills = 0;
-    e.dmgBy.clear(); e.inv.bomb = false; e.trig = false;
+    e.dmgBy.clear(); e.inv.bomb = false; e.trig = false; e.bought = [];
     if (!e.inv.secondary) e.giveWeapon(e.team === 'T' ? 'glock' : 'usp');
     // eldeki silahların şarjörleri dolsun (CS: kalan cephane korunur, bu sürümde dolduruyoruz)
     for (const s of ['primary', 'secondary']) { const w = e.inv[s]; if (w) { w.mag = w.def.mag; w.reserve = w.def.reserve; } }
@@ -671,24 +671,54 @@ G.buy = function (e, id, bot) {
   if (id === 'kevlar' && e.armor >= 100) return false;
   if (id === 'kit' && e.kit) return false;
   if (e.money < price) return false;
+  const prev = { armor: e.armor, helmet: e.helmet };
+  let kind = 'equip';
   if (EQUIPMENT[id]) {
     if (id === 'kevlar') e.armor = 100;
     if (id === 'helmet') { e.armor = 100; e.helmet = true; }
     if (id === 'kit') e.kit = true;
     if (id === 'nvg') { if (e.nvg) return false; e.nvg = true; }
   } else if (def.slot === 'grenade') {
-    if (!e.giveWeapon(id)) return false;
+    if (!e.giveWeapon(id)) return false; kind = 'nade';
   } else {
+    kind = 'weapon';
     const cur = e.inv[def.slot];
     if (cur && cur.def.id === id) { if (cur.mag === def.mag && cur.reserve === def.reserve) return false; }
     if (cur && !bot && !this.dm) this.spawnPickup(cur, e.pos);
+    e.bought = (e.bought || []).filter(b => !(b.kind === 'weapon' && b.slot === def.slot));   // eski silah yere düştü: iade edilemez
     e.giveWeapon(id);
     if (!bot) e.switchTo(def.slot, true);
   }
   e.money -= price;
+  (e.bought = e.bought || []).push({ id, price, kind, slot: def.slot, prev });
   if (!bot) Audio3.click(null, 1500);
   return true;
 };
+// Aynı raunt (alım süresi içinde) satın alınan eşyayı tam fiyata geri sat
+G.sell = function (e, id) {
+  if (this.dm || !this.canBuy(e) || !e.bought) return false;
+  let i = -1; for (let k = e.bought.length - 1; k >= 0; k--) if (e.bought[k].id === id) { i = k; break; }
+  if (i < 0) return false;
+  const b = e.bought[i];
+  if (b.kind === 'weapon') {
+    const cur = e.inv[b.slot]; if (!cur || cur.def.id !== id) { e.bought.splice(i, 1); return false; }
+    e.inv[b.slot] = null;
+    if (b.slot === 'secondary') e.giveWeapon(e.team === 'T' ? 'glock' : 'usp');   // varsayılan tabanca geri gelir
+  } else if (b.kind === 'nade') {
+    const gi = e.inv.grenades.indexOf(id); if (gi < 0) { e.bought.splice(i, 1); return false; }
+    e.inv.grenades.splice(gi, 1);
+  } else {
+    if (id === 'kevlar' || id === 'helmet') { e.armor = b.prev.armor; e.helmet = b.prev.helmet; }
+    else if (id === 'kit') e.kit = false;
+    else if (id === 'nvg') { e.nvg = false; e.nvgOn = false; }
+  }
+  e.bought.splice(i, 1);
+  e.money = Math.min(ECON.max, e.money + b.price);
+  if (!e.weapon(e.slot)) e.switchTo(e.bestSlot(), true); else e.onEquip();
+  Audio3.click(null, 1000);
+  return true;
+};
+G.undoBuy = function (e) { return e.bought && e.bought.length ? this.sell(e, e.bought[e.bought.length - 1].id) : false; };
 
 // ================= BOMBA KURMA / İMHA =================
 G.inBombZone = function (p) { const z = MAP.zoneAt(p.x, p.z); return (z === 'A' || z === 'B') ? z : null; };

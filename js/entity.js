@@ -30,7 +30,7 @@ class Entity {
     this.scoped = 0; this.rescopeAt = 0; this.rescopeLevel = 0;
     this.input = { fwd: 0, side: 0, walk: false, crouch: false, jump: false, use: false };
     this.stats = { kills: 0, deaths: 0, assists: 0, hs: 0, dmg: 0, mvp: 0 };
-    this.dmgBy = new Map();
+    this.dmgBy = new Map(); this.bought = [];
     this.flashT = 0; this.flashMax = 0;
     this.stepAcc = 0; this.plantT = 0; this.defuseT = 0;
     this.deathT = 0; this.spottedUntil = 0; this.lastHurt = -10;

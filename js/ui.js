@@ -22,6 +22,7 @@ const UI = {
     $('meAgain').onclick = () => { $('matchEnd').classList.add('hidden'); this.play(); };
     $('meMenu').onclick = () => { $('matchEnd').classList.add('hidden'); this.quit(); };
     $('buyClose').onclick = () => this.toggleBuy(false);
+    $('buyUndo').onclick = () => { if (G.undoBuy(G.player)) this.renderBuy(); else Audio3.ui(220); };
     document.querySelectorAll('[data-fsbtn]').forEach(b => b.onclick = () => this.toggleFullscreen());
     ['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, () => this.fsRefresh()));
     this.fsRefresh();
@@ -277,6 +278,7 @@ const UI = {
   renderBuy() {
     const p = G.player;
     $('buyMoney').textContent = '$' + p.money;
+    $('buyUndo').classList.toggle('hidden', G.dm || !(p.bought && p.bought.length));
     document.querySelectorAll('#buyCats button').forEach((b, i) => b.classList.toggle('sel', i === this.buyCat));
     const box = $('buyItems'); box.innerHTML = '';
     for (const id of BUY_MENU[this.buyCat].items) {
@@ -295,8 +297,10 @@ const UI = {
       else if (id === 'nvg') info = 'Karanlık yerleri aydınlatır (N / GG tuşu)';
       else if (id === 'helmet') info = 'Kafa vuruşlarına karşı';
       else if (id === 'kevlar') info = 'Gövde hasarını azaltır';
-      b.innerHTML = `${def.name}<span>${G.dm ? 'ÜCRETSİZ' : '$' + price}</span><em>${info}</em>`;
+      const sold = !G.dm && own && p.bought && p.bought.find(x => x.id === id);
+      b.innerHTML = `${def.name}<span>${G.dm ? 'ÜCRETSİZ' : '$' + price}</span><em>${info}</em>` + (sold ? `<i class="sell">↩ SAT +$${sold.price}</i>` : '');
       b.onclick = () => { if (G.buy(p, id)) { this.renderBuy(); } else { Audio3.ui(220); } };
+      const sb = b.querySelector('.sell'); if (sb) sb.onclick = ev => { ev.stopPropagation(); if (G.sell(p, id)) this.renderBuy(); else Audio3.ui(220); };
       box.appendChild(b);
     }
   },
