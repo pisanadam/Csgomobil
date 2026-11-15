@@ -37,7 +37,7 @@ const DEFAULT_SETTINGS = {
   startMoney: 800, roundTime: 115, c4Time: 40, freezeTime: 6,
   hudStyle: 'modern',    // 'modern' | 'classic'
   aimScenario: 'grid', aimTime: 60, aimSize: 1, aimSpeed: 1,
-  botMusic: 'both',      // botların şarkıları: 'both' | 'tr' | 'en' | 'off'
+  botMusic: 'all',      // botların şarkıları: 'both' | 'tr' | 'en' | 'off'
   mvpStart: 0, mvpLen: 10, // yüklenen şarkıdan çalınacak bölüm (sn)
   mvpWhen: 'me',         // MVP müziği: 'me' (ben olunca) | 'always' | 'off'
   musicVol: 0.8,

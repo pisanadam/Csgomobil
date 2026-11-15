@@ -392,7 +392,7 @@ const Music = {
 // Her bota Türkçe/İngilizce bir şarkı atanır; bot raundun oyuncusu olunca şarkısı çalar.
 // Şarkılar bir kez indirilip cihazda (IndexedDB) saklanır; sonrasında internetsiz de çalar.
 const BotSongs = {
-  LIST: { tr: [["Tarkan","Kuzu Kuzu"],["Tarkan","Şımarık"],["Sezen Aksu","Hadi Bakalım"],["Sertab Erener","Everyway That I Can"],["Hadise","Düm Tek Tek"],["Mabel Matiz","Aşk Bu Mu"],["Duman","Her Şeyi Yak"],["Mor ve Ötesi","Bir Derdim Var"],["Teoman","Paramparça"],["Athena","Senden Daha Güzel"],["maNga","Fly to Stay Alive"],["Ceza","Neyim Var Ki"],["Ezhel","Geceler"],["Murat Boz","Aşkı Bulamam"],["Hande Yener","Kış Güneşi"],["Barış Manço","Gülpembe"],["Kenan Doğulu","Shake It Up Şekerim"],["Şebnem Ferah","Sil Baştan"],["Yüksek Sadakat","Belki Üstümüzden Bir Kuş Geçer"],["Emre Aydın","Beni Biraz Anla"],["Müslüm Gürses","Nilüfer"],["Sagopa Kajmer","Bir Pesimistin Gözyaşları"],["Sıla","Yolun Sonu"],["Cem Adrian","Sen Aşkı Bana Sor"],["Kolpa","Aşkın Nur Hali"],["Norm Ender","Bi Dakika"],["Mustafa Sandal","Araba"]], en: [["Queen","We Will Rock You"],["Eminem","Lose Yourself"],["Daft Punk","Harder, Better, Faster, Stronger"],["The Weeknd","Blinding Lights"],["Survivor","Eye of the Tiger"],["Linkin Park","In the End"],["AC/DC","Thunderstruck"],["Imagine Dragons","Believer"],["Rick Astley","Never Gonna Give You Up"],["Kendrick Lamar","HUMBLE."],["Dua Lipa","Levitating"],["Metallica","Enter Sandman"],["Michael Jackson","Beat It"],["Lady Gaga","Bad Romance"],["Coldplay","Viva La Vida"],["Skrillex","Scary Monsters and Nice Sprites"],["Rage Against the Machine","Killing in the Name"],["Guns N' Roses","Sweet Child O' Mine"],["Britney Spears","Toxic"],["Kanye West","Stronger"],["Foo Fighters","Everlong"],["Nirvana","Smells Like Teen Spirit"],["Gorillaz","Feel Good Inc."],["Avicii","Wake Me Up"],["Post Malone","Rockstar"],["Travis Scott","SICKO MODE"],["Billie Eilish","bad guy"],["Pharrell Williams","Happy"],["Bon Jovi","It's My Life"],["Red Hot Chili Peppers","Can't Stop"]] },
+  LIST: { tr: [["Tarkan","Kuzu Kuzu"],["Tarkan","Şımarık"],["Sezen Aksu","Hadi Bakalım"],["Sertab Erener","Everyway That I Can"],["Hadise","Düm Tek Tek"],["Mabel Matiz","Aşk Bu Mu"],["Duman","Her Şeyi Yak"],["Mor ve Ötesi","Bir Derdim Var"],["Teoman","Paramparça"],["Athena","Senden Daha Güzel"],["maNga","Fly to Stay Alive"],["Ceza","Neyim Var Ki"],["Ezhel","Geceler"],["Murat Boz","Aşkı Bulamam"],["Hande Yener","Kış Güneşi"],["Barış Manço","Gülpembe"],["Kenan Doğulu","Shake It Up Şekerim"],["Şebnem Ferah","Sil Baştan"],["Yüksek Sadakat","Belki Üstümüzden Bir Kuş Geçer"],["Emre Aydın","Beni Biraz Anla"],["Müslüm Gürses","Nilüfer"],["Sagopa Kajmer","Bir Pesimistin Gözyaşları"],["Sıla","Yolun Sonu"],["Cem Adrian","Sen Aşkı Bana Sor"],["Kolpa","Aşkın Nur Hali"],["Norm Ender","Bi Dakika"],["Mustafa Sandal","Araba"],["Tarkan","Dudu"],["Sezen Aksu","Firuze"],["Ajda Pekkan","Bambaşka Biri"],["Barış Manço","Can Bedenden Çıkmayınca"],["Cem Karaca","Resimdeki Gözyaşları"],["Gülşen","Bangır Bangır"],["Hadise","Superman"],["Reynmen","Ela"],["Edis","Martılar"],["Haluk Levent","Elfida"],["Teoman","İstanbul'da Sonbahar"],["Mor ve Ötesi","Cambaz"],["Duman","Köprüaltı"],["Ezhel","Müptezel"],["Sezen Aksu","Şarkı Söylemek Lazım"]], en: [["Queen","We Will Rock You"],["Eminem","Lose Yourself"],["Daft Punk","Harder, Better, Faster, Stronger"],["The Weeknd","Blinding Lights"],["Survivor","Eye of the Tiger"],["Linkin Park","In the End"],["AC/DC","Thunderstruck"],["Imagine Dragons","Believer"],["Rick Astley","Never Gonna Give You Up"],["Kendrick Lamar","HUMBLE."],["Dua Lipa","Levitating"],["Metallica","Enter Sandman"],["Michael Jackson","Beat It"],["Lady Gaga","Bad Romance"],["Coldplay","Viva La Vida"],["Skrillex","Scary Monsters and Nice Sprites"],["Rage Against the Machine","Killing in the Name"],["Guns N' Roses","Sweet Child O' Mine"],["Britney Spears","Toxic"],["Kanye West","Stronger"],["Foo Fighters","Everlong"],["Nirvana","Smells Like Teen Spirit"],["Gorillaz","Feel Good Inc."],["Avicii","Wake Me Up"],["Post Malone","Rockstar"],["Travis Scott","SICKO MODE"],["Billie Eilish","bad guy"],["Pharrell Williams","Happy"],["Bon Jovi","It's My Life"],["Red Hot Chili Peppers","Can't Stop"],["Ed Sheeran","Shape of You"],["Adele","Rolling in the Deep"],["Taylor Swift","Shake It Off"],["Harry Styles","As It Was"],["Olivia Rodrigo","drivers license"],["Rihanna","Umbrella"],["Beyoncé","Crazy in Love"],["Ariana Grande","7 rings"],["Miley Cyrus","Flowers"],["The Killers","Mr. Brightside"],["Oasis","Wonderwall"],["ABBA","Dancing Queen"],["Bee Gees","Stayin' Alive"],["Journey","Don't Stop Believin'"],["a-ha","Take On Me"],["Toto","Africa"],["Dua Lipa","Don't Start Now"],["Lil Nas X","Old Town Road"],["50 Cent","In da Club"],["OutKast","Hey Ya!"],["Martin Garrix","Animals"]], xx: [["Luis Fonsi","Despacito","es"],["Shakira","La Tortura","es"],["Bad Bunny","Tití Me Preguntó","es"],["Enrique Iglesias","Bailando","es"],["Daddy Yankee","Gasolina","es"],["Maluma","Felices los 4","es"],["J Balvin","Mi Gente","es"],["Karol G","TUSA","es"],["Los del Río","Macarena","es"],["Manu Chao","Me gustas tú","es"],["PSY","Gangnam Style","ko"],["BLACKPINK","How You Like That","ko"],["BTS","Fire","ko"],["TWICE","TT","ko"],["Girls' Generation","Gee","ko"],["NewJeans","Hype Boy","ko"],["Stromae","Papaoutai","fr"],["Édith Piaf","La Vie en rose","fr"],["Aya Nakamura","Djadja","fr"],["Zaz","Je veux","fr"],["Rammstein","Du hast","de"],["Nena","99 Luftballons","de"],["Kraftwerk","Das Model","de"],["Tokio Hotel","Durch den Monsun","de"],["Måneskin","Zitti e buoni","it"],["Laura Pausini","La solitudine","it"],["Eros Ramazzotti","Più bella cosa","it"],["Gigi D'Agostino","L'amour toujours","it"],["Khaled","Aïcha","ar"],["Amr Diab","Nour El Ain","ar"],["Nancy Ajram","Ya Tabtab","ar"],["Khaled","Didi","ar"],["Arijit Singh","Tum Hi Ho","hi"],["Badshah","Genda Phool","hi"],["Sukhwinder Singh","Chaiyya Chaiyya","hi"],["Michel Teló","Ai Se Eu Te Pego","pt"],["Sergio Mendes","Mas Que Nada","pt"],["Anitta","Envolver","pt"],["Kyu Sakamoto","Sukiyaki","ja"],["Kenshi Yonezu","Lemon","ja"],["t.A.T.u.","All the Things She Said","ru"],["Zivert","Life","ru"]] },
   cache: {}, loaded: false, saved: new Map(), urls: new Map(), prefetching: new Set(),
   embedded: (typeof SONG_DATA !== 'undefined') ? SONG_DATA : null,
   embUrl(k) {
@@ -458,8 +458,9 @@ const BotSongs = {
     for (const e of entities) e.song = null;
     if (mode === 'off') return;
     const pool = [];
-    if (mode !== 'en') this.LIST.tr.forEach(s => pool.push(s));
-    if (mode !== 'tr') this.LIST.en.forEach(s => pool.push(s));
+    if (mode === 'tr' || mode === 'both' || mode === 'all') this.LIST.tr.forEach(s => pool.push(s));
+    if (mode === 'en' || mode === 'both' || mode === 'all') this.LIST.en.forEach(s => pool.push(s));
+    if (mode === 'all') this.LIST.xx.forEach(s => pool.push(s));
     // internet yoksa yalnızca cihazdaki şarkılardan seç
     let use = this.embedded ? pool.filter(s => this.embedded[this.key(s[0], s[1])])
       : navigator.onLine ? pool : pool.filter(s => this.saved.has(this.key(s[0], s[1])));
@@ -480,7 +481,7 @@ const BotSongs = {
     }
   },
   // ---- ayarlar ekranı ----
-  total() { return this.LIST.tr.length + this.LIST.en.length; },
+  total() { return this.LIST.tr.length + this.LIST.en.length + this.LIST.xx.length; },
   refreshUI() {
     const el = document.getElementById('songStat'); if (!el) return;
     if (this.embedded) { el.textContent = `Oyuna gömülü: ${Object.keys(this.embedded).length} şarkı — internet gerekmez`; return; }
@@ -490,7 +491,7 @@ const BotSongs = {
   async downloadAll() {
     const btn = document.getElementById('songDl'), el = document.getElementById('songStat');
     if (this.busy) return; this.busy = true; btn.disabled = true;
-    const all = [].concat(this.LIST.tr, this.LIST.en); let done = 0, fail = 0;
+    const all = [].concat(this.LIST.tr, this.LIST.en, this.LIST.xx); let done = 0, fail = 0;
     for (const s of all) {
       if (!navigator.onLine) { el.textContent = '✗ İnternet yok'; break; }
       if (!this.saved.has(this.key(s[0], s[1]))) { const ok = await this.download(s[0], s[1]); if (!ok) fail++; }
@@ -511,7 +512,7 @@ const BotSongs = {
 // ====================== HAZIR KATALOG: kendi raundun oyuncusu müziğini listeden seç ======================
 const Catalog = {
   filter: 'all', q: '', playing: null, audio: null,
-  all() { const o = []; BotSongs.LIST.tr.forEach(s => o.push({ a: s[0], t: s[1], l: 'tr' })); BotSongs.LIST.en.forEach(s => o.push({ a: s[0], t: s[1], l: 'en' })); return o; },
+  all() { const o = []; BotSongs.LIST.tr.forEach(s => o.push({ a: s[0], t: s[1], l: 'tr', c: 'TR' })); BotSongs.LIST.en.forEach(s => o.push({ a: s[0], t: s[1], l: 'en', c: 'EN' })); BotSongs.LIST.xx.forEach(s => o.push({ a: s[0], t: s[1], l: 'xx', c: (s[2] || '??').toUpperCase() })); return o; },
   has(s) { const k = BotSongs.key(s.a, s.t); return !!(BotSongs.embedded && BotSongs.embedded[k]) || BotSongs.saved.has(k); },
   title(s) { const k = BotSongs.key(s.a, s.t), e = BotSongs.embedded && BotSongs.embedded[k], r = BotSongs.saved.get(k); return e ? { t: e.t, a: e.a } : r ? { t: r.title, a: r.artist } : { t: s.t, a: s.a }; },
   async urlFor(s) {
@@ -557,7 +558,7 @@ const Catalog = {
     list.forEach(s => {
       const tt = this.title(s), row = document.createElement('div'); row.className = 'amRow';
       const chosen = cur && cur.indexOf(tt.t) >= 0 && cur.indexOf(tt.a) >= 0;
-      row.innerHTML = `<div class="ctTag ${s.l}">${s.l === 'tr' ? 'TR' : 'EN'}</div><div class="amT"><b></b><span></span></div><button class="btn sm ctP">▶</button><button class="btn sm ${chosen ? '' : 'pri'} ctS">${chosen ? '✓ Seçili' : 'Seç'}</button>`;
+      row.innerHTML = `<div class="ctTag ${s.l}">${s.c}</div><div class="amT"><b></b><span></span></div><button class="btn sm ctP">▶</button><button class="btn sm ${chosen ? '' : 'pri'} ctS">${chosen ? '✓ Seçili' : 'Seç'}</button>`;
       row.querySelector('b').textContent = tt.t; row.querySelector('span').textContent = tt.a + (this.has(s) ? '' : ' • internetten');
       row.querySelector('.ctP').onclick = ev => { ev.stopPropagation(); this.preview(s, ev.currentTarget); };
       row.querySelector('.ctS').onclick = ev => { ev.stopPropagation(); this.pick(s); };
@@ -569,6 +570,7 @@ const Catalog = {
     const q = document.getElementById('ctQuery'); if (!q) return;
     q.oninput = () => { this.q = q.value; this.render(); }; q.onkeydown = q.onkeyup = q.onkeypress = e => e.stopPropagation();
     document.querySelectorAll('#ctTabs button').forEach(b => b.onclick = () => { this.filter = b.dataset.f; document.querySelectorAll('#ctTabs button').forEach(x => x.classList.toggle('sel', x === b)); this.render(); });
+    const ob = document.getElementById('ctOpen'); if (ob) ob.textContent = `📚 Hazır katalogdan seç (${BotSongs.total()} popüler şarkı, her dilden)`;
     document.getElementById('ctOpen').onclick = () => { const w = document.getElementById('ctWrap'); w.classList.toggle('hidden'); if (!w.classList.contains('hidden')) this.render(); else this.stopPreview(); };
   },
 };
