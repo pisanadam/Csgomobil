@@ -13,6 +13,7 @@ Mobilde ve masaüstünde tarayıcıda oynanan, 5v5 bomba kurma / imha modlu takt
 - Ekonomi: başlangıç $800, öldürme ödülleri silaha göre, kazanma/kaybetme bonusları, kayıp serisi
 - 30+ silah: tabancalar, SMG'ler, pompalılar, makineli tüfekler, tüfekler, sürgülü ve otomatik keskin nişancı tüfekleri; susturucu tak/çıkar ve 3'lü seri atış modları
 - Her botun kendine özel Türkçe/İngilizce şarkısı (Apple Music 30 sn önizleme); bot raundun oyuncusu olunca çalar, şarkılar bir kez indirilip cihazda saklanır (internetsiz çalar)
+- Raunt bittikten sonra (bomba imha edilince vb.) da yerden silah alma
 - Fare hassasiyeti CS2 ölçüsünde (0.022°/birim); varsayılan 5.73 (önceki oyunla aynı his), rakam kutusuyla 0,01 hassasiyetle ayar, DPI/eDPI göstergesi
 - Ctrl ile eğilirken sekmenin kapanmasına karşı: tam ekranda klavye kilidi, kapatma onayı, Ctrl kısayollarını engelleme, eğilme tuşu seçimi
 - Aynı raunt satın alınan eşyayı tam fiyata geri satma (alım süresi içinde, "Son alımı geri al")

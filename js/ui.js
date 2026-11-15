@@ -416,10 +416,11 @@ const UI = {
     if (prog) { this.set('progTxt', ptxt); this.set('progBar', Math.min(100, prog * 100) + '%', 'width'); }
     // kullan tuşu
     let um = null;
-    if (p.alive && R.phase !== 'end') {
-      if (p.inv.bomb && G.inBombZone(p.pos) && R.phase === 'live') um = 'plant';
-      else if (p.team === 'CT' && G.bomb.state === 'planted' && dist2(p.pos, G.bomb.pos) < 1.6) um = 'defuse';
-      else if (G.pickups.some(k => dist2(k.pos, p.pos) < 1.8)) um = 'pick';
+    if (p.alive) {
+      const live = R.phase !== 'end';
+      if (live && p.inv.bomb && G.inBombZone(p.pos) && R.phase === 'live') um = 'plant';
+      else if (live && p.team === 'CT' && G.bomb.state === 'planted' && dist2(p.pos, G.bomb.pos) < 1.6) um = 'defuse';
+      else if (G.pickups.some(k => dist2(k.pos, p.pos) < 1.8)) um = 'pick';   // raunt bittikten sonra da (bomba imha edilince, süre dolunca) yerden silah alınabilir
     }
     this.useMode = um;
     if (this.cache.um !== um) {
