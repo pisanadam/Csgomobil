@@ -7,7 +7,7 @@ const DEFAULT_SETTINGS = {
   autoFire: false,       // nişangah düşmana gelince otomatik ateş
   // Kontroller
   touchSens: 1.0,
-  mouseSens: 1.0,        // CS2 ölçüsü (m_yaw 0.022°/birim); CS2'deki sensitivity değeriyle aynı
+  mouseSens: 0.17,       // CS2 ölçüsü (m_yaw 0.022°/birim); varsayılan = eski varsayılanın (1.0) CS2 karşılığı, his değişmez
   mouseDpi: 800,
   scopeSens: 0.8,
   invertY: false,
