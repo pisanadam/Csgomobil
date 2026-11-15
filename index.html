@@ -386,8 +386,11 @@ input[type=range]{width:100%;accent-color:#e9a83a}
     </div>
     <div class="menuGrid tabc hidden" data-tab="ctrl">
       <div class="field"><label>Dokunmatik Hassasiyet <span class="val" data-val="touchSens"></span></label><input type="range" min="0.2" max="3" step="0.05" data-set="touchSens"></div>
-      <div class="field"><label>Fare Hassasiyeti <span class="val" data-val="mouseSens"></span></label><input type="range" min="0.1" max="4" step="0.05" data-set="mouseSens"></div>
-      <div class="field"><label>Dürbün Hassasiyeti <span class="val" data-val="scopeSens"></span></label><input type="range" min="0.2" max="1.5" step="0.05" data-set="scopeSens"></div>
+      <div class="field"><label>Fare Hassasiyeti (CS2 ölçüsü) <span class="val" data-val="mouseSens"></span></label><input type="range" min="0.05" max="10" step="0.01" data-set="mouseSens">
+        <label style="margin-top:6px">Fare DPI <span class="val" data-val="mouseDpi"></span></label><input type="range" min="400" max="3200" step="50" data-set="mouseDpi">
+        <div id="sensInfo" style="font-size:12px;color:#ffd98a;font-weight:700"></div>
+        <div style="font-size:11px;color:var(--dim)">CS2'deki hassasiyet değerini aynen gir (aynı DPI ile aynı his). eDPI = hassasiyet × DPI.</div></div>
+      <div class="field"><label>Dürbün Hassasiyeti (CS2: zoom_sensitivity_ratio, varsayılan 1.0) <span class="val" data-val="scopeSens"></span></label><input type="range" min="0.2" max="1.5" step="0.05" data-set="scopeSens"></div>
       <div class="field"><label>Tuş Boyutu <span class="val" data-val="btnScale"></span></label><input type="range" min="0.7" max="1.5" step="0.05" data-set="btnScale"></div>
       <div class="field"><label>Tuş Opaklığı <span class="val" data-val="btnOpacity"></span></label><input type="range" min="0.2" max="1" step="0.05" data-set="btnOpacity"></div>
       <div class="field"><label>Eğilme Tuşu (Bilgisayar)</label><div class="seg" data-set="crouchKey" data-opts='[["both","Ctrl + C"],["c","Sadece C"],["ctrl","Sadece Ctrl"]]'></div>

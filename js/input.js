@@ -37,7 +37,7 @@ const Input = {
     });
     window.addEventListener('mousemove', e => {
       if (!this.locked || !G.running || G.paused) return;
-      this.look(e.movementX, e.movementY, S.mouseSens * 0.0022);
+      this.look(e.movementX, e.movementY, S.mouseSens * 0.022 * Math.PI / 180);   // CS2: yaw = pitch = 0.022° x hassasiyet
     });
     window.addEventListener('wheel', e => {
       if (!G.running || !G.player) return;

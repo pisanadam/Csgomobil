@@ -63,6 +63,7 @@ const UI = {
       else if (el.type === 'range') el.value = v;
       else if (el.type === 'checkbox') el.checked = !!v;
     });
+    const si = $('sensInfo'); if (si) { const e = S.mouseSens * S.mouseDpi, cm = 360 / (0.022 * S.mouseSens) / S.mouseDpi * 2.54; si.textContent = `eDPI ${Math.round(e)}  •  360° dönüş ≈ ${cm.toFixed(1)} cm`; }
     document.querySelectorAll('[data-val]').forEach(el => { const v = S[el.dataset.val]; el.textContent = typeof v === 'number' ? (Number.isInteger(v) ? v : v.toFixed(2)) : v; });
   },
   applySettings(key) {

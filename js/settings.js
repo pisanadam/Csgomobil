@@ -7,7 +7,8 @@ const DEFAULT_SETTINGS = {
   autoFire: false,       // nişangah düşmana gelince otomatik ateş
   // Kontroller
   touchSens: 1.0,
-  mouseSens: 1.0,
+  mouseSens: 1.0,        // CS2 ölçüsü (m_yaw 0.022°/birim); CS2'deki sensitivity değeriyle aynı
+  mouseDpi: 800,
   scopeSens: 0.8,
   invertY: false,
   crouchKey: 'both',     // eğilme tuşu: 'both' (Ctrl + C) | 'c' | 'ctrl'
@@ -50,6 +51,7 @@ const DEFAULT_SETTINGS = {
   volume: 0.8,
   texStyle: 'retro',     // 'retro' (eski okul, piksel) veya 'modern'
   layoutV: 3,
+  sensV: 2,
 };
 
 const Settings = {
@@ -60,6 +62,7 @@ const Settings = {
       if (raw) {
         const d = JSON.parse(raw);
         if (!d.layoutV) { d.leftFire = false; d.btnScale = 1; d.btnOpacity = 0.6; d.layoutV = 2; }
+        if (!d.sensV) { if (typeof d.mouseSens === 'number') d.mouseSens = Math.max(0.05, Math.round(d.mouseSens * 0.1745 * 100) / 100); d.sensV = 2; }   // eski ölçekten CS2 ölçüsüne
         if (d.layoutV < 3) { if (d.fov === 74) d.fov = 66; d.layoutV = 3; }
         Object.assign(this.data, d);
       }
