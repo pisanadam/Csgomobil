@@ -190,7 +190,55 @@ const Skins = {
 
 // ====================== RAUNDUN OYUNCUSU MÜZİĞİ ======================
 const Music = {
-  url: null, name: '', audio: null, fadeT: null,
+  url: null, name: '', audio: null, fadeT: null, dur: 0, peaks: null, waveFor: null,
+  // ---- çalınacak bölüm seçimi (dalga formu) ----
+  fmt(t) { t = Math.max(0, t); return Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0'); },
+  clampSel() {
+    const d = this.dur; if (!d) return;
+    S.mvpLen = Math.max(1, Math.min(S.mvpLen || 10, d, 30));
+    S.mvpStart = Math.max(0, Math.min(S.mvpStart || 0, d - S.mvpLen));
+    const a = document.querySelector('input[data-set="mvpStart"]'), l = document.querySelector('input[data-set="mvpLen"]');
+    if (a) { a.max = Math.max(0, d - S.mvpLen).toFixed(1); a.value = S.mvpStart; }
+    if (l) { l.max = Math.min(30, d).toFixed(1); l.value = S.mvpLen; }
+  },
+  async ensureWave() {
+    if (!this.url) { this.peaks = null; this.dur = 0; this.refreshUI(); return; }
+    if (this.waveFor === this.url && this.peaks) { this.drawWave(); return; }
+    this.waveFor = this.url;
+    try {
+      const ab = await (await fetch(this.url)).arrayBuffer();
+      const AC = window.AudioContext || window.webkitAudioContext, c = new AC();
+      let buf; try { buf = await c.decodeAudioData(ab); } finally { if (c.close) c.close(); }
+      const ch = buf.getChannelData(0), N = 360, step = Math.floor(ch.length / N) || 1, pk = new Float32Array(N);
+      for (let i = 0; i < N; i++) { let m = 0; const s0 = i * step; for (let j = s0; j < s0 + step && j < ch.length; j += 8) { const v = Math.abs(ch[j]); if (v > m) m = v; } pk[i] = m; }
+      let mx = 0; for (let i = 0; i < N; i++) mx = Math.max(mx, pk[i]); if (mx > 0) for (let i = 0; i < N; i++) pk[i] /= mx;
+      this.peaks = pk; this.dur = buf.duration;
+    } catch (e) { this.peaks = null; this.dur = 0; }
+    this.clampSel(); this.drawWave();
+  },
+  drawWave() {
+    const cv = document.getElementById('mvpWave'); if (!cv) return;
+    const lab = document.getElementById('mvpSel'), d = this.dur;
+    const w = cv.clientWidth || 300, h = 64, dpr = window.devicePixelRatio || 1;
+    if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+    const x = cv.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, w, h);
+    if (!d || !this.peaks) { x.fillStyle = '#9aa3ad'; x.font = '12px Arial'; x.fillText(this.url ? 'Dalga formu çıkarılamadı — başlangıç/süre kaydırıcılarını kullan' : '', 8, 36); if (lab) lab.textContent = ''; return; }
+    const N = this.peaks.length, bw = w / N, s = S.mvpStart / d * w, e = (S.mvpStart + S.mvpLen) / d * w;
+    x.fillStyle = 'rgba(240,180,60,.22)'; x.fillRect(s, 0, e - s, h);
+    for (let i = 0; i < N; i++) { const inside = (i + 0.5) * bw >= s && (i + 0.5) * bw <= e, ph = Math.max(2, this.peaks[i] * (h - 8)); x.fillStyle = inside ? '#f0b43c' : '#5b6572'; x.fillRect(i * bw, (h - ph) / 2, Math.max(1, bw - 1), ph); }
+    x.fillStyle = '#fff'; x.fillRect(s - 1, 0, 2, h); x.fillRect(e - 1, 0, 2, h);
+    if (lab) lab.textContent = `Çalınacak bölüm: ${this.fmt(S.mvpStart)} – ${this.fmt(S.mvpStart + S.mvpLen)}  (${(+S.mvpLen).toFixed(1)} sn)  •  toplam ${this.fmt(d)}`;
+  },
+  waveBind() {
+    const cv = document.getElementById('mvpWave'); if (!cv) return;
+    let drag = false;
+    const set = ev => { if (!this.dur) return; const r = cv.getBoundingClientRect(); S.mvpStart = ((ev.clientX - r.left) / r.width) * this.dur - S.mvpLen / 2; this.clampSel(); this.drawWave(); UI.refreshSettings(); };
+    cv.addEventListener('pointerdown', ev => { ev.preventDefault(); drag = true; try { cv.setPointerCapture(ev.pointerId); } catch (e) {} set(ev); });
+    cv.addEventListener('pointermove', ev => { if (drag) { ev.preventDefault(); set(ev); } });
+    const up = () => { if (drag) { drag = false; Settings.save(); } };
+    cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+    window.addEventListener('resize', () => this.drawWave());
+  },
   db() {
     return new Promise((res, rej) => {
       try { const r = indexedDB.open('taktikops', 1); r.onupgradeneeded = () => r.result.createObjectStore('files'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }
@@ -292,34 +340,38 @@ const Music = {
     }
     if (this.url) URL.revokeObjectURL(this.url);
     this.url = URL.createObjectURL(file); this.name = file.name;
-    this.refreshUI();
+    S.mvpStart = 0; Settings.save(); this.peaks = null; this.dur = 0;
+    this.refreshUI(); this.ensureWave();
     try { const db = await this.db(); db.transaction('files', 'readwrite').objectStore('files').put({ blob: file, name: file.name }, 'mvp'); } catch (e) { /* kalıcı olmaz, bu oturumda çalışır */ }
   },
   async clear() {
-    this.stop(); if (this.url) URL.revokeObjectURL(this.url); this.url = null; this.name = '';
+    this.stop(); if (this.url) URL.revokeObjectURL(this.url); this.url = null; this.name = ''; this.peaks = null; this.dur = 0;
     this.refreshUI();
     try { const db = await this.db(); db.transaction('files', 'readwrite').objectStore('files').delete('mvp'); } catch (e) {}
   },
+  // Kullanıcının şarkısı: seçilen bölüm (başlangıç + süre); botların şarkısı: urlOverride + startAt
   play(seconds, urlOverride, startAt) {
     const src = urlOverride || this.url;
     if (!src) return false;
     this.stop();
+    const own = !urlOverride;
+    if (own) { if (seconds === undefined) seconds = S.mvpLen || 9; if (startAt === undefined) startAt = S.mvpStart || 0; }
     const a = this.audio = new Audio(src);
-    if (startAt) { try { a.addEventListener('loadedmetadata', () => { if (a.duration > startAt + 6) a.currentTime = startAt; }, { once: true }); } catch (e) {} }
+    if (startAt) { try { a.addEventListener('loadedmetadata', () => { if (a.duration > startAt + (own ? 0.5 : 6)) a.currentTime = startAt; }, { once: true }); } catch (e) {} }
     const vol = Math.max(0, Math.min(1, S.volume * (S.musicVol === undefined ? 0.8 : S.musicVol)));
-    a.volume = vol;
+    a.volume = 0;
     const p = a.play(); if (p && p.catch) p.catch(() => {});
-    const dur = seconds || 9;
+    const dur = seconds || 9, fo = Math.min(2, dur * 0.3);
     const t0 = performance.now();
     this.fadeT = setInterval(() => {
       const t = (performance.now() - t0) / 1000;
-      if (t > dur - 2) a.volume = Math.max(0, vol * (dur - t) / 2);
+      a.volume = Math.max(0, Math.min(1, vol * Math.min(t / 0.25, 1, (dur - t) / fo)));
       if (t >= dur) this.stop();
-    }, 100);
+    }, 50);
     return true;
   },
   stop() { if (this.fadeT) { clearInterval(this.fadeT); this.fadeT = null; } if (this.audio) { try { this.audio.pause(); } catch (e) {} this.audio = null; } },
-  refreshUI() { const el = document.getElementById('mvpName'); if (el) el.textContent = this.url ? '♪ ' + this.name : 'Yüklü müzik yok'; },
+  refreshUI() { const el = document.getElementById('mvpName'); if (el) el.textContent = this.url ? '♪ ' + this.name : 'Yüklü müzik yok'; const tr = document.getElementById('mvpTrim'); if (tr) tr.classList.toggle('hidden', !this.url); },
   bind() {
     const f = document.getElementById('mvpFile');
     f.onchange = () => { if (f.files && f.files[0]) this.set(f.files[0]); f.value = ''; };
@@ -329,7 +381,8 @@ const Music = {
     const dl = document.getElementById('mvpSave');
     if (dl) dl.onclick = () => { if (!this.url) return; const a = document.createElement('a'); a.href = this.url; a.download = this.name || 'muzik.mp3'; document.body.appendChild(a); a.click(); a.remove(); };
     document.getElementById('mvpPick').onclick = () => f.click();
-    document.getElementById('mvpTest').onclick = () => { Audio3.init(); if (!this.play(8)) UI.toast && (document.getElementById('mvpName').textContent = 'Önce bir müzik dosyası seç'); };
+    this.waveBind();
+    document.getElementById('mvpTest').onclick = () => { Audio3.init(); if (!this.play()) UI.toast && (document.getElementById('mvpName').textContent = 'Önce bir müzik dosyası seç'); };
     document.getElementById('mvpStop').onclick = () => this.stop();
     document.getElementById('mvpClear').onclick = () => this.clear();
   },

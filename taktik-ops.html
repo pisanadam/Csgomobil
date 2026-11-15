@@ -409,6 +409,14 @@ input[type=range]{width:100%;accent-color:#e9a83a}
       <div class="field" style="grid-column:1/-1"><label>★ Raundun Oyuncusu Müziği</label>
         <div id="mvpName" style="font-weight:700;font-size:13px">Yüklü müzik yok</div>
         <input type="file" id="mvpFile" accept="audio/*,video/mp4,video/*,.mp3,.mp4,.m4v,.mov,.ogg,.wav,.m4a,.aac,.flac,.opus,.webm" style="display:none">
+        <div id="mvpTrim" class="hidden" style="display:flex;flex-direction:column;gap:5px;padding:8px;border:1px solid var(--line);border-radius:8px">
+          <div style="font-size:12px;color:var(--dim);font-weight:700">✂ ÇALINACAK BÖLÜMÜ SEÇ (dalga formuna dokun / sürükle)</div>
+          <canvas id="mvpWave" height="64" style="width:100%;height:64px;background:#14181e;border-radius:6px;touch-action:none;cursor:pointer"></canvas>
+          <div id="mvpSel" style="font-size:12px;font-weight:700;color:#ffd98a"></div>
+          <div class="rgm"><span style="font-size:12px;color:var(--dim)">Başlangıç <span class="val" data-val="mvpStart"></span> sn</span><input type="range" min="0" max="30" step="0.5" data-set="mvpStart"></div>
+          <div class="rgm"><span style="font-size:12px;color:var(--dim)">Süre <span class="val" data-val="mvpLen"></span> sn</span><input type="range" min="3" max="30" step="0.5" data-set="mvpLen"></div>
+          <div style="font-size:11px;color:var(--dim)">▶ Dene düğmesi seçtiğin bölümü çalar. Raundun oyuncusu sen olunca bu bölüm çalar, sonunda ses kısılır.</div>
+        </div>
         <div class="row"><button class="btn sm pri" id="mvpPick">🎵 Müzik / MP4 yükle</button><button class="btn sm" id="mvpTest">▶ Dene</button><button class="btn sm" id="mvpStop">■ Durdur</button><button class="btn sm" id="mvpSave">⬇ MP3 indir</button><button class="btn sm" id="mvpClear">Kaldır</button></div>
         <button class="btn sm" id="ctOpen" style="align-self:flex-start">📚 Hazır katalogdan seç (Türkçe + İngilizce, 57 şarkı)</button>
         <div id="ctWrap" class="amBox hidden">
@@ -578,6 +586,7 @@ const DEFAULT_SETTINGS = {
   hudStyle: 'modern',    // 'modern' | 'classic'
   aimScenario: 'grid', aimTime: 60, aimSize: 1, aimSpeed: 1,
   botMusic: 'both',      // botların şarkıları: 'both' | 'tr' | 'en' | 'off'
+  mvpStart: 0, mvpLen: 10, // yüklenen şarkıdan çalınacak bölüm (sn)
   mvpWhen: 'me',         // MVP müziği: 'me' (ben olunca) | 'always' | 'off'
   musicVol: 0.8,
   map: 'dust',            // dust, harbor, snow, town, random
@@ -5060,7 +5069,7 @@ G.endRound = function (win, reason) {
   if (mvp) mvp.stats.mvp = (mvp.stats.mvp || 0) + 1;
   const pw = win === this.player.team;
   let song = null;
-  if (mvp && Music.url && S.mvpWhen !== 'off' && (S.mvpWhen === 'always' || mvp.isPlayer)) { Music.play(9); song = { own: true }; }
+  if (mvp && Music.url && S.mvpWhen !== 'off' && (S.mvpWhen === 'always' || mvp.isPlayer)) { Music.play(); song = { own: true }; }
   else if (mvp && !mvp.isPlayer && S.botMusic !== 'off' && mvp.song && mvp.song.info) {
     // botun kendi şarkısı: 30 sn'lik önizlemenin başından (nakarata yakın kısım için 6. sn'den) çalar
     Music.play(10, mvp.song.info.url, 4); song = mvp.song.info;
@@ -5596,10 +5605,11 @@ const UI = {
     $('fps').classList.toggle('hidden', !S.showFps);
     if ((key === 'graphics' || key === 'sharp') && G.renderer) G.applyGraphics();
     document.body.classList.toggle('hudclassic', S.hudStyle === 'classic');
+    if (key === 'mvpStart' || key === 'mvpLen') { Music.clampSel(); Music.drawWave(); }
     if (key === 'map' && G.renderer && !G.running) G.loadMap(S.map === 'random' ? 'dust' : S.map);
     if (key === 'fov' && G.camera) { G.camera.fov = S.fov; G.camera.updateProjectionMatrix(); }
   },
-  openSettings() { this.refreshSettings(); $('settings').classList.remove('hidden'); },
+  openSettings() { this.refreshSettings(); $('settings').classList.remove('hidden'); Music.ensureWave(); },
   closeSettings() {
     $('settings').classList.add('hidden');
     if (this.needReload && !G.running) { this.needReload = false; location.reload(); }
@@ -6508,7 +6518,55 @@ const Skins = {
 
 // ====================== RAUNDUN OYUNCUSU MÜZİĞİ ======================
 const Music = {
-  url: null, name: '', audio: null, fadeT: null,
+  url: null, name: '', audio: null, fadeT: null, dur: 0, peaks: null, waveFor: null,
+  // ---- çalınacak bölüm seçimi (dalga formu) ----
+  fmt(t) { t = Math.max(0, t); return Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0'); },
+  clampSel() {
+    const d = this.dur; if (!d) return;
+    S.mvpLen = Math.max(1, Math.min(S.mvpLen || 10, d, 30));
+    S.mvpStart = Math.max(0, Math.min(S.mvpStart || 0, d - S.mvpLen));
+    const a = document.querySelector('input[data-set="mvpStart"]'), l = document.querySelector('input[data-set="mvpLen"]');
+    if (a) { a.max = Math.max(0, d - S.mvpLen).toFixed(1); a.value = S.mvpStart; }
+    if (l) { l.max = Math.min(30, d).toFixed(1); l.value = S.mvpLen; }
+  },
+  async ensureWave() {
+    if (!this.url) { this.peaks = null; this.dur = 0; this.refreshUI(); return; }
+    if (this.waveFor === this.url && this.peaks) { this.drawWave(); return; }
+    this.waveFor = this.url;
+    try {
+      const ab = await (await fetch(this.url)).arrayBuffer();
+      const AC = window.AudioContext || window.webkitAudioContext, c = new AC();
+      let buf; try { buf = await c.decodeAudioData(ab); } finally { if (c.close) c.close(); }
+      const ch = buf.getChannelData(0), N = 360, step = Math.floor(ch.length / N) || 1, pk = new Float32Array(N);
+      for (let i = 0; i < N; i++) { let m = 0; const s0 = i * step; for (let j = s0; j < s0 + step && j < ch.length; j += 8) { const v = Math.abs(ch[j]); if (v > m) m = v; } pk[i] = m; }
+      let mx = 0; for (let i = 0; i < N; i++) mx = Math.max(mx, pk[i]); if (mx > 0) for (let i = 0; i < N; i++) pk[i] /= mx;
+      this.peaks = pk; this.dur = buf.duration;
+    } catch (e) { this.peaks = null; this.dur = 0; }
+    this.clampSel(); this.drawWave();
+  },
+  drawWave() {
+    const cv = document.getElementById('mvpWave'); if (!cv) return;
+    const lab = document.getElementById('mvpSel'), d = this.dur;
+    const w = cv.clientWidth || 300, h = 64, dpr = window.devicePixelRatio || 1;
+    if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+    const x = cv.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, w, h);
+    if (!d || !this.peaks) { x.fillStyle = '#9aa3ad'; x.font = '12px Arial'; x.fillText(this.url ? 'Dalga formu çıkarılamadı — başlangıç/süre kaydırıcılarını kullan' : '', 8, 36); if (lab) lab.textContent = ''; return; }
+    const N = this.peaks.length, bw = w / N, s = S.mvpStart / d * w, e = (S.mvpStart + S.mvpLen) / d * w;
+    x.fillStyle = 'rgba(240,180,60,.22)'; x.fillRect(s, 0, e - s, h);
+    for (let i = 0; i < N; i++) { const inside = (i + 0.5) * bw >= s && (i + 0.5) * bw <= e, ph = Math.max(2, this.peaks[i] * (h - 8)); x.fillStyle = inside ? '#f0b43c' : '#5b6572'; x.fillRect(i * bw, (h - ph) / 2, Math.max(1, bw - 1), ph); }
+    x.fillStyle = '#fff'; x.fillRect(s - 1, 0, 2, h); x.fillRect(e - 1, 0, 2, h);
+    if (lab) lab.textContent = `Çalınacak bölüm: ${this.fmt(S.mvpStart)} – ${this.fmt(S.mvpStart + S.mvpLen)}  (${(+S.mvpLen).toFixed(1)} sn)  •  toplam ${this.fmt(d)}`;
+  },
+  waveBind() {
+    const cv = document.getElementById('mvpWave'); if (!cv) return;
+    let drag = false;
+    const set = ev => { if (!this.dur) return; const r = cv.getBoundingClientRect(); S.mvpStart = ((ev.clientX - r.left) / r.width) * this.dur - S.mvpLen / 2; this.clampSel(); this.drawWave(); UI.refreshSettings(); };
+    cv.addEventListener('pointerdown', ev => { ev.preventDefault(); drag = true; try { cv.setPointerCapture(ev.pointerId); } catch (e) {} set(ev); });
+    cv.addEventListener('pointermove', ev => { if (drag) { ev.preventDefault(); set(ev); } });
+    const up = () => { if (drag) { drag = false; Settings.save(); } };
+    cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+    window.addEventListener('resize', () => this.drawWave());
+  },
   db() {
     return new Promise((res, rej) => {
       try { const r = indexedDB.open('taktikops', 1); r.onupgradeneeded = () => r.result.createObjectStore('files'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }
@@ -6610,34 +6668,38 @@ const Music = {
     }
     if (this.url) URL.revokeObjectURL(this.url);
     this.url = URL.createObjectURL(file); this.name = file.name;
-    this.refreshUI();
+    S.mvpStart = 0; Settings.save(); this.peaks = null; this.dur = 0;
+    this.refreshUI(); this.ensureWave();
     try { const db = await this.db(); db.transaction('files', 'readwrite').objectStore('files').put({ blob: file, name: file.name }, 'mvp'); } catch (e) { /* kalıcı olmaz, bu oturumda çalışır */ }
   },
   async clear() {
-    this.stop(); if (this.url) URL.revokeObjectURL(this.url); this.url = null; this.name = '';
+    this.stop(); if (this.url) URL.revokeObjectURL(this.url); this.url = null; this.name = ''; this.peaks = null; this.dur = 0;
     this.refreshUI();
     try { const db = await this.db(); db.transaction('files', 'readwrite').objectStore('files').delete('mvp'); } catch (e) {}
   },
+  // Kullanıcının şarkısı: seçilen bölüm (başlangıç + süre); botların şarkısı: urlOverride + startAt
   play(seconds, urlOverride, startAt) {
     const src = urlOverride || this.url;
     if (!src) return false;
     this.stop();
+    const own = !urlOverride;
+    if (own) { if (seconds === undefined) seconds = S.mvpLen || 9; if (startAt === undefined) startAt = S.mvpStart || 0; }
     const a = this.audio = new Audio(src);
-    if (startAt) { try { a.addEventListener('loadedmetadata', () => { if (a.duration > startAt + 6) a.currentTime = startAt; }, { once: true }); } catch (e) {} }
+    if (startAt) { try { a.addEventListener('loadedmetadata', () => { if (a.duration > startAt + (own ? 0.5 : 6)) a.currentTime = startAt; }, { once: true }); } catch (e) {} }
     const vol = Math.max(0, Math.min(1, S.volume * (S.musicVol === undefined ? 0.8 : S.musicVol)));
-    a.volume = vol;
+    a.volume = 0;
     const p = a.play(); if (p && p.catch) p.catch(() => {});
-    const dur = seconds || 9;
+    const dur = seconds || 9, fo = Math.min(2, dur * 0.3);
     const t0 = performance.now();
     this.fadeT = setInterval(() => {
       const t = (performance.now() - t0) / 1000;
-      if (t > dur - 2) a.volume = Math.max(0, vol * (dur - t) / 2);
+      a.volume = Math.max(0, Math.min(1, vol * Math.min(t / 0.25, 1, (dur - t) / fo)));
       if (t >= dur) this.stop();
-    }, 100);
+    }, 50);
     return true;
   },
   stop() { if (this.fadeT) { clearInterval(this.fadeT); this.fadeT = null; } if (this.audio) { try { this.audio.pause(); } catch (e) {} this.audio = null; } },
-  refreshUI() { const el = document.getElementById('mvpName'); if (el) el.textContent = this.url ? '♪ ' + this.name : 'Yüklü müzik yok'; },
+  refreshUI() { const el = document.getElementById('mvpName'); if (el) el.textContent = this.url ? '♪ ' + this.name : 'Yüklü müzik yok'; const tr = document.getElementById('mvpTrim'); if (tr) tr.classList.toggle('hidden', !this.url); },
   bind() {
     const f = document.getElementById('mvpFile');
     f.onchange = () => { if (f.files && f.files[0]) this.set(f.files[0]); f.value = ''; };
@@ -6647,7 +6709,8 @@ const Music = {
     const dl = document.getElementById('mvpSave');
     if (dl) dl.onclick = () => { if (!this.url) return; const a = document.createElement('a'); a.href = this.url; a.download = this.name || 'muzik.mp3'; document.body.appendChild(a); a.click(); a.remove(); };
     document.getElementById('mvpPick').onclick = () => f.click();
-    document.getElementById('mvpTest').onclick = () => { Audio3.init(); if (!this.play(8)) UI.toast && (document.getElementById('mvpName').textContent = 'Önce bir müzik dosyası seç'); };
+    this.waveBind();
+    document.getElementById('mvpTest').onclick = () => { Audio3.init(); if (!this.play()) UI.toast && (document.getElementById('mvpName').textContent = 'Önce bir müzik dosyası seç'); };
     document.getElementById('mvpStop').onclick = () => this.stop();
     document.getElementById('mvpClear').onclick = () => this.clear();
   },

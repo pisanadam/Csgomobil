@@ -38,6 +38,7 @@ const DEFAULT_SETTINGS = {
   hudStyle: 'modern',    // 'modern' | 'classic'
   aimScenario: 'grid', aimTime: 60, aimSize: 1, aimSpeed: 1,
   botMusic: 'both',      // botların şarkıları: 'both' | 'tr' | 'en' | 'off'
+  mvpStart: 0, mvpLen: 10, // yüklenen şarkıdan çalınacak bölüm (sn)
   mvpWhen: 'me',         // MVP müziği: 'me' (ben olunca) | 'always' | 'off'
   musicVol: 0.8,
   map: 'dust',            // dust, harbor, snow, town, random

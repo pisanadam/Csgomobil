@@ -409,6 +409,14 @@ input[type=range]{width:100%;accent-color:#e9a83a}
       <div class="field" style="grid-column:1/-1"><label>★ Raundun Oyuncusu Müziği</label>
         <div id="mvpName" style="font-weight:700;font-size:13px">Yüklü müzik yok</div>
         <input type="file" id="mvpFile" accept="audio/*,video/mp4,video/*,.mp3,.mp4,.m4v,.mov,.ogg,.wav,.m4a,.aac,.flac,.opus,.webm" style="display:none">
+        <div id="mvpTrim" class="hidden" style="display:flex;flex-direction:column;gap:5px;padding:8px;border:1px solid var(--line);border-radius:8px">
+          <div style="font-size:12px;color:var(--dim);font-weight:700">✂ ÇALINACAK BÖLÜMÜ SEÇ (dalga formuna dokun / sürükle)</div>
+          <canvas id="mvpWave" height="64" style="width:100%;height:64px;background:#14181e;border-radius:6px;touch-action:none;cursor:pointer"></canvas>
+          <div id="mvpSel" style="font-size:12px;font-weight:700;color:#ffd98a"></div>
+          <div class="rgm"><span style="font-size:12px;color:var(--dim)">Başlangıç <span class="val" data-val="mvpStart"></span> sn</span><input type="range" min="0" max="30" step="0.5" data-set="mvpStart"></div>
+          <div class="rgm"><span style="font-size:12px;color:var(--dim)">Süre <span class="val" data-val="mvpLen"></span> sn</span><input type="range" min="3" max="30" step="0.5" data-set="mvpLen"></div>
+          <div style="font-size:11px;color:var(--dim)">▶ Dene düğmesi seçtiğin bölümü çalar. Raundun oyuncusu sen olunca bu bölüm çalar, sonunda ses kısılır.</div>
+        </div>
         <div class="row"><button class="btn sm pri" id="mvpPick">🎵 Müzik / MP4 yükle</button><button class="btn sm" id="mvpTest">▶ Dene</button><button class="btn sm" id="mvpStop">■ Durdur</button><button class="btn sm" id="mvpSave">⬇ MP3 indir</button><button class="btn sm" id="mvpClear">Kaldır</button></div>
         <button class="btn sm" id="ctOpen" style="align-self:flex-start">📚 Hazır katalogdan seç (Türkçe + İngilizce, 57 şarkı)</button>
         <div id="ctWrap" class="amBox hidden">

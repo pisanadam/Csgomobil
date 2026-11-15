@@ -989,7 +989,7 @@ G.endRound = function (win, reason) {
   if (mvp) mvp.stats.mvp = (mvp.stats.mvp || 0) + 1;
   const pw = win === this.player.team;
   let song = null;
-  if (mvp && Music.url && S.mvpWhen !== 'off' && (S.mvpWhen === 'always' || mvp.isPlayer)) { Music.play(9); song = { own: true }; }
+  if (mvp && Music.url && S.mvpWhen !== 'off' && (S.mvpWhen === 'always' || mvp.isPlayer)) { Music.play(); song = { own: true }; }
   else if (mvp && !mvp.isPlayer && S.botMusic !== 'off' && mvp.song && mvp.song.info) {
     // botun kendi şarkısı: 30 sn'lik önizlemenin başından (nakarata yakın kısım için 6. sn'den) çalar
     Music.play(10, mvp.song.info.url, 4); song = mvp.song.info;

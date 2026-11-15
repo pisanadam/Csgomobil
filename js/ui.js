@@ -71,10 +71,11 @@ const UI = {
     $('fps').classList.toggle('hidden', !S.showFps);
     if ((key === 'graphics' || key === 'sharp') && G.renderer) G.applyGraphics();
     document.body.classList.toggle('hudclassic', S.hudStyle === 'classic');
+    if (key === 'mvpStart' || key === 'mvpLen') { Music.clampSel(); Music.drawWave(); }
     if (key === 'map' && G.renderer && !G.running) G.loadMap(S.map === 'random' ? 'dust' : S.map);
     if (key === 'fov' && G.camera) { G.camera.fov = S.fov; G.camera.updateProjectionMatrix(); }
   },
-  openSettings() { this.refreshSettings(); $('settings').classList.remove('hidden'); },
+  openSettings() { this.refreshSettings(); $('settings').classList.remove('hidden'); Music.ensureWave(); },
   closeSettings() {
     $('settings').classList.add('hidden');
     if (this.needReload && !G.running) { this.needReload = false; location.reload(); }
