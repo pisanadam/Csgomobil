@@ -91,6 +91,7 @@ const UI = {
       try { const de = document.documentElement; (de.requestFullscreen || de.webkitRequestFullscreen || (() => {})).call(de); } catch (e) {}
       try { screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {}); } catch (e) {}
     } else {
+      if (S.autoFs !== false && !this.fsActive()) this.toggleFullscreen();
       Input.lockPointer();
     }
     G.startMatch();
@@ -115,6 +116,13 @@ const UI = {
     const on = this.fsActive();
     document.querySelectorAll('[data-fs]').forEach(el => { el.textContent = (el.dataset.fs === 'btn' ? (on ? '⛶ TAM EKRANDAN ÇIK' : '⛶ TAM EKRAN') : (on ? '🗗' : '⛶')); });
     document.body.classList.toggle('isfs', on);
+    // tam ekranda klavye kilidi: Ctrl+W / Ctrl+T gibi kısayollar tarayıcıya gitmez, oyunda kalır (Chrome/Edge)
+    try {
+      if (navigator.keyboard) {
+        if (on && navigator.keyboard.lock) navigator.keyboard.lock().then(() => { this.kbLocked = true; }).catch(() => {});
+        else if (!on && navigator.keyboard.unlock) { navigator.keyboard.unlock(); this.kbLocked = false; }
+      }
+    } catch (e) {}
   },
   quit() {
     G.running = false; G.paused = false; Trainer.cleanup(); Audio3.ambStop(); Audio3.resume();

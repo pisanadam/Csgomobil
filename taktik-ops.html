@@ -390,6 +390,9 @@ input[type=range]{width:100%;accent-color:#e9a83a}
       <div class="field"><label>Dürbün Hassasiyeti <span class="val" data-val="scopeSens"></span></label><input type="range" min="0.2" max="1.5" step="0.05" data-set="scopeSens"></div>
       <div class="field"><label>Tuş Boyutu <span class="val" data-val="btnScale"></span></label><input type="range" min="0.7" max="1.5" step="0.05" data-set="btnScale"></div>
       <div class="field"><label>Tuş Opaklığı <span class="val" data-val="btnOpacity"></span></label><input type="range" min="0.2" max="1" step="0.05" data-set="btnOpacity"></div>
+      <div class="field"><label>Eğilme Tuşu (Bilgisayar)</label><div class="seg" data-set="crouchKey" data-opts='[["both","Ctrl + C"],["c","Sadece C"],["ctrl","Sadece Ctrl"]]'></div>
+        <label class="check"><input type="checkbox" data-set="autoFs"> Oyunu tam ekran başlat</label>
+        <div style="font-size:12px;color:var(--dim)">Ctrl + W tarayıcı sekmesini kapatır. Tam ekranda bu kısayollar kilitlenir (Chrome/Edge); yine de kapatma denemesinde onay sorulur. Sorun yaşarsan eğilmek için sadece C kullan.</div></div>
       <div class="field"><label>Seçenekler</label><label class="check"><input type="checkbox" data-set="leftFire"> Sol ateş tuşu</label><label class="check"><input type="checkbox" data-set="invertY"> Y eksenini ters çevir</label></div>
     </div>
     <div class="menuGrid tabc hidden" data-tab="cross">
@@ -465,7 +468,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
     <p><b>Ekonomi:</b> Her raunt kazanç/kayıp parası ve öldürme ödülleri alırsın. Raunt başında doğma bölgesindeyken <b>SATIN AL</b> ile silah, zırh, kit ve bomba al. Hayatta kalırsan eşyaların sonraki raunta geçer.</p>
     <p><b>İsabet:</b> Koşarken atış isabetsizdir. Durarak (veya eğilerek) ateş et, uzun mesafede kısa seri at. Sprey deseni sabittir — aşağı çekerek kontrol edebilirsin. Kafa vuruşu 4x hasar.</p>
     <p><b>Mobil:</b> Sol yarıya dokunup sürükle = yürü/koş (az itersen sessiz yürür). Sağ yarıyı kaydır = etrafa bak. Ateş tuşuna basılıyken parmağını kaydırarak nişan alabilirsin. Üstteki skora basılı tut = skor tablosu. Silah değiştirmek için alttaki silah kutularına dokun. Bomba bölgesinde <b>KUR</b>, bombanın yanında <b>İMHA</b> tuşuna basılı tut.</p>
-    <p><b>Masaüstü:</b> <kbd>WASD</kbd> hareket, <kbd>Fare</kbd> nişan/ateş, <kbd>Sağ tık</kbd> dürbün, <kbd>Boşluk</kbd> zıpla, <kbd>Ctrl</kbd>/<kbd>C</kbd> eğil, <kbd>Shift</kbd> yürü (sessiz), <kbd>R</kbd> doldur, <kbd>E</kbd> kur/imha/silah al, <kbd>G</kbd> bırak, <kbd>F</kbd> tam ekran, <kbd>B</kbd> satın al, <kbd>1-5</kbd> silahlar, <kbd>Q</kbd> son silah, <kbd>Z</kbd> telsiz, <kbd>N</kbd> gece görüşü, <kbd>Tab</kbd> skor, <kbd>Esc</kbd> menü.</p>
+    <p><b>Masaüstü:</b> <kbd>WASD</kbd> hareket, <kbd>Fare</kbd> nişan/ateş, <kbd>Sağ tık</kbd> dürbün, <kbd>Boşluk</kbd> zıpla, <kbd>Ctrl</kbd>/<kbd>C</kbd> eğil (Ctrl+W sekmeyi kapatabilir: tam ekran kullan ya da sadece C), <kbd>Shift</kbd> yürü (sessiz), <kbd>R</kbd> doldur, <kbd>E</kbd> kur/imha/silah al, <kbd>G</kbd> bırak, <kbd>F</kbd> tam ekran, <kbd>B</kbd> satın al, <kbd>1-5</kbd> silahlar, <kbd>Q</kbd> son silah, <kbd>Z</kbd> telsiz, <kbd>N</kbd> gece görüşü, <kbd>Tab</kbd> skor, <kbd>Esc</kbd> menü.</p>
     <p><b>Duvar arkasından vurma:</b> Tahta kasalar ve tek kat (ince) duvarlar delinebilir. Delme gücü silaha göre değişir: AWP, AK-47, SG 553, AUG ve Desert Eagle en iyisidir; tabancalar ve SMG'ler çoğunlukla sadece kasaları deler. Her delinen yüzey hasarı düşürür.</p>
     <p><b>İkincil ateş:</b> NİŞAN/sağ tık silaha göre değişir: dürbünlü silahlarda dürbün, M4A1-S ve USP-S'te susturucu tak/çıkar, Glock ve FAMAS'ta 3'lü seri atış, diğerlerinde hafif yakınlaştırma.</p>
     <p><b>Telsiz:</b> 📻 (ya da <kbd>Z</kbd>) ile takım botlarına komut ver: takip et, pozisyon tut, saldır, geri çekil, düşman bildir, rapor iste.</p>
@@ -559,6 +562,8 @@ const DEFAULT_SETTINGS = {
   mouseSens: 1.0,
   scopeSens: 0.8,
   invertY: false,
+  crouchKey: 'both',     // eğilme tuşu: 'both' (Ctrl + C) | 'c' | 'ctrl'
+  autoFs: true,          // masaüstünde oyunu tam ekran başlat (Ctrl+W gibi kısayollar tam ekranda kilitlenir)
   leftFire: false,       // sol tarafta ikinci ateş tuşu
   btnScale: 1.0,
   btnOpacity: 0.6,
@@ -5365,6 +5370,9 @@ const Input = {
     tl.addEventListener('touchcancel', e => this.onTouchEnd(e), { passive: false });
     // klavye & fare
     window.addEventListener('keydown', e => this.onKey(e, true));
+    // oyun sırasında tarayıcı kısayollarını (Ctrl+W/R/S/D/F...) engelle; sekmeyi yanlışlıkla kapatmaya karşı onay iste
+    window.addEventListener('keydown', e => { if (G.running && !G.matchOver && (e.ctrlKey || e.metaKey) && !e.altKey) e.preventDefault(); }, true);
+    window.addEventListener('beforeunload', e => { if (G.running && !G.matchOver && !this.isMobile) { e.preventDefault(); e.returnValue = ''; return ''; } });
     window.addEventListener('keyup', e => this.onKey(e, false));
     const cv = document.getElementById('game');
     cv.addEventListener('mousedown', e => {
@@ -5547,7 +5555,8 @@ const Input = {
       }
     }
     p.input.fwd = fwd; p.input.side = side; p.input.walk = walk;
-    p.input.crouch = !!(K.ControlLeft || K.KeyC) || this.crouchToggle;
+    const ck = S.crouchKey || 'both';
+    p.input.crouch = !!((ck !== 'c' && (K.ControlLeft || K.ControlRight)) || (ck !== 'ctrl' && K.KeyC)) || this.crouchToggle;
     p.input.use = !!K.KeyE || this.useHeld;
     if (UI.buyOpen) { p.trig = false; return; }
     // hileler aynı karede, güncel bakış açısıyla değerlendirilir (gecikmesiz)
@@ -5656,6 +5665,7 @@ const UI = {
       try { const de = document.documentElement; (de.requestFullscreen || de.webkitRequestFullscreen || (() => {})).call(de); } catch (e) {}
       try { screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {}); } catch (e) {}
     } else {
+      if (S.autoFs !== false && !this.fsActive()) this.toggleFullscreen();
       Input.lockPointer();
     }
     G.startMatch();
@@ -5680,6 +5690,13 @@ const UI = {
     const on = this.fsActive();
     document.querySelectorAll('[data-fs]').forEach(el => { el.textContent = (el.dataset.fs === 'btn' ? (on ? '⛶ TAM EKRANDAN ÇIK' : '⛶ TAM EKRAN') : (on ? '🗗' : '⛶')); });
     document.body.classList.toggle('isfs', on);
+    // tam ekranda klavye kilidi: Ctrl+W / Ctrl+T gibi kısayollar tarayıcıya gitmez, oyunda kalır (Chrome/Edge)
+    try {
+      if (navigator.keyboard) {
+        if (on && navigator.keyboard.lock) navigator.keyboard.lock().then(() => { this.kbLocked = true; }).catch(() => {});
+        else if (!on && navigator.keyboard.unlock) { navigator.keyboard.unlock(); this.kbLocked = false; }
+      }
+    } catch (e) {}
   },
   quit() {
     G.running = false; G.paused = false; Trainer.cleanup(); Audio3.ambStop(); Audio3.resume();

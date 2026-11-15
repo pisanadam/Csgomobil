@@ -10,6 +10,8 @@ const DEFAULT_SETTINGS = {
   mouseSens: 1.0,
   scopeSens: 0.8,
   invertY: false,
+  crouchKey: 'both',     // eğilme tuşu: 'both' (Ctrl + C) | 'c' | 'ctrl'
+  autoFs: true,          // masaüstünde oyunu tam ekran başlat (Ctrl+W gibi kısayollar tam ekranda kilitlenir)
   leftFire: false,       // sol tarafta ikinci ateş tuşu
   btnScale: 1.0,
   btnOpacity: 0.6,

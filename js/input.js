@@ -17,6 +17,9 @@ const Input = {
     tl.addEventListener('touchcancel', e => this.onTouchEnd(e), { passive: false });
     // klavye & fare
     window.addEventListener('keydown', e => this.onKey(e, true));
+    // oyun sırasında tarayıcı kısayollarını (Ctrl+W/R/S/D/F...) engelle; sekmeyi yanlışlıkla kapatmaya karşı onay iste
+    window.addEventListener('keydown', e => { if (G.running && !G.matchOver && (e.ctrlKey || e.metaKey) && !e.altKey) e.preventDefault(); }, true);
+    window.addEventListener('beforeunload', e => { if (G.running && !G.matchOver && !this.isMobile) { e.preventDefault(); e.returnValue = ''; return ''; } });
     window.addEventListener('keyup', e => this.onKey(e, false));
     const cv = document.getElementById('game');
     cv.addEventListener('mousedown', e => {
@@ -199,7 +202,8 @@ const Input = {
       }
     }
     p.input.fwd = fwd; p.input.side = side; p.input.walk = walk;
-    p.input.crouch = !!(K.ControlLeft || K.KeyC) || this.crouchToggle;
+    const ck = S.crouchKey || 'both';
+    p.input.crouch = !!((ck !== 'c' && (K.ControlLeft || K.ControlRight)) || (ck !== 'ctrl' && K.KeyC)) || this.crouchToggle;
     p.input.use = !!K.KeyE || this.useHeld;
     if (UI.buyOpen) { p.trig = false; return; }
     // hileler aynı karede, güncel bakış açısıyla değerlendirilir (gecikmesiz)
