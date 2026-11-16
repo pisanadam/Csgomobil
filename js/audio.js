@@ -4,7 +4,7 @@
 'use strict';
 const Audio3 = {
   ctx: null, master: null, dry: null, rev: null, revSend: null, noise: null, irs: {}, env: { ir: 'open', wet: 0.35, slap: 0.18 }, theme: 'desert',
-  listener: { x: 0, y: 0, z: 0, yaw: 0 },
+  listener: { x: 0, y: 0, z: 0, yaw: 0, pitch: 0 }, hrtfActive: 0,
   amb: null, lastImpact: 0, lastShots: 0, shotCount: 0, shotWin: 0, voiceT: new Map(),
   init() {
     if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
@@ -77,7 +77,15 @@ const Audio3 = {
     let head = g;
     if (pos && (cut < 15000)) { const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = cut; f.Q.value = 0.5; g.connect(f); head = f; }
     let tail = head;
-    if (c.createStereoPanner) { const p = c.createStereoPanner(); p.pan.value = pan; head.connect(p); tail = p; }
+    // 3B kulaklık sesi: tarayıcının HRTF motoru (yön, mesafe ve yükseklik ipuçları). Çok fazla eşzamanlı ses varsa / çok uzaktaysa stereoya düşer.
+    if (pos && S.audio3d !== 'stereo' && c.createPanner && this.hrtfActive < 18 && d < 70) {
+      const pn = c.createPanner();
+      pn.panningModel = 'HRTF'; pn.distanceModel = 'inverse'; pn.refDistance = 1; pn.maxDistance = 10000; pn.rolloffFactor = 0;   // mesafe düşüşünü kendimiz yapıyoruz
+      const py = pos.y === undefined ? 1.4 : pos.y;
+      if (pn.positionX) { pn.positionX.value = pos.x; pn.positionY.value = py; pn.positionZ.value = pos.z; } else pn.setPosition(pos.x, py, pos.z);
+      head.connect(pn); tail = pn; this.hrtfActive++;
+      setTimeout(() => { this.hrtfActive = Math.max(0, this.hrtfActive - 1); }, 1500);
+    } else if (c.createStereoPanner) { const p = c.createStereoPanner(); p.pan.value = pan; head.connect(p); tail = p; }
     tail.connect(this.dry);
     // yankı gönderimi: uzaktaki ve kapalı alandaki sesler daha ıslak
     let wet = (this.env.wet || 0.3) * (pos ? (0.35 + Math.min(1, d / 55) * 0.65) : 0.25) * (o.wet === undefined ? 1 : o.wet);
@@ -86,6 +94,29 @@ const Audio3 = {
     // ses hızı gecikmesi (yalnızca uzaktaki büyük sesler)
     const delay = (pos && o.delay) ? Math.min(0.7, d / 343) : 0;
     return { node: g, vol, t: c.currentTime + delay + 0.005, d, occ };
+  },
+  // dinleyici (kafa) konumu ve bakış yönü: HRTF için gerekli
+  setListener(x, y, z, yaw, pitch) {
+    const L = this.listener; L.x = x; L.y = y; L.z = z; L.yaw = yaw; L.pitch = pitch || 0;
+    const c = this.ctx; if (!c || !c.listener) return;
+    const cp = Math.cos(L.pitch), fx = -Math.sin(yaw) * cp, fy = Math.sin(L.pitch), fz = -Math.cos(yaw) * cp;
+    const l = c.listener;
+    if (l.positionX) {
+      l.positionX.value = x; l.positionY.value = y; l.positionZ.value = z;
+      l.forwardX.value = fx; l.forwardY.value = fy; l.forwardZ.value = fz; l.upX.value = 0; l.upY.value = 1; l.upZ.value = 0;
+    } else { l.setPosition(x, y, z); l.setOrientation(fx, fy, fz, 0, 1, 0); }
+  },
+  // 3B ses testi: kafanın etrafında dönen ayak sesleri (ön → sağ → arka → sol → yukarı → aşağı)
+  test3d() {
+    if (!this.ctx) this.init(); if (!this.ctx) return;
+    const saved = Object.assign({}, this.listener), surf = this.surfaceAt;
+    this.setListener(0, 1.6, 0, 0, 0); this.surfaceAt = () => 'tile';
+    const dirs = [[0, -1, 0], [1, -1, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], [-1, 1, 0], [-1, 0, 0], [-1, -1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];   // x(sağ), z(ön -), y(yukarı)
+    const seq = [[0, 0, -4], [4, 0, -4], [4, 0, 0], [4, 0, 4], [0, 0, 4], [-4, 0, 4], [-4, 0, 0], [-4, 0, -4], [0, 0, -4], [0, 3, -3], [0, -1.2, -3]];
+    seq.forEach((p, i) => setTimeout(() => {
+      this.footstep({ x: p[0], y: p[1], z: p[2] }, 1.6); setTimeout(() => this.footstep({ x: p[0], y: p[1], z: p[2] }, 1.6), 260);
+    }, i * 760));
+    setTimeout(() => { this.listener = saved; this.surfaceAt = surf; }, seq.length * 760 + 800);
   },
   // ---------- sentez yardımcıları ----------
   nb(dest, t, dur, type, f, q, gain, sweep, att) {

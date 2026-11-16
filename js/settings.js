@@ -49,6 +49,7 @@ const DEFAULT_SETTINGS = {
   dmTime: 300,           // ölüm kalım süresi (sn)
   // Ses
   volume: 0.8,
+  audio3d: 'hrtf',       // ses konumu: 'hrtf' (3B kulaklık) | 'stereo' (hoparlör)
   texStyle: 'retro',     // 'retro' (eski okul, piksel) veya 'modern'
   layoutV: 3,
   sensV: 3,

@@ -1145,7 +1145,7 @@ G.render = function (dt) {
   else if (viewE.zoomed && viewE.alive) fov = 2 * Math.atan(Math.tan(S.fov * DEG / 2) / 1.5) / DEG;
   if (Math.abs(cam.fov - fov) > 0.01) { cam.fov += (fov - cam.fov) * Math.min(1, dt * 25); if (Math.abs(cam.fov - fov) < 0.3) cam.fov = fov; cam.updateProjectionMatrix(); }
   // dinleyici
-  Audio3.listener.x = eye.x; Audio3.listener.y = eye.y; Audio3.listener.z = eye.z; Audio3.listener.yaw = viewE.yaw;
+  Audio3.setListener(eye.x, eye.y, eye.z, viewE.yaw, viewE.pitch);
   // görünürlük: izlenen karakterin modeli gizli
   for (const e of this.entities) {
     if (!e.model) continue;
