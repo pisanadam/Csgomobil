@@ -274,6 +274,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
   <div id="mvp" class="hidden"></div>
   <div id="scope"></div>
   <div id="crosshair"></div>
+  <div id="micHud" class="hudbox hidden" style="position:absolute;left:50%;top:14%;transform:translateX(-50%);color:#f66">🎤 Sesin duyuluyor!</div>
   <div id="hitmarker"></div>
   <div id="dmgVignette"></div>
   <div id="dmgDirs"></div>
@@ -418,6 +419,10 @@ input[type=range]{width:100%;accent-color:#e9a83a}
       <div class="field"><label>Seçenekler</label><label class="check"><input type="checkbox" data-set="shadows" data-reload="1"> Gölgeler</label><label class="check"><input type="checkbox" data-set="showFps"> FPS göster</label><label class="check"><input type="checkbox" data-set="enemyGlow"> Düşmanları vurgula (kırmızı ton)</label></div>
       <div class="field"><label>Ses <span class="val" data-val="volume"></span></label><input type="range" min="0" max="1" step="0.05" data-set="volume"></div>
       <div class="field"><label>🎧 Ses Konumu</label><div class="seg" data-set="audio3d" data-opts='[["hrtf","3B Kulaklık (HRTF)"],["stereo","Stereo (hoparlör)"]]'></div>
+        <div class="field" style="margin-top:8px"><label>🎤 Mikrofon (botlar duyar)</label><div class="seg" data-set="micMode" data-opts='[["off","Kapalı"],["on","Açık"]]'></div>
+          <div class="field"><label>Mikrofon hassasiyeti <span class="val" data-val="micSens"></span></label><input type="range" min="0.1" max="1" step="0.05" data-set="micSens"></div>
+          <div style="height:10px;background:#222;border-radius:5px;overflow:hidden"><div id="micBar" style="height:100%;width:0;background:#4c4;transition:width .08s"></div></div>
+          <div id="micStat" style="font-size:12px;color:var(--dim)">Açınca tarayıcı mikrofon izni ister. Konuşur ya da gürültü yaparsan düşman botlar duyar ve sesin geldiği yere bakar/gider; ne kadar yüksek ve yakınsan o kadar kolay duyarlar. Ses sunucuya gitmez, sadece ses seviyesi ölçülür (kayıt yok). Hoparlörde oyun sesi mikrofona karışabilir, kulaklık önerilir.</div></div>
         <button class="btn sm" id="test3d" style="align-self:flex-start">▶ 3B ses testi</button>
         <div style="font-size:12px;color:var(--dim)">Kulaklıkla rakibin ayak sesinin hangi yönden (ön, arka, sağ, sol, yukarı, aşağı) geldiğini daha net duyarsın. Test: ayak sesi kafanın etrafında dönüyor — ön, sağ, arka, sol, yukarı, aşağı sırasıyla. Hoparlör kullanıyorsan Stereo seç.</div></div>
       <div class="field" style="grid-column:1/-1"><label>★ Raundun Oyuncusu Müziği</label>
@@ -611,6 +616,7 @@ const DEFAULT_SETTINGS = {
   dmTime: 300,           // ölüm kalım süresi (sn)
   // Ses
   volume: 0.8,
+  micMode: 'off', micSens: 0.5,   // mikrofon: botlar sesini duyar
   audio3d: 'hrtf',       // ses konumu: 'hrtf' (3B kulaklık) | 'stereo' (hoparlör)
   texStyle: 'retro',     // 'retro' (eski okul, piksel) veya 'modern'
   layoutV: 3,
@@ -7009,6 +7015,58 @@ const Catalog = {
   },
 };
 
+// ---------- Mikrofon: konuşma/gürültü seviyesi botlara 'duyma' olayı olarak gider ----------
+const Mic = {
+  stream: null, an: null, buf: null, level: 0, lastHear: 0, timer: null,
+  async start() {
+    const st = document.getElementById('micStat');
+    if (this.stream) return true;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { if (st) st.textContent = 'Bu tarayıcı mikrofonu desteklemiyor (HTTPS/dosya gerekir).'; return false; }
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: false } });
+      Audio3.init(); const c = Audio3.ctx; if (c.resume) c.resume();
+      const src = c.createMediaStreamSource(this.stream); this.an = c.createAnalyser(); this.an.fftSize = 1024; src.connect(this.an);   // çıkışa bağlı DEĞİL (geri besleme yok)
+      this.buf = new Float32Array(this.an.fftSize);
+      this.timer = setInterval(() => this.tick(), 90);
+      if (st) st.textContent = 'Mikrofon açık ✔ — konuş ya da ses çıkar, çubuk dolsun.';
+      return true;
+    } catch (e) { this.stream = null; if (st) st.textContent = 'Mikrofon izni verilmedi / bulunamadı.'; S.micMode = 'off'; if (typeof UI !== 'undefined') UI.refreshSettings && UI.refreshSettings(); return false; }
+  },
+  stop() {
+    if (this.timer) clearInterval(this.timer); this.timer = null;
+    if (this.stream) this.stream.getTracks().forEach(t => t.stop()); this.stream = null; this.an = null; this.level = 0;
+    const b = document.getElementById('micBar'); if (b) b.style.width = '0';
+  },
+  tick() {
+    if (!this.an) return;
+    this.an.getFloatTimeDomainData(this.buf);
+    let s = 0; for (let i = 0; i < this.buf.length; i++) s += this.buf[i] * this.buf[i];
+    const rms = Math.sqrt(s / this.buf.length);
+    // dB'ye göre 0..1 (−60 dB sessiz, −10 dB bağırma); hassasiyet eşiği kaydırır
+    const db = 20 * Math.log10(rms + 1e-6), gain = 0.5 + S.micSens;       // 0.6..1.5
+    this.level = Math.max(0, Math.min(1, ((db + 60) / 50) * gain));
+    const bar = document.getElementById('micBar'); if (bar) bar.style.width = Math.round(this.level * 100) + '%';
+    if (this.level < 0.35 || !G.running || G.paused || !G.player || !G.player.alive) return;
+    const now = G.now; if (now - this.lastHear < 0.5) return; this.lastHear = now;
+    const range = 8 + this.level * this.level * 70;                    // fısıltı ~8 m, bağırma ~70 m
+    const p = G.player;
+    for (const b of G.bots) {
+      if (!b.e.alive || G.ally(b.e, p)) continue;
+      const d = dist2(b.e.pos, p.pos);
+      let r = range; if (Phys.blocked(b.e.eye(), p.eye())) r *= 0.55;   // duvar arkasından daha az duyulur
+      if (d < r) b.hear(p.pos, now, 'voice');
+    }
+    p.spottedUntil = Math.max(p.spottedUntil || 0, now + 0.2);
+    if (this.level > 0.6) { const h = document.getElementById('micHud'); if (h) { h.classList.remove('hidden'); clearTimeout(this.ht); this.ht = setTimeout(() => h.classList.add('hidden'), 800); } }
+  },
+  sync() { if (S.micMode === 'on') this.start(); else this.stop(); },
+  init() {
+    document.querySelectorAll('[data-set="micMode"] button, [data-set="micMode"] .opt').forEach(b => b.addEventListener('click', () => setTimeout(() => this.sync(), 0)));
+    const seg = document.querySelector('[data-set="micMode"]'); if (seg) seg.addEventListener('click', () => setTimeout(() => this.sync(), 0));
+    if (S.micMode === 'on') this.start();
+  },
+};
+
 </script>
 <script>
 // Nişan Antrenmanı (Aim Trainer): Grid Shot, Flick, Tracking ve Hareketli Manken senaryoları
@@ -7467,6 +7525,7 @@ const Cheats = {
   UI.init();
   Cheats.init();
   document.getElementById('test3d').onclick = () => { Audio3.init(); Audio3.test3d(); };
+  Mic.init();
   Skins.loadAll(); Music.bind(); Music.init(); BotSongs.bind(); BotSongs.init().then(() => Catalog.render()); Catalog.bind();
   UI.applySettings();
   let last = performance.now(), fpsAcc = 0, fpsN = 0;

@@ -49,6 +49,7 @@ const DEFAULT_SETTINGS = {
   dmTime: 300,           // ölüm kalım süresi (sn)
   // Ses
   volume: 0.8,
+  micMode: 'off', micSens: 0.5,   // mikrofon: botlar sesini duyar
   audio3d: 'hrtf',       // ses konumu: 'hrtf' (3B kulaklık) | 'stereo' (hoparlör)
   texStyle: 'retro',     // 'retro' (eski okul, piksel) veya 'modern'
   layoutV: 3,

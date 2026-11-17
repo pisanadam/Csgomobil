@@ -574,3 +574,55 @@ const Catalog = {
     document.getElementById('ctOpen').onclick = () => { const w = document.getElementById('ctWrap'); w.classList.toggle('hidden'); if (!w.classList.contains('hidden')) this.render(); else this.stopPreview(); };
   },
 };
+
+// ---------- Mikrofon: konuşma/gürültü seviyesi botlara 'duyma' olayı olarak gider ----------
+const Mic = {
+  stream: null, an: null, buf: null, level: 0, lastHear: 0, timer: null,
+  async start() {
+    const st = document.getElementById('micStat');
+    if (this.stream) return true;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { if (st) st.textContent = 'Bu tarayıcı mikrofonu desteklemiyor (HTTPS/dosya gerekir).'; return false; }
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: false } });
+      Audio3.init(); const c = Audio3.ctx; if (c.resume) c.resume();
+      const src = c.createMediaStreamSource(this.stream); this.an = c.createAnalyser(); this.an.fftSize = 1024; src.connect(this.an);   // çıkışa bağlı DEĞİL (geri besleme yok)
+      this.buf = new Float32Array(this.an.fftSize);
+      this.timer = setInterval(() => this.tick(), 90);
+      if (st) st.textContent = 'Mikrofon açık ✔ — konuş ya da ses çıkar, çubuk dolsun.';
+      return true;
+    } catch (e) { this.stream = null; if (st) st.textContent = 'Mikrofon izni verilmedi / bulunamadı.'; S.micMode = 'off'; if (typeof UI !== 'undefined') UI.refreshSettings && UI.refreshSettings(); return false; }
+  },
+  stop() {
+    if (this.timer) clearInterval(this.timer); this.timer = null;
+    if (this.stream) this.stream.getTracks().forEach(t => t.stop()); this.stream = null; this.an = null; this.level = 0;
+    const b = document.getElementById('micBar'); if (b) b.style.width = '0';
+  },
+  tick() {
+    if (!this.an) return;
+    this.an.getFloatTimeDomainData(this.buf);
+    let s = 0; for (let i = 0; i < this.buf.length; i++) s += this.buf[i] * this.buf[i];
+    const rms = Math.sqrt(s / this.buf.length);
+    // dB'ye göre 0..1 (−60 dB sessiz, −10 dB bağırma); hassasiyet eşiği kaydırır
+    const db = 20 * Math.log10(rms + 1e-6), gain = 0.5 + S.micSens;       // 0.6..1.5
+    this.level = Math.max(0, Math.min(1, ((db + 60) / 50) * gain));
+    const bar = document.getElementById('micBar'); if (bar) bar.style.width = Math.round(this.level * 100) + '%';
+    if (this.level < 0.35 || !G.running || G.paused || !G.player || !G.player.alive) return;
+    const now = G.now; if (now - this.lastHear < 0.5) return; this.lastHear = now;
+    const range = 8 + this.level * this.level * 70;                    // fısıltı ~8 m, bağırma ~70 m
+    const p = G.player;
+    for (const b of G.bots) {
+      if (!b.e.alive || G.ally(b.e, p)) continue;
+      const d = dist2(b.e.pos, p.pos);
+      let r = range; if (Phys.blocked(b.e.eye(), p.eye())) r *= 0.55;   // duvar arkasından daha az duyulur
+      if (d < r) b.hear(p.pos, now, 'voice');
+    }
+    p.spottedUntil = Math.max(p.spottedUntil || 0, now + 0.2);
+    if (this.level > 0.6) { const h = document.getElementById('micHud'); if (h) { h.classList.remove('hidden'); clearTimeout(this.ht); this.ht = setTimeout(() => h.classList.add('hidden'), 800); } }
+  },
+  sync() { if (S.micMode === 'on') this.start(); else this.stop(); },
+  init() {
+    document.querySelectorAll('[data-set="micMode"] button, [data-set="micMode"] .opt').forEach(b => b.addEventListener('click', () => setTimeout(() => this.sync(), 0)));
+    const seg = document.querySelector('[data-set="micMode"]'); if (seg) seg.addEventListener('click', () => setTimeout(() => this.sync(), 0));
+    if (S.micMode === 'on') this.start();
+  },
+};
