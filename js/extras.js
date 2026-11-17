@@ -619,10 +619,18 @@ const Mic = {
     p.spottedUntil = Math.max(p.spottedUntil || 0, now + 0.2);
     if (this.level > 0.6) { const h = document.getElementById('micHud'); if (h) { h.classList.remove('hidden'); clearTimeout(this.ht); this.ht = setTimeout(() => h.classList.add('hidden'), 800); } }
   },
-  sync() { if (S.micMode === 'on') this.start(); else this.stop(); },
+  sync() { if (S.micMode === 'on') this.start(); else this.stop(); this.paint(); },
+  toggle() {
+    S.micMode = S.micMode === 'on' ? 'off' : 'on'; Settings.save();
+    if (typeof UI !== 'undefined' && UI.refreshSettings) UI.refreshSettings();
+    this.sync();
+    if (G.running && typeof UI !== 'undefined' && UI.toast) UI.toast(S.micMode === 'on' ? '🎤 Mikrofon açık' : '🎤 Mikrofon kapalı');
+  },
+  paint() { const b = document.getElementById('micBtn'); if (!b) return; const on = S.micMode === 'on'; b.textContent = on ? '🎤 Açık (M)' : '🎤 Kapalı (M)'; b.style.color = on ? '#6f6' : '#aaa'; },
   init() {
     document.querySelectorAll('[data-set="micMode"] button, [data-set="micMode"] .opt').forEach(b => b.addEventListener('click', () => setTimeout(() => this.sync(), 0)));
     const seg = document.querySelector('[data-set="micMode"]'); if (seg) seg.addEventListener('click', () => setTimeout(() => this.sync(), 0));
-    if (S.micMode === 'on') this.start();
+    const mb = document.getElementById('micBtn'); if (mb) { mb.onclick = e => { e.stopPropagation(); this.toggle(); }; mb.addEventListener('touchstart', e => e.stopPropagation(), { passive: true }); }
+    if (S.micMode === 'on') this.start(); this.paint();
   },
 };

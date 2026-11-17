@@ -177,6 +177,7 @@ const Input = {
       case 'KeyQ': p.switchTo(p.prevSlot); break;
       case 'KeyZ': UI.toggleRadio(); break;
       case 'KeyN': UI.toggleNvg(); break;
+      case 'KeyM': Mic.toggle(); break;
       case 'Digit1': p.switchTo('primary'); break;
       case 'Digit2': p.switchTo('secondary'); break;
       case 'Digit3': p.switchTo('knife'); break;
