@@ -185,9 +185,9 @@ const Net = {
     else if (this.role === 'client' && this.link) this.sendSongTo(this.link.r, this.myNid, rec);
   },
   onBin(buf, holder) { if (holder.rx) { holder.rx.chunks.push(buf); holder.rx.got += buf.byteLength; } },
-  songHeader(holder, m) { holder.rx = { o: m.o, name: m.name, size: m.size, start: m.start, len: m.len, chunks: [], got: 0 }; },
+  songHeader(holder, m) { holder.rx = { kind: 'song', o: m.o, name: m.name, size: m.size, start: m.start, len: m.len, chunks: [], got: 0 }; },
   songDone(holder, m, from) {
-    const rx = holder.rx; holder.rx = null; if (!rx || rx.o !== m.o || rx.got !== rx.size) return;
+    const rx = holder.rx; holder.rx = null; if (!rx || rx.kind !== 'song' || rx.o !== m.o || rx.got !== rx.size) return;
     if (from && from.ent && from.ent.nid !== rx.o) return;       // sahte sahip
     const blob = new Blob(rx.chunks, { type: 'audio/mpeg' });
     const old = this.songs.get(rx.o); if (old && old.url) URL.revokeObjectURL(old.url);
@@ -203,12 +203,66 @@ const Net = {
       this.send(p.r, { t: 'start', cfg, ents, me: p.ent.nid, sog: G.sideOfGroup, dm: G.dm, FREEZE: G.FREEZE, ROUND_TIME: G.ROUND_TIME, BOMB_TIME: G.BOMB_TIME, start: ECON.start });
     }
     this.sendRound(false);
-    this.shareMySong();
+    this.shareMySong(); this.shareMySkins();
   },
   sendRound(swap) {
     const R = G.round, B = G.bomb;
     const es = G.entities.map(e => [e.nid, +e.pos.x.toFixed(2), +e.pos.z.toFixed(2), +e.yaw.toFixed(3), e.team, e.inv.bomb ? 1 : 0]);
     this.sendAll({ t: 'round', num: R.num, phase: R.phase, timer: R.timer, tl: R.timeLeft, bl: R.buyLeft, plan: R.plan, score: G.score, sog: G.sideOfGroup, swap: !!swap, es, dm: G.dm, pistol: R.num === 1 || R.num === G.halfRounds() + 1, ls: G.lossStreak });
+  },
+  // ---------- yerdeki silahlar (oda kurucu yönetir) ----------
+  pkId: 0, pkSet: new Set(),
+  skinKey(owner, wid) { return 'n' + owner + ':' + wid; },
+  pkSkinKey(ow, wid) { const me = this.role === 'host' ? this.nid(G.player) : this.myNid; return ow === me ? wid : this.skinKey(ow, wid); },
+  applyPickupSkin(pk) {
+    if (pk.ow === null || pk.ow === undefined) return;
+    const wid = pk.w.def.id, key = this.pkSkinKey(pk.ow, wid);
+    if (Skins.has(key)) Skins.apply(pk.mesh, key);
+  },
+  onPickup(pk, ownerEnt) {
+    if (this.role === 'host') {
+      pk.id = ++this.pkId; pk.ow = ownerEnt ? this.nid(ownerEnt) : null;
+      if (this.started && this.readyPeers().length) { this.pkSet.add(pk.id); this.sendAll({ t: 'pk', id: pk.id, w: pk.w.def.id, mag: pk.w.mag, reserve: pk.w.reserve, x: +pk.pos.x.toFixed(2), z: +pk.pos.z.toFixed(2), ow: pk.ow, d: Math.max(0, pk.t - G.now) }); }
+    } else if (this.role === 'client' && pk.id === undefined) return;
+    if (ownerEnt && this.role !== 'client' && ownerEnt.isPlayer) { if (Skins.has(pk.w.def.id)) Skins.apply(pk.mesh, pk.w.def.id); }
+    else this.applyPickupSkin(pk);
+  },
+  pkDelete(id) {
+    const i = G.pickups.findIndex(x => x.id === id); if (i < 0) return null;
+    const pk = G.pickups[i]; G.scene.remove(pk.mesh); G.pickups.splice(i, 1); return pk;
+  },
+  // ---------- skin paylaşımı ----------
+  sendSkinTo(ch, owner, wid, blob) {
+    this.songQ = this.songQ.then(async () => {
+      if (!ch || ch.readyState !== 'open') return;
+      ch.send(JSON.stringify({ t: 'skh', o: owner, w: wid, size: blob.size }));
+      const buf = new Uint8Array(await blob.arrayBuffer());
+      for (let i = 0; i < buf.length; i += 16000) { while (ch.bufferedAmount > 1e6) await new Promise(r => setTimeout(r, 25)); ch.send(buf.slice(i, i + 16000)); }
+      ch.send(JSON.stringify({ t: 'ske', o: owner, w: wid }));
+    }).catch(() => {});
+  },
+  async shareMySkins() {
+    const ids = Object.keys(Skins.canvases).filter(k => k[0] !== 'n' || k.indexOf(':') < 0).slice(0, 10);
+    for (const id of ids) {
+      const blob = await new Promise(r => Skins.canvases[id].toBlob(r, 'image/png')); if (!blob || blob.size > 500000) continue;
+      if (this.role === 'host') { const me = this.nid(G.player); for (const p of this.readyPeers()) this.sendSkinTo(p.r, me, id, blob); }
+      else if (this.role === 'client' && this.link) this.sendSkinTo(this.link.r, this.myNid, id, blob);
+    }
+  },
+  skinHeader(holder, m) { holder.rx = { kind: 'skin', o: m.o, w: m.w, size: m.size, chunks: [], got: 0 }; },
+  skinDone(holder, m, from) {
+    const rx = holder.rx; holder.rx = null; if (!rx || rx.kind !== 'skin' || rx.o !== m.o || rx.w !== m.w || rx.got !== rx.size) return;
+    if (from && from.ent && from.ent.nid !== rx.o) return;
+    const blob = new Blob(rx.chunks, { type: 'image/png' });
+    const url = URL.createObjectURL(blob), img = new Image();
+    img.onload = () => {
+      const key = this.skinKey(rx.o, rx.w), c = Skins.ensure(key);
+      c.getContext('2d').clearRect(0, 0, c.width, c.height); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); Skins.textures[key].needsUpdate = true; URL.revokeObjectURL(url);
+      const e = this.byNid(rx.o); if (e && e.model && !e.isPlayer && (e.cw || (e.def && e.def.id)) === rx.w) Models.setCharGun(e.model, WEAPONS[rx.w]);   // elindeki silah: skini yenile
+      for (const pk of G.pickups) if (pk.ow === rx.o && pk.w.def.id === rx.w) this.applyPickupSkin(pk);
+    };
+    img.src = url;
+    if (this.role === 'host') for (const p of this.readyPeers()) if (p !== from) this.sendSkinTo(p.r, rx.o, rx.w, blob);
   },
   // mermi görselleri (iz, çarpma, kan): ateş eden cihaz diğerlerine bildirir
   fxOut(sh, k, p, n, mat, head) {
@@ -227,6 +281,10 @@ const Net = {
   onMsgHost(p, m) {
     const e = p.ent;
     switch (m.t) {
+      case 'skh': this.skinHeader(p, m); break;
+      case 'ske': this.skinDone(p, m, p); break;
+      case 'pkdrop': if (e && e.alive && G.running && WEAPONS[m.w]) G.spawnPickup({ def: WEAPONS[m.w], mag: m.mag, reserve: m.reserve }, { x: m.x, z: m.z }, e, null, 0.7); break;
+      case 'pkreq': if (e && e.alive && G.running) { const pk = G.pickups.find(x => x.id === m.id); if (pk && dist2(e.pos, pk.pos) < 3.2) { this.pkDelete(m.id); this.pkSet.delete(m.id); this.sendAll({ t: 'pkdel', id: m.id }); this.send(p.r, { t: 'pkgive', w: pk.w.def.id, mag: pk.w.mag, reserve: pk.w.reserve }); } } break;
       case 'songh': this.songHeader(p, m); break;
       case 'songe': this.songDone(p, m, p); break;
       case 'hello': p.name = String(m.name || 'Arkadaş').slice(0, 14); this.send(p.r, { t: 'welcome', id: p.id }); this.lobbyBroadcast(); this.paintMenu(); break;
@@ -288,6 +346,15 @@ const Net = {
     switch (m.t) {
       case 'welcome': this.paintMenu(); break;
       case 'lobby': this.lobbyNames = m.names; this.paintMenu(); break;
+      case 'skh': this.skinHeader(this.link, m); break;
+      case 'ske': this.skinDone(this.link, m, null); break;
+      case 'pk': if (G.running && WEAPONS[m.w]) G.spawnPickup({ def: WEAPONS[m.w], mag: m.mag, reserve: m.reserve }, null, null, m, m.d); break;
+      case 'pkdel': if (G.running) this.pkDelete(m.id); break;
+      case 'pkgive': if (G.running && G.player && G.player.alive && WEAPONS[m.w]) {
+        const p = G.player, def = WEAPONS[m.w], slot = def.slot, old = p.inv[slot], f = dirFromAngles(p.yaw, 0);
+        if (old) G.spawnPickup(old, { x: p.pos.x + f.x * 1.2, z: p.pos.z + f.z * 1.2 }, p, null, 0.7);
+        p.inv[slot] = { def, mag: m.mag, reserve: m.reserve, sil: true, burst: false }; p.switchTo(slot, true); UI.toast(def.name + ' alındı', 1.2); Audio3.click(null, 1200);
+      } break;
       case 'songh': this.songHeader(this.link, m); break;
       case 'songe': this.songDone(this.link, m, null); break;
       case 'bye': { const was = G.running; this.leave(); if (was) UI.quit(); alert('Oda kapatıldı.'); break; }
@@ -330,7 +397,7 @@ const Net = {
     UI.onMatchStart(); Audio3.ambStart(MAP.info.theme);
     G.bomb = { state: 'none', carrier: null, pos: { x: 0, y: -100, z: 0 }, timer: 0, defuser: null, beepT: 0, site: null };
     this.lastBombState = 'none'; this.snapT = 0; G.now = 0;
-    this.songs.clear(); this.shareMySong();
+    this.songs.clear(); this.shareMySong(); this.shareMySkins();
   },
   applyRound(m) {
     const R = G.round;
@@ -432,6 +499,7 @@ const Net = {
     const R = G.round, B = G.bomb;
     const es = G.entities.map(e => [this.nid(e), +e.pos.x.toFixed(2), +e.pos.y.toFixed(2), +e.pos.z.toFixed(2), +e.yaw.toFixed(3), +e.pitch.toFixed(3), +e.vel.x.toFixed(2), +e.vel.z.toFixed(2), +e.crouch.toFixed(2), e.alive ? 1 : 0, Math.round(e.hp), e.alive ? e.def.id : 0, e.spottedUntil > G.now ? 1 : 0, e.team]);
     const msg = { t: 's', ph: R.phase, tm: +R.timer.toFixed(2), tl: +R.timeLeft.toFixed(2), bl: +R.buyLeft.toFixed(2), sc: G.score, e: es, bs: { st: B.state, x: B.pos.x, y: B.pos.y || 0, z: B.pos.z, tm: +B.timer.toFixed(2), df: B.defuser ? this.nid(B.defuser) : 0 } };
+    for (const id of [...this.pkSet]) if (!G.pickups.some(x => x.id === id)) { this.pkSet.delete(id); this.sendAll({ t: 'pkdel', id }); }
     if (this.tick % 20 === 0) msg.st = G.entities.map(e => [this.nid(e), e.stats]);
     this.sendAllU(msg);
   },
@@ -473,6 +541,8 @@ const Net = {
       if (e.flashT > 0) e.flashT -= dt;
       G.updateModel(e, dt);
     }
+    // boş yuvaya yakındaki silahı otomatik al (oda kurucudan onay ister)
+    if (p.alive) for (const pk of G.pickups) { if (!pk.id || now - pk.t < 0.8 || (pk.rq && now - pk.rq < 1) || dist2(p.pos, pk.pos) > 1.1 || p.inv[pk.w.def.slot]) continue; pk.rq = now; this.toHost({ t: 'pkreq', id: pk.id }); }
     G.updateNades(dt);
     // bomba bip sesi (görsel)
     const B = G.bomb;
@@ -519,6 +589,7 @@ const Net = {
     const r = orig.apply(this, a);
     if (hostOn()) {
       const swap = Net.lastSog0 !== G.sideOfGroup[0]; Net.lastSog0 = G.sideOfGroup[0];
+      Net.pkSet.clear();
       for (const p of Net.readyPeers()) if (p.ent) p.ent.bombSync = G.now + 1.0;
       Net.sendRound(swap);
     }
@@ -810,5 +881,15 @@ Net.paintList = function () {
     const leave = $('netLeave').onclick;
     $('netLeave').onclick = () => { this.disc.hosting = false; this.disc.wantHost = null; this.disc.closeRoom(); $('netCodeBox').classList.add('hidden'); leave(); this.disc.announce(); this.paintList(); };
     nameEl.addEventListener('change', () => this.disc.announce());
+  };
+})();
+
+// Üçüncü şahıs silah modeline arkadaşın skinini uygula
+(function () {
+  const sg = Models.setCharGun;
+  Models.setCharGun = function (ch, def) {
+    sg(ch, def);
+    const e = ch && ch.ent;
+    if (def && e && !e.isPlayer && (e.remote || e.human)) { const k = Net.skinKey(e.nid, def.id); if (Skins.has(k)) Skins.apply(ch.parts.gun.userData.model, k); }
   };
 })();

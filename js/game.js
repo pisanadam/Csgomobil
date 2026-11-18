@@ -129,7 +129,7 @@ G.startMatch = function () {
 };
 G.makeModel = function (e) {
   if (e.model) this.disposeModel(e.model);
-  e.model = Models.character(e.team);
+  e.model = Models.character(e.team); e.model.ent = e;
   e.model.root.rotation.order = 'YXZ';
   // modele özel malzemeler (düşman vurgusu için)
   const gh = e.model.parts.gun;
@@ -555,7 +555,7 @@ G.onKill = function (v, k, def, hs, wallbang) {
   if (this.dm) {
     v.respawnAt = this.now + 2.5;
     if (v.isPlayer) v.dmSaved = { primary: v.inv.primary ? v.inv.primary.def.id : (v.dmSaved && v.dmSaved.primary), secondary: v.inv.secondary ? v.inv.secondary.def.id : null };
-  } else if (drop) this.spawnPickup(drop, v.pos);
+  } else if (drop) this.spawnPickup(drop, v.pos, v);
   if (v.inv.bomb) { v.inv.bomb = false; this.bomb.state = 'dropped'; this.bomb.carrier = null; this.bomb.pos = { x: v.pos.x, y: 0, z: v.pos.z }; this.bombMesh.visible = true; this.bombMesh.position.set(v.pos.x, 0.07, v.pos.z); if (v.team === this.player.team || true) UI.toast('Bomba düşürüldü!', 2); }
   v.resetForDeath();
   if (v.model) Models.setCharGun(v.model, null);
@@ -613,13 +613,19 @@ G.cycleSpec = function () {
 G.addMoney = function (e, m) { e.money = Math.max(0, Math.min(ECON.max, e.money + m)); };
 
 // ================= YERDEKİ SİLAHLAR =================
-G.spawnPickup = function (w, pos) {
+// ownerEnt: silahı düşüren (skin için), msg: ağdan gelen hazır yer bilgisi, delay: alınabilmesi için bekleme (sn)
+G.spawnPickup = function (w, pos, ownerEnt, msg, delay) {
+  if (Net.role === 'client' && !msg) { Net.toHost({ t: 'pkdrop', w: w.def.id, mag: w.mag, reserve: w.reserve, x: pos.x, z: pos.z }); return null; }   // yerdeki silahı oda kurucu yönetir
   const mesh = Models.gun(w.def);
-  mesh.position.set(pos.x + (Math.random() - 0.5) * 0.6, 0.06, pos.z + (Math.random() - 0.5) * 0.6);
+  mesh.position.set(msg ? msg.x : pos.x + (Math.random() - 0.5) * 0.6, 0.06, msg ? msg.z : pos.z + (Math.random() - 0.5) * 0.6);
   mesh.rotation.set(0, Math.random() * 6, Math.PI / 2);
   mesh.traverse(o => { if (o.isMesh) o.castShadow = true; });
   this.scene.add(mesh);
-  this.pickups.push({ w: { def: w.def, mag: w.mag, reserve: w.reserve }, mesh, pos: { x: mesh.position.x, z: mesh.position.z }, t: this.now });
+  const pk = { w: { def: w.def, mag: w.mag, reserve: w.reserve }, mesh, pos: { x: mesh.position.x, z: mesh.position.z }, t: this.now + (delay || 0) };
+  if (msg) { pk.id = msg.id; pk.ow = msg.ow; }
+  this.pickups.push(pk);
+  Net.onPickup(pk, ownerEnt);
+  return pk;
 };
 G.updatePickups = function () {
   const B = this.bomb;
@@ -641,7 +647,7 @@ G.updatePickups = function () {
       let take = !cur || (e.bot && cur.def.mag && cur.mag + cur.reserve === 0);
       // botlar daha iyi silahı alır
       if (!take && e.bot && slot === 'primary' && e.inv.primary && p.w.def.price > e.inv.primary.def.price + 500) {
-        this.spawnPickup(e.inv.primary, e.pos); take = true;
+        this.spawnPickup(e.inv.primary, e.pos, e); take = true;
       }
       if (take) {
         e.inv[slot] = p.w; this.scene.remove(p.mesh); this.pickups.splice(i, 1);
@@ -657,7 +663,8 @@ G.playerSwapPickup = function () {
   for (const p of this.pickups) { const d = dist2(e.pos, p.pos); if (d < bd) { bd = d; best = p; } }
   if (!best) return false;
   const slot = best.w.def.slot;
-  if (e.inv[slot]) this.spawnPickup(e.inv[slot], e.pos);
+  if (Net.role === 'client') { if (best.id) Net.toHost({ t: 'pkreq', id: best.id }); return true; }   // yerden alma oda kurucu onayıyla
+  if (e.inv[slot]) this.spawnPickup(e.inv[slot], e.pos, e);
   e.inv[slot] = best.w; this.scene.remove(best.mesh); this.pickups.splice(this.pickups.indexOf(best), 1);
   e.switchTo(slot, true); UI.toast(best.w.def.name + ' alındı', 1.2);
   return true;
@@ -674,8 +681,7 @@ G.dropWeapon = function () {
   if (e.slot !== 'primary' && e.slot !== 'secondary') return;
   const w = e.inv[e.slot]; if (!w) return;
   const f = dirFromAngles(e.yaw, 0);
-  this.spawnPickup(w, { x: e.pos.x + f.x * 1.6, z: e.pos.z + f.z * 1.6 });
-  this.pickups[this.pickups.length - 1].t = this.now + 0.7;
+  this.spawnPickup(w, { x: e.pos.x + f.x * 1.6, z: e.pos.z + f.z * 1.6 }, e, null, 0.7);
   e.inv[e.slot] = null; e.switchTo(e.bestSlot(), true);
 };
 
@@ -707,7 +713,7 @@ G.buy = function (e, id, bot) {
     kind = 'weapon';
     const cur = e.inv[def.slot];
     if (cur && cur.def.id === id) { if (cur.mag === def.mag && cur.reserve === def.reserve) return false; }
-    if (cur && !bot && !this.dm) this.spawnPickup(cur, e.pos);
+    if (cur && !bot && !this.dm) this.spawnPickup(cur, e.pos, e);
     e.bought = (e.bought || []).filter(b => !(b.kind === 'weapon' && b.slot === def.slot));   // eski silah yere düştü: iade edilemez
     e.giveWeapon(id);
     if (!bot) e.switchTo(def.slot, true);
