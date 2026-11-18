@@ -139,6 +139,16 @@ G.makeModel = function (e) {
   this.scene.add(e.model.root);
   Models.setCharGun(e.model, e.def);
   e.model.root.visible = !e.isPlayer;
+  // arkadaş (gerçek oyuncu) ise başının üstünde adı yazar
+  if ((e.human || e.remote) && !e.isPlayer) {
+    const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64; const x = cv.getContext('2d');
+    x.font = 'bold 34px Arial'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.lineWidth = 7; x.strokeStyle = 'rgba(0,0,0,0.85)'; x.strokeText(e.name, 128, 32); x.fillStyle = '#fff'; x.fillText(e.name, 128, 32);
+    const tex = new THREE.CanvasTexture(cv);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, fog: false, depthWrite: false }));
+    sp.scale.set(1.5, 0.375, 1); sp.position.set(0, 2.2, 0); sp.renderOrder = 10;
+    e.model.root.add(sp); e.model.label = sp;
+  }
 };
 G.teamOf = g => G.sideOfGroup[g];
 G.halfRounds = () => Math.floor(S.maxRounds / 2);
@@ -1033,6 +1043,7 @@ G.endRound = function (win, reason) {
   const pw = win === this.player.team;
   let song = null;
   if (mvp && Music.url && S.mvpWhen !== 'off' && (S.mvpWhen === 'always' || mvp.isPlayer)) { Music.play(); song = { own: true }; }
+  else if (mvp && mvp.remote && S.mvpWhen !== 'off' && Net.songs.has(Net.nid(mvp))) { const r = Net.songs.get(Net.nid(mvp)); Music.play(r.len, r.url, r.start); Net.curSong = { o: Net.nid(mvp) }; }
   else if (mvp && !mvp.isPlayer && S.botMusic !== 'off' && mvp.song && mvp.song.info) {
     // botun kendi şarkısı: 30 sn'lik önizlemenin başından (nakarata yakın kısım için 6. sn'den) çalar
     Music.play(10, mvp.song.info.url, 4); song = mvp.song.info;
@@ -1180,6 +1191,7 @@ G.render = function (dt) {
   if (r.shadowMap.enabled) { const full = S.graphics >= 2; r.shadowMap.autoUpdate = full; if (!full) { this._sf = (this._sf || 0) + 1; if (this._sf % 2 === 0) r.shadowMap.needsUpdate = true; } }
   Cheats.applyChams();
   const tp = Cheats.camera(cam, viewE);
+  for (const e of this.entities) if (e.model && e.model.label) { const L = e.model.label, ally = !this.ffa && e.team === p.team; L.visible = e.alive; L.material.color.setHex(ally ? 0x8dff8d : 0xff9090); L.material.depthTest = !ally; }
   for (const e of this.entities) if (e.model) e.model.root.visible = (tp && e.isPlayer) || (!(e === viewE && e.alive) && !(e.isPlayer && e.alive) && (e.alive || e.deathT < 15));
   FX.update(dt, eye);
   r.clear();
@@ -1280,6 +1292,6 @@ G.ally = function (a, b) { return !this.ffa && a.team === b.team; };
 G.disposeModel = function (m) {
   this.scene.remove(m.root);
   const gunH = m.parts.gun;
-  const walk = o => { if (o === gunH) return; if (o.isMesh) { o.geometry.dispose(); if (o.material && o.material.emissive) o.material.dispose(); } o.children.forEach(walk); };
+  const walk = o => { if (o === gunH) return; if (o.isSprite) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); return; } if (o.isMesh) { o.geometry.dispose(); if (o.material && o.material.emissive) o.material.dispose(); } o.children.forEach(walk); };
   walk(m.root);
 };

@@ -132,7 +132,7 @@ const UI = {
     } catch (e) {}
   },
   quit() {
-    G.running = false; G.paused = false; Trainer.cleanup(); Audio3.ambStop(); Audio3.resume();
+    this.netPaused = false; G.running = false; G.paused = false; Trainer.cleanup(); Audio3.ambStop(); Audio3.resume();
     $('pause').classList.add('hidden'); $('hud').classList.add('hidden');
     this.toggleBuy(false); this.showScore(false);
     document.body.classList.remove('ingame');

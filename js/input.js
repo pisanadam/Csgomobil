@@ -23,7 +23,7 @@ const Input = {
     window.addEventListener('keyup', e => this.onKey(e, false));
     const cv = document.getElementById('game');
     cv.addEventListener('mousedown', e => {
-      if (!G.running || G.paused || UI.buyOpen) return;
+      if (!G.running || G.paused || UI.buyOpen || UI.netPaused) return;
       if (!this.locked && !this.isMobile) { this.lockPointer(); return; }
       if (G.player && !G.player.alive) { G.cycleSpec(); return; }
       if (e.button === 0) this.fireHeld = true;
@@ -160,7 +160,11 @@ const Input = {
     const k = e.code;
     if (k === 'Tab') { e.preventDefault(); this.scoreHeld = down; UI.showScore(down); return; }
     if (!G.running) return;
-    if (k === 'Escape' && down) { if (UI.buyOpen) UI.toggleBuy(false); UI.toggleRadio(false); return; }
+    if (k === 'Escape' && down) {
+      // duraklatma menüsü açıksa: önce ayarları kapat, sonra oyuna dön
+      if (!document.getElementById('pause').classList.contains('hidden')) { if (!document.getElementById('settings').classList.contains('hidden')) UI.closeSettings(); else UI.pause(false); return; }
+      if (UI.buyOpen) UI.toggleBuy(false); UI.toggleRadio(false); return;
+    }
     if (down && UI.radioOpen && /^Digit[1-6]$/.test(k)) { G.radio(parseInt(k.slice(5))); UI.toggleRadio(false); return; }
     this.keys[k] = down;
     if (!down) return;
@@ -190,6 +194,7 @@ const Input = {
   // Her karede oyuncuya uygula
   apply(dt) {
     const p = G.player; if (!p) return;
+    if (UI.netPaused) { p.input.fwd = p.input.side = 0; p.input.jump = false; p.input.use = false; p.trig = false; this.fireHeld = false; return; }   // çok oyunculuda menü açıkken karakter durur
     const K = this.keys;
     let fwd = (K.KeyW ? 1 : 0) - (K.KeyS ? 1 : 0), side = (K.KeyD ? 1 : 0) - (K.KeyA ? 1 : 0);
     let walk = !!(K.ShiftLeft || K.ShiftRight) || this.walkToggle;

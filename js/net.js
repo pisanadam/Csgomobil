@@ -49,8 +49,9 @@ const Net = {
     p.r = p.pc.createDataChannel('r');
     p.u = p.pc.createDataChannel('u', { ordered: false, maxRetransmits: 0 });
     p.r.onopen = () => { p.ready = true; this.onPeerOpen(p); };
-    p.r.onmessage = ev => this.onMsgHost(p, JSON.parse(ev.data));
-    p.u.onmessage = ev => this.onMsgHost(p, JSON.parse(ev.data));
+    p.r.binaryType = 'arraybuffer';
+    p.r.onmessage = ev => (typeof ev.data === 'string' ? this.onMsgHost(p, JSON.parse(ev.data)) : this.onBin(ev.data, p));
+    p.u.onmessage = ev => { if (typeof ev.data === 'string') this.onMsgHost(p, JSON.parse(ev.data)); };
     p.pc.onconnectionstatechange = () => { const s = p.pc.connectionState; if (s === 'failed' || s === 'closed' || s === 'disconnected') this.onPeerGone(p); };
     this.peers.push(p);
     await p.pc.setLocalDescription(await p.pc.createOffer());
@@ -84,7 +85,8 @@ const Net = {
     const pc = this.newPC(); const L = this.link = { pc, r: null, u: null, open: false };
     pc.ondatachannel = ev => {
       const ch = ev.channel; L[ch.label] = ch;
-      ch.onmessage = e => this.onMsgClient(JSON.parse(e.data));
+      ch.binaryType = 'arraybuffer';
+      ch.onmessage = e => (typeof e.data === 'string' ? this.onMsgClient(JSON.parse(e.data)) : this.onBin(e.data, L));
       if (ch.label === 'r') ch.onopen = () => { L.open = true; this.send(L.r, { t: 'hello', name: this.myName }); this.paintMenu(); };
     };
     pc.onconnectionstatechange = () => { const s = pc.connectionState; if (s === 'failed' || s === 'closed' || s === 'disconnected') this.onHostGone(); };
@@ -130,25 +132,74 @@ const Net = {
   nid(e) { return e.nid !== undefined ? e.nid : e.id; },
   byNid(n) { return G.entities.find(e => this.nid(e) === n); },
   // ---------- host: maça oyuncu ekle (G.startMatch içinden çağrılır) ----------
+  // Parti modları: coop = hepsi kurucu ile aynı takımda botlara karşı; teams = arkadaşlar iki takıma bölünür;
+  // duel = 1v1 (kurucu ve ilk arkadaş, botsuz); ffa = herkes herkese ölüm kalım
   hostAddPlayers(names) {
-    for (const p of this.readyPeers()) {
-      const side = G.sideOfGroup[0];   // arkadaşlar kurucu ile aynı tarafta
-      let e = null;
-      const idx = G.entities.map((x, i) => (!x.isPlayer && !x.remote && x.bot && x.team === side) ? i : -1).filter(i => i >= 0).pop();
-      if (idx !== undefined) { const old = G.entities.splice(idx, 1)[0]; G.bots.splice(G.bots.indexOf(old.bot), 1); }
-      e = new Entity(p.name, side, false); e.group = 0; e.remote = p; e.protectUntil = 0; p.ent = e;
-      G.entities.push(e);
+    const peers = this.readyPeers();
+    let mode = S.netMode || 'coop', bots = S.netBots !== false;
+    if (mode === 'duel') { bots = false; if (peers.length > 1) mode = 'teams'; }
+    if (mode === 'teams' || mode === 'ffa') { /* bots ayarı geçerli */ }
+    if (mode === 'coop') bots = true;
+    const humans = [0 /* kurucu: grup 0 */];
+    peers.forEach((p, i) => {
+      const g = mode === 'coop' ? 0 : (mode === 'duel' ? 1 : (i % 2 === 0 ? 1 : 0));
+      const side = G.sideOfGroup[g];
+      const e = new Entity(p.name, side, false); e.group = g; e.remote = p; e.protectUntil = 0; p.ent = e;
+      G.entities.push(e); humans.push(g);
+    });
+    // botları yerleştir: her tarafta (takım boyutu - insan sayısı) bot kalır; botsuz modda hiç kalmaz
+    for (const g of [0, 1]) {
+      const side = G.sideOfGroup[g], nh = humans.filter(x => x === g).length;
+      const mine = G.entities.filter(x => !x.isPlayer && !x.remote && x.bot && x.team === side);
+      const keep = bots ? Math.max(0, Math.min(mine.length, (g === 0 ? S.teamSize : S.teamSize) - nh)) : 0;
+      for (const old of mine.slice(keep)) { G.entities.splice(G.entities.indexOf(old), 1); G.bots.splice(G.bots.indexOf(old.bot), 1); }
     }
     for (const e of G.entities) e.nid = e.id;
   },
+  // ---------- şarkı paylaşımı (katalog dışı yüklenen müzik) ----------
+  songs: new Map(), songQ: Promise.resolve(),
+  async mySong() {
+    if (!Music.url) return null;
+    try {
+      const blob = await (await fetch(Music.url)).blob();
+      if (blob.size > 8e6) { UI.toast('Müzik dosyan 8 MB\'tan büyük, arkadaşlara gönderilmedi', 3); return null; }
+      return { blob, name: Music.name || 'müzik', start: S.mvpStart || 0, len: S.mvpLen || 9 };
+    } catch (e) { return null; }
+  },
+  sendSongTo(ch, owner, rec) {
+    this.songQ = this.songQ.then(async () => {
+      if (!ch || ch.readyState !== 'open') return;
+      ch.send(JSON.stringify({ t: 'songh', o: owner, name: rec.name, size: rec.blob.size, start: rec.start, len: rec.len }));
+      const buf = new Uint8Array(await rec.blob.arrayBuffer());
+      for (let i = 0; i < buf.length; i += 16000) { while (ch.bufferedAmount > 1e6) await new Promise(r => setTimeout(r, 25)); ch.send(buf.slice(i, i + 16000)); }
+      ch.send(JSON.stringify({ t: 'songe', o: owner }));
+    }).catch(() => {});
+  },
+  async shareMySong() {
+    const rec = await this.mySong(); if (!rec) return;
+    if (this.role === 'host') { const me = Net.nid(G.player); this.songs.set(me, Object.assign({ url: URL.createObjectURL(rec.blob) }, rec)); for (const p of this.readyPeers()) this.sendSongTo(p.r, me, rec); }
+    else if (this.role === 'client' && this.link) this.sendSongTo(this.link.r, this.myNid, rec);
+  },
+  onBin(buf, holder) { if (holder.rx) { holder.rx.chunks.push(buf); holder.rx.got += buf.byteLength; } },
+  songHeader(holder, m) { holder.rx = { o: m.o, name: m.name, size: m.size, start: m.start, len: m.len, chunks: [], got: 0 }; },
+  songDone(holder, m, from) {
+    const rx = holder.rx; holder.rx = null; if (!rx || rx.o !== m.o || rx.got !== rx.size) return;
+    if (from && from.ent && from.ent.nid !== rx.o) return;       // sahte sahip
+    const blob = new Blob(rx.chunks, { type: 'audio/mpeg' });
+    const old = this.songs.get(rx.o); if (old && old.url) URL.revokeObjectURL(old.url);
+    const rec = { blob, name: rx.name, start: rx.start, len: rx.len, url: URL.createObjectURL(blob) };
+    this.songs.set(rx.o, rec);
+    if (this.role === 'host') for (const p of this.readyPeers()) if (p !== from) this.sendSongTo(p.r, rx.o, rec);   // diğer arkadaşlara ilet
+  },
   afterStartMatch() {
     this.started = true; this.applyLimits();
-    const ents = G.entities.map(e => ({ n: e.nid, name: e.isPlayer ? (this.hostName || 'Oda kurucu') : e.name, team: e.team, g: e.group, human: !!e.remote }));
+    const ents = G.entities.map(e => ({ n: e.nid, name: e.isPlayer ? (this.hostName || 'Oda kurucu') : e.name, team: e.team, g: e.group, human: !!e.remote || e.isPlayer }));
     const cfg = { map: MAP.current, mode: S.mode, maxRounds: S.maxRounds, dmTime: S.dmTime, teamSize: S.teamSize, friendlyFire: !!S.friendlyFire, c4Time: S.c4Time, roundTime: S.roundTime, freezeTime: S.freezeTime, startMoney: S.startMoney };
     for (const p of this.readyPeers()) {
       this.send(p.r, { t: 'start', cfg, ents, me: p.ent.nid, sog: G.sideOfGroup, dm: G.dm, FREEZE: G.FREEZE, ROUND_TIME: G.ROUND_TIME, BOMB_TIME: G.BOMB_TIME, start: ECON.start });
     }
     this.sendRound(false);
+    this.shareMySong();
   },
   sendRound(swap) {
     const R = G.round, B = G.bomb;
@@ -159,6 +210,8 @@ const Net = {
   onMsgHost(p, m) {
     const e = p.ent;
     switch (m.t) {
+      case 'songh': this.songHeader(p, m); break;
+      case 'songe': this.songDone(p, m, p); break;
       case 'hello': p.name = String(m.name || 'Arkadaş').slice(0, 14); this.send(p.r, { t: 'welcome', id: p.id }); this.lobbyBroadcast(); this.paintMenu(); break;
       case 'st': if (e && G.running) this.applyRemoteState(e, m); break;
       case 'shot': if (e && e.alive && G.running) { const def = WEAPONS[m.w]; if (def) { e.lastShot = G.now; G.onShot(e, def); } } break;
@@ -217,6 +270,8 @@ const Net = {
     switch (m.t) {
       case 'welcome': this.paintMenu(); break;
       case 'lobby': this.lobbyNames = m.names; this.paintMenu(); break;
+      case 'songh': this.songHeader(this.link, m); break;
+      case 'songe': this.songDone(this.link, m, null); break;
       case 'bye': { const was = G.running; this.leave(); if (was) UI.quit(); alert('Oda kapatıldı.'); break; }
       case 'start': this.pendingStart = m; if (!G.running || G.matchOver) UI.play(); else UI.play(); break;
       case 'round': if (G.running) this.applyRound(m); break;
@@ -256,6 +311,7 @@ const Net = {
     UI.onMatchStart(); Audio3.ambStart(MAP.info.theme);
     G.bomb = { state: 'none', carrier: null, pos: { x: 0, y: -100, z: 0 }, timer: 0, defuser: null, beepT: 0, site: null };
     this.lastBombState = 'none'; this.snapT = 0; G.now = 0;
+    this.songs.clear(); this.shareMySong();
   },
   applyRound(m) {
     const R = G.round;
@@ -295,7 +351,12 @@ const Net = {
     const R = G.round; R.phase = 'end'; R.timer = G.END_TIME; R.winner = m.win; R.endReason = m.reason; G.score = m.score;
     const mvp = m.mvp !== undefined && m.mvp !== null ? this.byNid(m.mvp) : null;
     const pw = m.win === G.player.team;
-    Audio3.roundEnd(pw);
+    const ms = m.ms; let played = false;
+    if (ms && S.mvpWhen !== 'off') {
+      if (ms.o !== undefined) { if (ms.o === this.myNid) played = Music.play(); else { const r = this.songs.get(ms.o); if (r) played = Music.play(r.len, r.url, r.start); } }
+      else if (ms.a && S.botMusic !== 'off') { BotSongs.resolve(ms.a, ms.t).then(info => { if (info) Music.play(10, info.url, 4); }); played = true; }
+    }
+    if (!played) Audio3.roundEnd(pw);
     UI.roundEnd(m.win, m.reason, pw, mvp, m.why || '', null);
   },
   applyShot(m) {
@@ -428,8 +489,11 @@ const Net = {
   const hostOn = () => Net.role === 'host' && Net.started && Net.readyPeers().length > 0;
   wrap(G, 'startMatch', function (orig, a) {
     Net.started = false;
-    const r = orig.apply(this, a);
+    const modeBefore = S.mode; const force = Net.role === 'host' && Net.readyPeers().length && S.netMode === 'ffa' && S.mode !== 'aim';
+    if (force) S.mode = 'dm';
+    let r; try { r = orig.apply(this, a); } finally { if (force) { Net._modeRestore = modeBefore; } }
     if (Net.role === 'host' && !this.aim && Net.readyPeers().length) { Net.lastSog0 = G.sideOfGroup[0]; Net.afterStartMatch(); }
+    if (Net._modeRestore) { S.mode = Net._modeRestore; Net._modeRestore = null; }
     return r;
   });
   wrap(G, 'startRound', function (orig, a) {
@@ -477,7 +541,12 @@ const Net = {
     return r;
   });
   wrap(UI, 'roundEnd', function (orig, a) {
-    if (hostOn()) { const [win, reason, pw, mvp, why] = a; Net.sendAll({ t: 'end', win, reason, mvp: mvp ? Net.nid(mvp) : null, why, score: G.score }); }
+    if (hostOn()) {
+      const [win, reason, pw, mvp, why, song] = a; const cs = Net.curSong; Net.curSong = null;
+      let ms = null;
+      if (cs) ms = cs; else if (song && song.own) ms = { o: Net.nid(G.player) }; else if (song && mvp && mvp.song) ms = { a: mvp.song.a, t: mvp.song.t };
+      Net.sendAll({ t: 'end', win, reason, mvp: mvp ? Net.nid(mvp) : null, why, score: G.score, ms });
+    }
     return orig.apply(this, a);
   });
   wrap(UI, 'matchEnd', function (orig, a) {
@@ -502,7 +571,7 @@ const Net = {
   });
   wrap(UI, 'pause', function (orig, a) {
     if (Net.role && Net.started && G.running) {   // çok oyunculuda oyun durmaz, sadece menü açılır
-      const on = a[0]; $('pause').classList.toggle('hidden', !on);
+      const on = a[0]; UI.netPaused = !!on; $('pause').classList.toggle('hidden', !on);
       if (on) { Input.fireHeld = false; if (document.exitPointerLock) document.exitPointerLock(); } else Input.lockPointer();
       return;
     }

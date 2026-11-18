@@ -50,6 +50,7 @@ const DEFAULT_SETTINGS = {
   // Ses
   volume: 0.8,
   micMode: 'off', micSens: 0.5,   // mikrofon: botlar sesini duyar
+  netMode: 'coop', netBots: true,   // çok oyunculu parti modu: coop | teams | duel | ffa
   autoRes: true,         // kare hızı düşerse çözünürlüğü kendiliğinden azalt
   audio3d: 'hrtf',       // ses konumu: 'hrtf' (3B kulaklık) | 'stereo' (hoparlör)
   texStyle: 'retro',     // 'retro' (eski okul, piksel) veya 'modern'
