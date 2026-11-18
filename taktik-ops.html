@@ -6850,7 +6850,11 @@ Net.disc = {
       this.es = new EventSource('https://ntfy.sh/' + topic + '/sse');
       this.es.onmessage = ev => { try { const d = JSON.parse(ev.data); if (d.event === 'message') onmsg(JSON.parse(d.message)); } catch (e) {} };
     },
-    publish(topic, obj) { return fetch('https://ntfy.sh/' + topic, { method: 'POST', body: JSON.stringify(obj) }).catch(() => {}); },
+    // ntfy.sh ücretsiz kotası sınırlı (aynı IP'yi paylaşanlar ortak kullanır): hata/429 olursa kısa süre sonra yeniden dene
+    publish(topic, obj, tries) {
+      tries = tries || 0;
+      return fetch('https://ntfy.sh/' + topic, { method: 'POST', body: JSON.stringify(obj) }).then(r => { if (!r.ok && tries < 3) setTimeout(() => this.publish(topic, obj, tries + 1), 2500 * (tries + 1)); }).catch(() => { if (tries < 3) setTimeout(() => this.publish(topic, obj, tries + 1), 2500 * (tries + 1)); });
+    },
     close() { if (this.es) { this.es.close(); this.es = null; } },
   }; },
   async hash(txt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt)); return 'to' + Array.from(new Uint8Array(h)).slice(0, 12).map(b => b.toString(16).padStart(2, '0')).join(''); },
@@ -6881,17 +6885,18 @@ Net.disc = {
     this.status = 'Aranıyor…'; Net.paintList();
     try { this.topic = await this.roomKey(); } catch (e) { this.status = 'İnternet yok: cihazlar otomatik bulunamıyor. Aşağıdan "Elle bağlan" ile kodla bağlanabilirsin.'; Net.paintList(); return; }
     this.tr = this.mk(); this.tr.open(this.topic, m => this.onMsg(m, 'ip'));
-    this.status = ''; this.announce(); this.timer = setInterval(() => this.announce(), 4000); Net.paintList();
+    this.status = ''; this.announce(); this.timer = setInterval(() => this.announce(), 15000); this.pub({ k: 'who', id: this.id }); Net.paintList();
   },
   stop() { if (this.timer) clearInterval(this.timer); this.timer = null; if (this.tr) { this.pub({ k: 'bye', id: this.id }); this.tr.close(); } this.tr = null; this.list.clear(); },
   pub(o, via) { if (via === 'room') { if (this.trRoom) this.trRoom.publish(this.topicRoom, o); } else if (this.tr && this.topic) this.tr.publish(this.topic, o); },
   announce() {
     this.pub({ k: 'hi', id: this.id, name: this.myName(), dev: this.devLabel(), host: !!this.hosting && Net.role === 'host' && !Net.started, n: Net.readyPeers().length });
-    const now = Date.now(); for (const [id, d] of this.list) if (now - d.ts > 14000) this.list.delete(id);
+    const now = Date.now(); for (const [id, d] of this.list) if (now - d.ts > 45000) this.list.delete(id);
     Net.paintList();
   },
   async onMsg(m, via) {
     if (!m || m.id === this.id) return;
+    if (m.k === 'who') { setTimeout(() => this.announce(), Math.random() * 1500); return; }
     if (m.k === 'hi') { this.list.set(m.id, { id: m.id, name: m.name, dev: m.dev, host: !!m.host, n: m.n || 0, ts: Date.now() }); Net.paintList(); return; }
     if (m.k === 'bye') { this.list.delete(m.id); Net.paintList(); return; }
     if (m.to !== this.id && !(m.to === '*' && Net.role === 'host')) return;
