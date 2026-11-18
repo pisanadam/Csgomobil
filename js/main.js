@@ -6,7 +6,7 @@
   UI.init();
   Cheats.init();
   document.getElementById('test3d').onclick = () => { Audio3.init(); Audio3.test3d(); };
-  Mic.init();
+  Mic.init(); Net.bindUI();
   Skins.loadAll(); Music.bind(); Music.init(); BotSongs.bind(); BotSongs.init().then(() => Catalog.render()); Catalog.bind();
   UI.applySettings();
   let last = performance.now(), fpsAcc = 0, fpsN = 0;
@@ -42,5 +42,5 @@
   };
   requestAnimationFrame(frame);
   // görünürlük değişince duraklat
-  document.addEventListener('visibilitychange', () => { if (document.hidden && G.running && !G.paused) UI.pause(true); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && G.running && !G.paused && !(Net.role && Net.started)) UI.pause(true); });
 })();

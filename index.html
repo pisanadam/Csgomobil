@@ -251,6 +251,9 @@ input[type=range]{width:100%;accent-color:#e9a83a}
 .help p{margin:6px 0;color:#cdd3da;font-size:14px;line-height:1.45}
 .help kbd{background:#2a2f38;border:1px solid #444;border-radius:4px;padding:1px 6px;font-size:12px}
 .legal{font-size:11px;color:#6d747d;margin-top:14px}
+.netTa{width:100%;box-sizing:border-box;background:#111;color:#9f9;border:1px solid #444;border-radius:8px;padding:8px;font:11px monospace;resize:vertical}
+.netSlot{border:1px solid #3a5a44;border-radius:10px;padding:10px;margin-top:8px;background:#102016;display:flex;flex-direction:column;gap:6px}
+.netStep{font-size:13px;color:#cde}
 </style>
 </head>
 <body>
@@ -366,10 +369,34 @@ input[type=range]{width:100%;accent-color:#e9a83a}
       <button class="btn" id="btnSettings">⚙ AYARLAR</button>
       <button class="btn" id="btnHelp">? NASIL OYNANIR</button>
       <button class="btn" id="btnFs" data-fsbtn data-fs="btn">⛶ TAM EKRAN</button>
+      <button class="btn" id="btnNet" style="background:#1f3a2a;border-color:#3a9a5a">👥 ARKADAŞLARLA OYNA</button>
       <button class="btn" id="btnSkins" style="background:#2a2440;border-color:#7a5ad0">🎨 SKİNLER</button>
       <button class="btn" id="btnCheats" style="background:#3a1f22;border-color:#a33">🧪 HİLE SİMÜLASYONU</button>
     </div>
     <div class="legal">Özgün hayran yapımı taktik nişancı. Harita, karakterler ve isimler özgündür.</div>
+  </div>
+</div>
+
+<!-- ============ ARKADAŞLARLA OYNA ============ -->
+<div id="netPanel" class="screen hidden">
+  <div class="panel">
+    <div class="row" style="justify-content:space-between;margin-bottom:10px"><b style="font-size:22px">👥 ARKADAŞLARLA OYNA</b><button class="btn sm" id="netClose">GERİ ←</button></div>
+    <div style="font-size:13px;color:var(--dim);margin-bottom:10px">Aynı Wi-Fi'ye (veya internete) bağlı arkadaşlarınla beraber, <b>aynı takımda botlara karşı</b> oynayın. Herkes bu oyunu (HTML dosyasını) açar. Sunucu gerekmez: kodları WhatsApp gibi bir yerden birbirinize yollarsınız. En fazla 4 arkadaş. <b>Çok oyunculuda nişan/tarama yardımı ve hile simülasyonu en fazla orta düzeyde çalışır</b> (ölümsüzlük, sonsuz mermi, hız, duvar ardı nişan vb. kapalı olur; maç bitince eski ayarların geri gelir).</div>
+    <div class="field"><label>Adın</label><input type="text" id="netName" maxlength="14" placeholder="Oyuncu" style="padding:8px;border-radius:8px;border:1px solid #444;background:#111;color:#fff"></div>
+    <div class="field"><label><input type="checkbox" id="netStun" checked> İnternet varsa yardımcı sunucu kullan (aynı ağda bağlanamazsan açık kalsın)</label></div>
+    <div id="netState" style="margin:8px 0;font-weight:bold">Bağlı değilsin</div>
+    <div class="menuGrid">
+      <div class="field" style="grid-column:1/-1"><label>🏠 Oda kur (sen oda kurucusun: harita, mod ve botları sen seçersin)</label>
+        <button class="btn pri" id="netInvite" style="align-self:flex-start">+ Arkadaş davet et</button>
+        <div id="netSlots"></div>
+        <div style="font-size:12px;color:var(--dim)">Hepsi bağlanınca ana menüden normal şekilde ▶ OYNA'ya bas; maç arkadaşlarında kendiliğinden açılır. Arkadaşların senin takımında olur; bot sayısı takım boyutuna göre azalır.</div></div>
+      <div class="field" style="grid-column:1/-1"><label>🔗 Odaya katıl</label>
+        <textarea id="netOffer" rows="3" class="netTa" placeholder="Oda kurucunun gönderdiği DAVET kodunu buraya yapıştır"></textarea>
+        <button class="btn pri" id="netJoin" style="align-self:flex-start">Katıl</button><div id="netJoinSt" style="font-size:12px;color:var(--dim)"></div>
+        <div id="netReply" class="hidden"><textarea id="netReplyTa" rows="3" class="netTa" readonly></textarea><button class="btn sm" id="netReplyCopy">Kopyala</button></div></div>
+    </div>
+    <div class="row" style="margin-top:12px"><button class="btn" id="netLeave" style="background:#3a1f22;border-color:#a33">Odayı kapat / Ayrıl</button></div>
+    <div style="font-size:12px;color:var(--dim);margin-top:8px">Not: Aynı Wi-Fi'de internet olmasa da çalışır. Bazı kurumsal/okul ağları cihazların birbirine bağlanmasını engeller. Yerdeki silahlar ve sohbet sadece oda kurucuda senkron değildir (basit sürüm).</div>
   </div>
 </div>
 
@@ -571,6 +598,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
 <script src="js/game.js"></script>
 <script src="js/input.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/net.js"></script>
 <script src="lib/lame.min.js"></script>
 <script src="js/extras.js"></script>
 <script src="js/trainer.js"></script>

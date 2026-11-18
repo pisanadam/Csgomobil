@@ -116,6 +116,7 @@ G.startMatch = function () {
       e.group = g; new Bot(e); this.entities.push(e); this.bots.push(e.bot);
     }
   }
+  if (typeof Net !== 'undefined' && Net.role === 'host' && !this.aim) Net.hostAddPlayers(names); else for (const e of this.entities) e.nid = e.id;
   for (const e of this.entities) this.makeModel(e);
   if (this.aim) { for (const e of this.entities) e.song = null; } else BotSongs.assign(this.entities);
   this.round.num = 0;
@@ -238,6 +239,7 @@ G.assignRoles = function () {
 // ================= ANA DÖNGÜ =================
 G.update = function (dt) {
   if (!this.running || this.paused) return;
+  if (Net.role === 'client') return Net.clientUpdate(dt);
   this.now += dt;
   const now = this.now, R = this.round;
   // raunt zamanlayıcıları
@@ -257,6 +259,7 @@ G.update = function (dt) {
   // varlıklar
   for (const e of this.entities) {
     if (!e.alive) { this.animateDeath(e, dt); if (this.dm && e.respawnAt && now >= e.respawnAt && R.phase !== 'end') this.respawn(e); continue; }
+    if (e.remote) { Net.hostRemote(e, dt); this.updateModel(e, dt); continue; }   // arkadaş: konumu kendi cihazından gelir
     // hazırlık süresinde hareket ve ateş yok (CS'deki gibi)
     if (frozen) { e.input.fwd = e.input.side = 0; e.input.jump = false; e.trig = false; }
     e.updateMovement(dt);
@@ -271,6 +274,7 @@ G.update = function (dt) {
   this.updatePickups();
   this.updateFireDamage(dt);
   if (R.phase === 'live' || R.phase === 'planted') this.checkWin();
+  if (Net.role === 'host') Net.hostTick(dt);
   // izleyici
   if (!this.player.alive) {
     if (!this.spec || !this.spec.alive) {
@@ -386,7 +390,8 @@ G.fireBullet = function (sh, o, d, def, first) {
     let dmg = def.damage * Math.pow(def.rangeMod || 0.9, dist / 12.7) * HIT_MULT[vh.group] * dmgScale;
     const hp = { x: o.x + d.x * dist, y: o.y + d.y * dist, z: o.z + d.z * dist };
     const wasAlive = victim.alive;
-    victim.takeDamage(dmg, sh, def, vh.group, d, this.now);
+    if (Net.role === 'client' && isPl) Net.toHost({ t: 'hit', v: Net.nid(victim), d: Math.round(dmg), g: vh.group, w: def.id, wb: pens > 0 && penWalls.some(w => w.t < vh.t) ? 1 : 0 });
+    else victim.takeDamage(dmg, sh, def, vh.group, d, this.now);
     FX.blood(hp, d, vh.group === 'head');
     if (victim.bot) victim.bot.onDamaged(sh, this.now);
     if (!victim.isPlayer && victim.alive) Audio3.voice(victim.pos, 'pain', victim.id * 0.37);
@@ -465,7 +470,8 @@ G.knifeAttack = function (e) {
   const back = Math.abs(angDiff(best.yaw, e.yaw)) < 1.0;
   const dmg = 999; // yakın mesafede tek vuruşta öldürür
   const wasAlive = best.alive;
-  best.takeDamage(dmg, e, { pen: 0.85 }, 'chest', d, this.now);
+  if (Net.role === 'client' && e.isPlayer) Net.toHost({ t: 'hit', v: Net.nid(best), d: 999, g: 'chest', w: 'knife', wb: 0 });
+  else best.takeDamage(dmg, e, { pen: 0.85 }, 'chest', d, this.now);
   FX.blood({ x: o.x + d.x * bt, y: o.y + d.y * bt, z: o.z + d.z * bt }, d, back); Audio3.stab(best.pos);
   if (best.bot) best.bot.onDamaged(e, this.now);
   if (best.isPlayer) this.onPlayerHurt(e, dmg);
@@ -499,6 +505,7 @@ G.onLand = function (e, vy) {
   if (e.isPlayer) Audio3.land(null); else Audio3.land(e.pos);
 };
 G.onPlayerHurt = function (att, dmg) {
+  if (Net.role === 'client' && !this._netHurt) return;
   Audio3.hurt(dmg);
   UI.damage(att ? att.pos : null, dmg);
   this.hurtPunch = Math.min(4, (this.hurtPunch || 0) + 1.5);
@@ -609,7 +616,9 @@ G.updatePickups = function () {
     if (B.state === 'dropped' && e.team === 'T' && dist2(e.pos, B.pos) < 1.1) {
       B.state = 'carried'; B.carrier = e; e.inv.bomb = true; this.bombMesh.visible = false;
       if (e.isPlayer) UI.toast('Bombayı aldın', 1.5);
+      if (e.remote) { e.bombSync = this.now + 1; Net.send(e.remote.r, { t: 'give', bomb: 1 }); }
     }
+    if (e.remote) continue;
     for (let i = this.pickups.length - 1; i >= 0; i--) {
       const p = this.pickups[i];
       if (this.now - p.t < 0.8) continue;
@@ -644,6 +653,7 @@ G.dropWeapon = function () {
   const e = this.player; if (!e.alive) return;
   if (e.slot === 'bomb' && e.inv.bomb) {
     e.inv.bomb = false; const f = dirFromAngles(e.yaw, 0);
+    if (Net.role === 'client') { Net.toHost({ t: 'dropbomb', x: e.pos.x + f.x * 1.5, z: e.pos.z + f.z * 1.5 }); e.switchTo(e.bestSlot(), true); return; }
     this.bomb.state = 'dropped'; this.bomb.carrier = null; this.bomb.pos = { x: e.pos.x + f.x * 1.5, y: 0, z: e.pos.z + f.z * 1.5 };
     this.bombMesh.visible = true; this.bombMesh.position.set(this.bomb.pos.x, 0.07, this.bomb.pos.z);
     e.switchTo(e.bestSlot(), true); return;
@@ -739,6 +749,7 @@ G.updatePlantDefuse = function (e, dt) {
     if (!B.defuser) { B.defuser = e; Audio3.click(B.pos, 700); }
     e.defuseT += dt;
     if (e.defuseT >= (e.kit ? 5 : 10)) {
+      if (Net.role === 'client') { Net.toHost({ t: 'defuse' }); e.defuseT = 0; return; }
       B.state = 'defused'; B.defuser = null; e.defuseT = 0;
       this.addMoney(e, ECON.defuseReward); B.defusedBy = e; Audio3.defused(B.pos);
       this.endRound('CT', 'defuse');
@@ -749,6 +760,7 @@ G.updatePlantDefuse = function (e, dt) {
   }
 };
 G.plantBomb = function (e) {
+  if (Net.role === 'client') { Net.toHost({ t: 'plant' }); e.inv.bomb = false; e.plantT = 0; e.switchTo(e.bestSlot(), true); return; }
   const B = this.bomb;
   e.inv.bomb = false; e.plantT = 0;
   B.state = 'planted'; B.carrier = null; B.pos = { x: e.pos.x, y: e.pos.y, z: e.pos.z }; B.timer = this.BOMB_TIME; B.beepT = 0;
@@ -1034,7 +1046,7 @@ G.updatePlayerAssist = function (dt) {
   const p = this.player;
   this.lookScale = 1; this.assist = null;
   if (!p.alive || this.round.phase === 'end') return;
-  const lvl = S.aimAssist;
+  const lvl = Net.assist(S.aimAssist);
   const d = p.def;
   const gunOk = d.mag || d.type === 'knife';
   if ((!lvl && !S.autoFire) || !gunOk) return;

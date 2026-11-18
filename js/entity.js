@@ -177,7 +177,7 @@ class Entity {
     const pat = d.pattern;
     if (pat) {
       const i0 = Math.min(pat.length - 1, Math.floor(this.recoilIdx)), i1 = Math.min(pat.length - 1, i0 + 1), f = this.recoilIdx - Math.floor(this.recoilIdx);
-      const ra = this.isPlayer ? (Cheats.c.norecoil ? 0 : 1 - SPRAY_ASSIST[S.sprayAssist || 0]) : 1;
+      const ra = this.isPlayer ? (Cheats.c.norecoil ? 0 : 1 - SPRAY_ASSIST[Net.assist(S.sprayAssist || 0)]) : 1;
       const tx = (pat[i0][0] + (pat[i1][0] - pat[i0][0]) * f) * ra, ty = (pat[i0][1] + (pat[i1][1] - pat[i0][1]) * f) * ra;
       const k = Math.min(1, dt * 25);
       this.punch.x += (tx - this.punch.x) * k; this.punch.y += (ty - this.punch.y) * k;
@@ -250,7 +250,7 @@ class Entity {
     }
     this.lastShot = now;
     this.recoilIdx += 1;
-    this.fireInacc = Math.min(this.fireInacc + d.fireInacc * (this.isPlayer ? 1 - SPRAY_ASSIST[S.sprayAssist || 0] * 0.6 : 1), 8);
+    this.fireInacc = Math.min(this.fireInacc + d.fireInacc * (this.isPlayer ? 1 - SPRAY_ASSIST[Net.assist(S.sprayAssist || 0)] * 0.6 : 1), 8);
     G.onShot(this, d);
     if (d.bolt) {
       if (this.scoped) { this.rescopeLevel = this.scoped; this.scoped = 0; this.rescopeAt = now + d.interval * 0.85; }
@@ -280,6 +280,7 @@ class Entity {
   // ----- Hasar -----
   takeDamage(dmg, attacker, def, group, dir, now) {
     if (!this.alive) return 0;
+    if (typeof Net !== 'undefined' && Net.role === 'client') { if (this.isPlayer && group === 'fall') Net.toHost({ t: 'selfdmg', d: dmg }); return 0; }   // hasarı sadece oda kurucu uygular
     if (this.protectUntil && now < this.protectUntil) return 0;
     if (this.isPlayer && Cheats.c.god) return 0;
     let d = dmg;
@@ -292,6 +293,7 @@ class Entity {
     d = Math.max(1, Math.round(d));
     const real = Math.min(this.hp, d);
     this.hp -= d; this.lastHurt = now;
+    if (this.remote && typeof Net !== 'undefined') Net.send(this.remote.r, { t: 'hurt', a: attacker ? Net.nid(attacker) : null, d: real, hp: Math.max(0, this.hp), ar: Math.round(this.armor) });
     if (attacker && attacker !== this) {
       this.dmgBy.set(attacker, (this.dmgBy.get(attacker) || 0) + real);
       attacker.stats.dmg += real;

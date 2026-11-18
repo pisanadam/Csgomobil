@@ -89,6 +89,7 @@ const UI = {
   },
   // ---------- Akış ----------
   play() {
+    if (Net.role === 'client') { if (!Net.pendingStart) { this.quit(); return; } $('matchEnd').classList.add('hidden'); $('netPanel').classList.add('hidden'); }
     Audio3.init();
     $('mainMenu').classList.add('hidden');
     $('hud').classList.remove('hidden');
@@ -100,7 +101,7 @@ const UI = {
       if (S.autoFs !== false && !this.fsActive()) this.toggleFullscreen();
       Input.lockPointer();
     }
-    G.startMatch();
+    if (Net.role === 'client') { const m = Net.pendingStart; Net.pendingStart = null; Net.clientStart(m); } else G.startMatch();
   },
   // ---- Tam ekran ----
   fsActive() { return !!(document.fullscreenElement || document.webkitFullscreenElement); },
