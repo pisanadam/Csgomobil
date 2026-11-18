@@ -14,7 +14,7 @@ const Cheats = {
   load() {
     try { const r = localStorage.getItem('taktikops_cheats'); if (r) Object.assign(this.c, JSON.parse(r)); } catch (e) {}
   },
-  save() { try { localStorage.setItem('taktikops_cheats', JSON.stringify(this.c)); } catch (e) {} },
+  save() { if (Net.limited()) Net.enforceLimits(); try { localStorage.setItem('taktikops_cheats', JSON.stringify(this.c)); } catch (e) {} },
   any() {
     const c = this.c;
     return c.aimbot || c.trigger || c.esp || c.chams || c.radar || c.norecoil || c.nospread || c.god || c.ammo || c.speed || c.spin || c.third;
@@ -27,6 +27,7 @@ const Cheats = {
   },
   // ---------- her kare (oyun mantığı) ----------
   update(dt) {
+    if (Net.limited()) Net.enforceLimits();
     const p = G.player, c = this.c;
     this.aimTarget = null;
     if (!p || !p.alive || G.round.phase === 'end') { this.trigSince = 0; return; }
@@ -214,11 +215,20 @@ const Cheats = {
       box.querySelectorAll(`[data-cs="${el.dataset.cs}"]`).forEach(b => b.classList.toggle('sel', b === el));
     });
     document.getElementById('chMoney').onclick = () => { if (G.player) { G.player.money = ECON.max; Audio3.ui(1200); } };
+    if (Net.limited()) {
+      box.insertAdjacentHTML('afterbegin', '<div class="hint" style="color:#fc6;margin-bottom:8px">🎮 Çok oyunculu maç: yardımlar en fazla orta düzeyde. Ölümsüzlük, hız, sonsuz mermi, geri tepmesiz/dağılmasız atış, duvar ardı nişan, wallhack, radar, spinbot ve 3. şahıs kapalı; aimbot alanı en çok 10°.</div>');
+      for (const k of ['god', 'ammo', 'speed', 'norecoil', 'nospread', 'spin', 'third', 'radar', 'chams', 'aimWalls', 'espLines']) { const el = box.querySelector(`[data-ck="${k}"]`); if (el) { el.checked = false; el.disabled = true; } }
+      const f = box.querySelector('[data-cr="aimFov"]'); if (f) f.max = 10;
+      const sm = box.querySelector('[data-cr="aimSmooth"]'); if (sm) sm.min = 0.5;
+      const td = box.querySelector('[data-cr="trigDelay"]'); if (td) td.min = 80;
+    }
   },
   open() {
+    if (Net.limited()) Net.enforceLimits();
     this.buildMenu();
     this.wasRunning = G.running && !G.paused;
-    if (G.running) { G.paused = true; Input.fireHeld = false; if (document.exitPointerLock) document.exitPointerLock(); }
+    if (Net.limited()) { UI.netPaused = true; Input.fireHeld = false; if (document.exitPointerLock) document.exitPointerLock(); }   // çok oyunculuda oyun durmaz
+    else if (G.running) { G.paused = true; Input.fireHeld = false; if (document.exitPointerLock) document.exitPointerLock(); }
     document.getElementById('pause').classList.add('hidden');
     document.getElementById('cheatMenu').classList.remove('hidden');
   },

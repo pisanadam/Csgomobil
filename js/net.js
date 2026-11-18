@@ -128,7 +128,14 @@ const Net = {
     c.trigDelay = Math.max(c.trigDelay, 80);
     if (Cheats.any()) UI.toast('Çok oyunculu: yardımlar en fazla orta düzey (duvar ardı/hile sınırlandı)', 4);
   },
-  removeLimits() { if (this.savedC) { Object.assign(Cheats.c, this.savedC); this.savedC = null; } },
+  removeLimits() { if (this.savedC) { this._restoring = true; Object.assign(Cheats.c, this.savedC); this.savedC = null; Cheats.save(); this._restoring = false; } },
+  limited() { return !!(this.role && this.started && G.running && !G.matchOver && !this._restoring); },
+  // maç sırasında hile menüsünden açılsa bile yasak seçenekler hemen kapatılır
+  enforceLimits() {
+    const c = Cheats.c;
+    for (const k of ['god', 'ammo', 'speed', 'norecoil', 'nospread', 'spin', 'third', 'radar', 'chams', 'aimWalls', 'espLines']) c[k] = false;
+    c.aimFov = Math.min(c.aimFov, 10); c.aimSmooth = Math.max(c.aimSmooth, 0.5); c.trigDelay = Math.max(c.trigDelay, 80);
+  },
   nid(e) { return e.nid !== undefined ? e.nid : e.id; },
   byNid(n) { return G.entities.find(e => this.nid(e) === n); },
   // ---------- host: maça oyuncu ekle (G.startMatch içinden çağrılır) ----------
