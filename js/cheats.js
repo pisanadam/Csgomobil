@@ -216,11 +216,8 @@ const Cheats = {
     });
     document.getElementById('chMoney').onclick = () => { if (G.player) { G.player.money = ECON.max; Audio3.ui(1200); } };
     if (Net.limited()) {
-      box.insertAdjacentHTML('afterbegin', '<div class="hint" style="color:#fc6;margin-bottom:8px">🎮 Çok oyunculu maç: yardımlar en fazla orta düzeyde. Ölümsüzlük, hız, sonsuz mermi, geri tepmesiz/dağılmasız atış, duvar ardı nişan, wallhack, radar, spinbot ve 3. şahıs kapalı; aimbot alanı en çok 10°.</div>');
-      for (const k of ['god', 'ammo', 'speed', 'norecoil', 'nospread', 'spin', 'third', 'radar', 'chams', 'aimWalls', 'espLines']) { const el = box.querySelector(`[data-ck="${k}"]`); if (el) { el.checked = false; el.disabled = true; } }
-      const f = box.querySelector('[data-cr="aimFov"]'); if (f) f.max = 10;
-      const sm = box.querySelector('[data-cr="aimSmooth"]'); if (sm) sm.min = 0.5;
-      const td = box.querySelector('[data-cr="trigDelay"]'); if (td) td.min = 80;
+      box.insertAdjacentHTML('afterbegin', '<div class="hint" style="color:#fc6;margin-bottom:8px">🎮 Çok oyunculu maçta hile kullanılamaz. Tüm hileler kilitli; maç bitince ayarların geri gelir.</div>');
+      box.querySelectorAll('input,button').forEach(el => { el.disabled = true; if (el.type === 'checkbox') el.checked = false; });
     }
   },
   open() {

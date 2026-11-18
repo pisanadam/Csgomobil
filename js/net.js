@@ -121,20 +121,17 @@ const Net = {
   assist(v) { return (this.role && this.started) ? Math.min(v, 2) : v; },
   applyLimits() {
     if (this.savedC) return;
-    const c = Cheats.c; this.savedC = Object.assign({}, c);
-    for (const k of ['god', 'ammo', 'speed', 'norecoil', 'nospread', 'spin', 'third', 'radar', 'chams']) c[k] = false;
-    c.aimWalls = false; c.espLines = false;
-    c.aimFov = Math.min(c.aimFov, 10); c.aimSmooth = Math.max(c.aimSmooth, 0.5);
-    c.trigDelay = Math.max(c.trigDelay, 80);
-    if (Cheats.any()) UI.toast('Çok oyunculu: yardımlar en fazla orta düzey (duvar ardı/hile sınırlandı)', 4);
+    this.savedC = Object.assign({}, Cheats.c);
+    const had = Cheats.any();
+    this.enforceLimits();
+    if (had) UI.toast('Çok oyunculu maçta hile kullanılamaz: tüm hileler kapatıldı', 4);
   },
   removeLimits() { if (this.savedC) { this._restoring = true; Object.assign(Cheats.c, this.savedC); this.savedC = null; Cheats.save(); this._restoring = false; } },
   limited() { return !!(this.role && this.started && G.running && !G.matchOver && !this._restoring); },
   // maç sırasında hile menüsünden açılsa bile yasak seçenekler hemen kapatılır
   enforceLimits() {
     const c = Cheats.c;
-    for (const k of ['god', 'ammo', 'speed', 'norecoil', 'nospread', 'spin', 'third', 'radar', 'chams', 'aimWalls', 'espLines']) c[k] = false;
-    c.aimFov = Math.min(c.aimFov, 10); c.aimSmooth = Math.max(c.aimSmooth, 0.5); c.trigDelay = Math.max(c.trigDelay, 80);
+    for (const k of ['aimbot', 'trigger', 'esp', 'chams', 'radar', 'norecoil', 'nospread', 'god', 'ammo', 'speed', 'spin', 'third', 'aimWalls', 'espLines']) c[k] = false;
   },
   nid(e) { return e.nid !== undefined ? e.nid : e.id; },
   byNid(n) { return G.entities.find(e => this.nid(e) === n); },

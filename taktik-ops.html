@@ -395,7 +395,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
     <div class="row" style="margin-bottom:8px;align-items:center"><input type="text" id="netCodeIn" inputmode="numeric" maxlength="7" placeholder="6 haneli oda kodu" style="flex:1;min-width:140px;font-size:22px;letter-spacing:4px;text-align:center;padding:10px;border-radius:8px;border:1px solid #444;background:#111;color:#fff"><button class="btn pri" id="netCodeJoin">Koda katıl</button></div>
     <div style="font-size:13px;color:var(--dim);margin-bottom:6px"><b>Oda kur</b>'a basınca 6 haneli bir kod çıkar; arkadaşların kodu yukarıdaki kutuya yazıp <b>Koda katıl</b>'a basar. Ayrıca aynı Wi-Fi / internete bağlı ve bu paneli açan cihazlar aşağıda da görünür. Birisi <b>Oda kur</b>'a basarsa diğerleri onun adının yanındaki <b>Katıl</b> düğmesine basar. Sonra oda kurucu ▶ OYNA der.</div>
     <div id="netList" class="netList"><div class="netEmpty">Cihazlar aranıyor…</div></div>
-    <div style="font-size:12px;color:var(--dim);margin:6px 0">Çok oyunculuda nişan/tarama yardımı ve hile simülasyonu en fazla orta düzeyde çalışır. Arkadaşların senin takımında botlara karşı oynar. Cihazları bulmak için aynı IP'yi paylaşan cihazlar eşleştirilir (IP'ni öğrenmek için ipify.org, mesajlaşma için herkese açık ücretsiz MQTT aracıları kullanılır; kota yoktur, sadece adın ve bağlantı bilgisi geçer).</div>
+    <div style="font-size:12px;color:var(--dim);margin:6px 0">Çok oyunculuda hile simülasyonu tamamen kapalıdır (aimbot, triggerbot, ESP, hız vb. kullanılamaz); nişan/tarama yardımı en fazla orta düzeyde çalışır. Arkadaşların senin takımında botlara karşı oynar. Cihazları bulmak için aynı IP'yi paylaşan cihazlar eşleştirilir (IP'ni öğrenmek için ipify.org, mesajlaşma için herkese açık ücretsiz MQTT aracıları kullanılır; kota yoktur, sadece adın ve bağlantı bilgisi geçer).</div>
     <details style="margin-top:8px"><summary style="cursor:pointer;color:#9cf">Elle bağlan (internet yoksa / liste boşsa)</summary>
       <div class="field"><label><input type="checkbox" id="netStun" checked> İnternet varsa yardımcı sunucu kullan</label></div>
       <div class="menuGrid">
@@ -6338,20 +6338,17 @@ const Net = {
   assist(v) { return (this.role && this.started) ? Math.min(v, 2) : v; },
   applyLimits() {
     if (this.savedC) return;
-    const c = Cheats.c; this.savedC = Object.assign({}, c);
-    for (const k of ['god', 'ammo', 'speed', 'norecoil', 'nospread', 'spin', 'third', 'radar', 'chams']) c[k] = false;
-    c.aimWalls = false; c.espLines = false;
-    c.aimFov = Math.min(c.aimFov, 10); c.aimSmooth = Math.max(c.aimSmooth, 0.5);
-    c.trigDelay = Math.max(c.trigDelay, 80);
-    if (Cheats.any()) UI.toast('Çok oyunculu: yardımlar en fazla orta düzey (duvar ardı/hile sınırlandı)', 4);
+    this.savedC = Object.assign({}, Cheats.c);
+    const had = Cheats.any();
+    this.enforceLimits();
+    if (had) UI.toast('Çok oyunculu maçta hile kullanılamaz: tüm hileler kapatıldı', 4);
   },
   removeLimits() { if (this.savedC) { this._restoring = true; Object.assign(Cheats.c, this.savedC); this.savedC = null; Cheats.save(); this._restoring = false; } },
   limited() { return !!(this.role && this.started && G.running && !G.matchOver && !this._restoring); },
   // maç sırasında hile menüsünden açılsa bile yasak seçenekler hemen kapatılır
   enforceLimits() {
     const c = Cheats.c;
-    for (const k of ['god', 'ammo', 'speed', 'norecoil', 'nospread', 'spin', 'third', 'radar', 'chams', 'aimWalls', 'espLines']) c[k] = false;
-    c.aimFov = Math.min(c.aimFov, 10); c.aimSmooth = Math.max(c.aimSmooth, 0.5); c.trigDelay = Math.max(c.trigDelay, 80);
+    for (const k of ['aimbot', 'trigger', 'esp', 'chams', 'radar', 'norecoil', 'nospread', 'god', 'ammo', 'speed', 'spin', 'third', 'aimWalls', 'espLines']) c[k] = false;
   },
   nid(e) { return e.nid !== undefined ? e.nid : e.id; },
   byNid(n) { return G.entities.find(e => this.nid(e) === n); },
@@ -8407,11 +8404,8 @@ const Cheats = {
     });
     document.getElementById('chMoney').onclick = () => { if (G.player) { G.player.money = ECON.max; Audio3.ui(1200); } };
     if (Net.limited()) {
-      box.insertAdjacentHTML('afterbegin', '<div class="hint" style="color:#fc6;margin-bottom:8px">🎮 Çok oyunculu maç: yardımlar en fazla orta düzeyde. Ölümsüzlük, hız, sonsuz mermi, geri tepmesiz/dağılmasız atış, duvar ardı nişan, wallhack, radar, spinbot ve 3. şahıs kapalı; aimbot alanı en çok 10°.</div>');
-      for (const k of ['god', 'ammo', 'speed', 'norecoil', 'nospread', 'spin', 'third', 'radar', 'chams', 'aimWalls', 'espLines']) { const el = box.querySelector(`[data-ck="${k}"]`); if (el) { el.checked = false; el.disabled = true; } }
-      const f = box.querySelector('[data-cr="aimFov"]'); if (f) f.max = 10;
-      const sm = box.querySelector('[data-cr="aimSmooth"]'); if (sm) sm.min = 0.5;
-      const td = box.querySelector('[data-cr="trigDelay"]'); if (td) td.min = 80;
+      box.insertAdjacentHTML('afterbegin', '<div class="hint" style="color:#fc6;margin-bottom:8px">🎮 Çok oyunculu maçta hile kullanılamaz. Tüm hileler kilitli; maç bitince ayarların geri gelir.</div>');
+      box.querySelectorAll('input,button').forEach(el => { el.disabled = true; if (el.type === 'checkbox') el.checked = false; });
     }
   },
   open() {
