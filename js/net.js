@@ -623,25 +623,67 @@ const Net = {
   };
 })();
 
+
+// ---------- Minimal MQTT 3.1.1 istemcisi (yalnızca bağlan / abone ol / yayınla, QoS 0) ----------
+Net.mqtt = function (D) {
+  const enc = new TextEncoder(), dec = new TextDecoder();
+  const rl = n => { const o = []; do { let d = n % 128; n = Math.floor(n / 128); if (n > 0) d |= 128; o.push(d); } while (n > 0); return o; };
+  const str = t => { const b = enc.encode(t); return [b.length >> 8, b.length & 255, ...b]; };
+  const pkt = (hdr, body) => { const u = new Uint8Array(1 + rl(body.length).length + body.length); u[0] = hdr; const r = rl(body.length); u.set(r, 1); u.set(body, 1 + r.length); return u; };
+  const T = {
+    ws: null, topic: null, cb: null, closed: false, bi: 0, buf: new Uint8Array(0), ping: null, ready: false, pid: 1, wait: [], retry: null, fail: 0,
+    open(topic, cb) { this.topic = topic; this.cb = cb; this.closed = false; this.connect(); },
+    connect() {
+      if (this.closed) return;
+      const url = D.brokers[this.bi % D.brokers.length];
+      let ws; try { ws = new WebSocket(url, 'mqtt'); } catch (e) { return this.next(); }
+      ws.binaryType = 'arraybuffer'; this.ws = ws; this.ready = false; this.buf = new Uint8Array(0);
+      const kill = setTimeout(() => { if (!this.ready) { try { ws.close(); } catch (e) {} } }, 6000);
+      ws.onopen = () => {
+        const cid = 'to' + Math.random().toString(36).slice(2, 10);
+        ws.send(pkt(0x10, [...str('MQTT'), 4, 2, 0, 30, ...str(cid)]));
+      };
+      ws.onmessage = ev => { const n = new Uint8Array(ev.data), m = new Uint8Array(this.buf.length + n.length); m.set(this.buf); m.set(n, this.buf.length); this.buf = m; this.parse(); };
+      ws.onclose = () => { clearTimeout(kill); clearInterval(this.ping); this.ready = false; if (this.ws === ws) { this.fail++; this.next(); } };
+      ws.onerror = () => {};
+    },
+    next() { if (this.closed) return; if (this.fail > 0) this.bi++; clearTimeout(this.retry); this.retry = setTimeout(() => this.connect(), Math.min(8000, 800 * (this.fail + 1))); },
+    parse() {
+      for (;;) {
+        const b = this.buf; if (b.length < 2) return;
+        let mul = 1, len = 0, i = 1, d;
+        do { if (i >= b.length) return; d = b[i++]; len += (d & 127) * mul; mul *= 128; } while (d & 128);
+        if (b.length < i + len) return;
+        const type = b[0] >> 4, body = b.slice(i, i + len); this.buf = b.slice(i + len);
+        if (type === 2) {                    // CONNACK
+          if (body[1] !== 0) { try { this.ws.close(); } catch (e) {} return; }
+          this.ready = true; this.fail = 0;
+          this.ws.send(pkt(0x82, [this.pid >> 8, this.pid & 255, ...str(this.topic), 0])); this.pid++;
+          this.ping = setInterval(() => { try { this.ws.send(new Uint8Array([0xC0, 0])); } catch (e) {} }, 20000);
+          const q = this.wait; this.wait = []; q.forEach(o => this.publish(o[0], o[1]));
+        } else if (type === 3) {             // PUBLISH
+          const tl = (body[0] << 8) | body[1]; const off = 2 + tl + (((b[0] >> 1) & 3) ? 2 : 0);
+          try { this.cb(JSON.parse(dec.decode(body.slice(off)))); } catch (e) {}
+        }
+      }
+    },
+    publish(topic, obj) {
+      if (!this.ready || !this.ws || this.ws.readyState !== 1) { if (this.wait.length < 30) this.wait.push([topic, obj]); return; }
+      try { this.ws.send(pkt(0x30, [...str(topic), ...enc.encode(JSON.stringify(obj))])); } catch (e) {}
+    },
+    close() { this.closed = true; clearTimeout(this.retry); clearInterval(this.ping); if (this.ws) { try { this.ws.close(); } catch (e) {} this.ws = null; } },
+  };
+  return T;
+};
+
 // ---------- Yakındaki cihazları bul (aynı IP'yi paylaşan cihazlar) ----------
-// Aracı: ntfy.sh (herkese açık bildirim servisi) üzerinden küçük mesajlar. Oda anahtarı = genel IP'nin özeti.
+// Aracı: herkese açık ücretsiz MQTT aracıları (WebSocket) üzerinden küçük mesajlar. Oda anahtarı = genel IP'nin özeti.
 Net.disc = {
   id: Math.random().toString(36).slice(2, 8), topic: null, tr: null, list: new Map(), timer: null, hosting: false, wantHost: null, status: '',
   // taşıyıcı: {open(topic,onmsg), publish(topic,obj), close()}; testte değiştirilebilir
-  mk() { return {
-    es: null,
-    open(topic, onmsg) {
-      this.close();
-      this.es = new EventSource('https://ntfy.sh/' + topic + '/sse');
-      this.es.onmessage = ev => { try { const d = JSON.parse(ev.data); if (d.event === 'message') onmsg(JSON.parse(d.message)); } catch (e) {} };
-    },
-    // ntfy.sh ücretsiz kotası sınırlı (aynı IP'yi paylaşanlar ortak kullanır): hata/429 olursa kısa süre sonra yeniden dene
-    publish(topic, obj, tries) {
-      tries = tries || 0;
-      return fetch('https://ntfy.sh/' + topic, { method: 'POST', body: JSON.stringify(obj) }).then(r => { if (!r.ok && tries < 3) setTimeout(() => this.publish(topic, obj, tries + 1), 2500 * (tries + 1)); }).catch(() => { if (tries < 3) setTimeout(() => this.publish(topic, obj, tries + 1), 2500 * (tries + 1)); });
-    },
-    close() { if (this.es) { this.es.close(); this.es = null; } },
-  }; },
+  // Taşıyıcı: herkese açık ücretsiz MQTT aracıları (WebSocket). Kota yok; küçük mesajlar (ad, bağlantı bilgisi) geçer.
+  brokers: ['wss://broker.hivemq.com:8884/mqtt', 'wss://broker.emqx.io:8084/mqtt', 'wss://test.mosquitto.org:8081/mqtt'],
+  mk() { return Net.mqtt(this); },
   async hash(txt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt)); return 'to' + Array.from(new Uint8Array(h)).slice(0, 12).map(b => b.toString(16).padStart(2, '0')).join(''); },
   // 6 haneli oda kodu: kodun özeti ortak konu olur; oda kurucu ve katılan aynı konuda buluşur
   trRoom: null, topicRoom: null, code: null,
