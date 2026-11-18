@@ -213,6 +213,19 @@ const Net = {
     const es = G.entities.map(e => [e.nid, +e.pos.x.toFixed(2), +e.pos.z.toFixed(2), +e.yaw.toFixed(3), e.team, e.inv.bomb ? 1 : 0]);
     this.sendAll({ t: 'round', num: R.num, phase: R.phase, timer: R.timer, tl: R.timeLeft, bl: R.buyLeft, plan: R.plan, score: G.score, sog: G.sideOfGroup, swap: !!swap, es, dm: G.dm, pistol: R.num === 1 || R.num === G.halfRounds() + 1, ls: G.lossStreak });
   },
+  // mermi görselleri (iz, çarpma, kan): ateş eden cihaz diğerlerine bildirir
+  fxOut(sh, k, p, n, mat, head) {
+    const m = { t: 'fx', o: this.nid(sh), k, p: [+p.x.toFixed(2), +p.y.toFixed(2), +p.z.toFixed(2)], n: n ? [+n.x.toFixed(2), +n.y.toFixed(2), +n.z.toFixed(2)] : null, m: mat, h: head ? 1 : 0 };
+    if (this.role === 'host' && this.started) { for (const q of this.readyPeers()) if (q !== sh.remote) this.send(q.u, m); }
+    else if (this.role === 'client' && sh.isPlayer) this.toHost(m, true);
+  },
+  applyFx(m) {
+    const e = this.byNid(m.o); if (!e || e === G.player) return;
+    const pt = { x: m.p[0], y: m.p[1], z: m.p[2] }, mz = G.muzzleWorld(e);
+    FX.tracer(mz, pt);
+    if (m.k === 'b') { const d = { x: pt.x - mz.x, y: pt.y - mz.y, z: pt.z - mz.z }, L = Math.hypot(d.x, d.y, d.z) || 1; FX.blood(pt, { x: d.x / L, y: d.y / L, z: d.z / L }, !!m.h); }
+    else if (m.n) { const nn = { x: m.n[0], y: m.n[1], z: m.n[2] }; Audio3.impact(pt, m.m || 'ground'); FX.impact(pt, nn, m.m || 'ground'); FX.hole(pt, nn); }
+  },
   // ---------- host: gelen mesajlar ----------
   onMsgHost(p, m) {
     const e = p.ent;
@@ -223,6 +236,7 @@ const Net = {
       case 'st': if (e && G.running) this.applyRemoteState(e, m); break;
       case 'shot': if (e && e.alive && G.running) { const def = WEAPONS[m.w]; if (def) { e.lastShot = G.now; G.onShot(e, def); } } break;
       case 'hit': this.hostHit(p, m); break;
+      case 'fx': if (G.running) { this.applyFx(m); for (const q of this.readyPeers()) if (q !== p) this.send(q.u, m); } break;
       case 'selfdmg': if (e && e.alive && G.running) { e.takeDamage(m.d, null, null, 'fall', null, G.now); if (!e.alive) G.onKill(e, e, null, false); } break;
       case 'nade': if (e && e.alive && G.running) { const nd = this.spawnNade(e, m.id, m.p, m.v); this.sendAll({ t: 'nade', o: e.nid, id: m.id, p: m.p, v: m.v }, p); } break;
       case 'plant': if (e && e.alive && e.team === 'T' && G.round.phase === 'live' && G.bomb.state !== 'planted') { e.inv.bomb = true; G.plantBomb(e); } break;
@@ -287,6 +301,7 @@ const Net = {
       case 'hurt': if (G.running) this.applyHurt(m); break;
       case 'money': { const p = G.player; if (p) p.money = Math.max(0, Math.min(ECON.max, p.money + m.d)); break; }
       case 'shot': if (G.running) this.applyShot(m); break;
+      case 'fx': if (G.running) this.applyFx(m); break;
       case 'nade': if (G.running) { const o = this.byNid(m.o); if (o && o !== G.player) this.spawnNade(o, m.id, m.p, m.v); } break;
       case 'respawn': if (G.running && G.player) { const p = G.player; G.respawn(p); } break;
       case 'give': if (G.player && m.bomb) { G.player.inv.bomb = true; UI.toast('Bombayı aldın', 1.5); } break;

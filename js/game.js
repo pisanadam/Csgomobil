@@ -404,6 +404,7 @@ G.fireBullet = function (sh, o, d, def, first) {
     if (Net.role === 'client' && isPl) Net.toHost({ t: 'hit', v: Net.nid(victim), d: Math.round(dmg), g: vh.group, w: def.id, wb: pens > 0 && penWalls.some(w => w.t < vh.t) ? 1 : 0 });
     else victim.takeDamage(dmg, sh, def, vh.group, d, this.now);
     FX.blood(hp, d, vh.group === 'head');
+    if (first) Net.fxOut(sh, 'b', hp, null, null, vh.group === 'head');
     if (victim.bot) victim.bot.onDamaged(sh, this.now);
     if (!victim.isPlayer && victim.alive) Audio3.voice(victim.pos, 'pain', victim.id * 0.37);
     if (victim.isPlayer) this.onPlayerHurt(sh, dmg);
@@ -421,6 +422,7 @@ G.fireBullet = function (sh, o, d, def, first) {
       FX.hole(endHit.point, endHit.normal);
     }
     for (const w of penWalls) { FX.hole(w.point, w.normal); FX.impact(w.point, w.normal, w.box.kind); FX.hole(w.exit, w.exitN); FX.impact(w.exit, w.exitN, w.box.kind); }
+    if (first) Net.fxOut(sh, 'w', end, endHit ? endHit.normal : null, endHit ? (endHit.box ? endHit.box.kind : 'ground') : null, false);
     if (first && (!isPl || Math.random() < 0.35)) FX.tracer(muzzle, end);
     // mermi vızıltısı -> botlar duyar
   }
