@@ -74,7 +74,7 @@ const Net = {
     if (G.running && typeof UI !== 'undefined') UI.toast(`${p.name} oyundan ayrıldı`, 2.5);
     this.lobbyBroadcast(); this.paintMenu();
   },
-  lobbyBroadcast() { const names = [S.playerName || 'Oda kurucu'].concat(this.readyPeers().map(p => p.name)); this.sendAll({ t: 'lobby', names }); },
+  lobbyBroadcast() { const names = [this.hostName || 'Oda kurucu'].concat(this.readyPeers().map(p => p.name)); this.sendAll({ t: 'lobby', names }); },
   // ---------- client ----------
   async join(offerCode, name) {
     if (this.role === 'host') throw new Error('Önce odanı kapat');
@@ -412,7 +412,6 @@ const Net = {
   // ---------- menü paneli ----------
   lobbyNames: [],
   paintMenu() {
-    const box = document.getElementById('netBox'); if (!box) return;
     const st = document.getElementById('netState'); if (!st) return;
     let txt = 'Bağlı değilsin';
     if (this.role === 'host') txt = `Oda kurucusun • bağlı arkadaş: ${this.readyPeers().length}`;
@@ -552,5 +551,107 @@ const Net = {
     };
     $('netStun').onchange = ev => { this.stunOn = ev.target.checked; };
     this.paintMenu();
+  };
+})();
+
+// ---------- Yakındaki cihazları bul (aynı IP'yi paylaşan cihazlar) ----------
+// Aracı: ntfy.sh (herkese açık bildirim servisi) üzerinden küçük mesajlar. Oda anahtarı = genel IP'nin özeti.
+Net.disc = {
+  id: Math.random().toString(36).slice(2, 8), topic: null, tr: null, list: new Map(), timer: null, hosting: false, wantHost: null, status: '',
+  // taşıyıcı: {open(topic,onmsg), publish(topic,obj), close()}; testte değiştirilebilir
+  transport: {
+    es: null,
+    open(topic, onmsg) {
+      this.close();
+      this.es = new EventSource('https://ntfy.sh/' + topic + '/sse');
+      this.es.onmessage = ev => { try { const d = JSON.parse(ev.data); if (d.event === 'message') onmsg(JSON.parse(d.message)); } catch (e) {} };
+    },
+    publish(topic, obj) { return fetch('https://ntfy.sh/' + topic, { method: 'POST', body: JSON.stringify(obj) }).catch(() => {}); },
+    close() { if (this.es) { this.es.close(); this.es = null; } },
+  },
+  async roomKey() {
+    let ip = null;
+    for (const u of ['https://api.ipify.org?format=json']) { try { const r = await fetch(u); const j = await r.json(); ip = j.ip; break; } catch (e) {} }
+    if (!ip) throw new Error('İnternete ulaşılamadı');
+    const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('taktikops-v1|' + ip));
+    return 'to' + Array.from(new Uint8Array(h)).slice(0, 12).map(b => b.toString(16).padStart(2, '0')).join('');
+  },
+  devLabel() {
+    const u = navigator.userAgent;
+    const os = /iPhone|iPad|iPod/.test(u) ? 'iPhone/iPad' : /Android/.test(u) ? 'Android' : /Windows/.test(u) ? 'Windows' : /Mac/.test(u) ? 'Mac' : /Linux/.test(u) ? 'Linux' : 'Cihaz';
+    const br = /Edg\//.test(u) ? 'Edge' : /OPR\//.test(u) ? 'Opera' : /Chrome\//.test(u) ? 'Chrome' : /Firefox\//.test(u) ? 'Firefox' : /Safari\//.test(u) ? 'Safari' : 'Tarayıcı';
+    return os + ' • ' + br;
+  },
+  myName() { const el = document.getElementById('netName'); return ((el && el.value) || 'Oyuncu').trim().slice(0, 14); },
+  async start() {
+    if (this.tr) return;
+    this.status = 'Aranıyor…'; Net.paintList();
+    try { this.topic = await this.roomKey(); } catch (e) { this.status = 'İnternet yok: cihazlar otomatik bulunamıyor. Aşağıdan "Elle bağlan" ile kodla bağlanabilirsin.'; Net.paintList(); return; }
+    this.tr = this.transport; this.tr.open(this.topic, m => this.onMsg(m));
+    this.status = ''; this.announce(); this.timer = setInterval(() => this.announce(), 4000); Net.paintList();
+  },
+  stop() { if (this.timer) clearInterval(this.timer); this.timer = null; if (this.tr) { this.pub({ k: 'bye', id: this.id }); this.tr.close(); } this.tr = null; this.list.clear(); },
+  pub(o) { if (this.tr && this.topic) this.tr.publish(this.topic, o); },
+  announce() {
+    this.pub({ k: 'hi', id: this.id, name: this.myName(), dev: this.devLabel(), host: !!this.hosting && Net.role === 'host' && !Net.started, n: Net.readyPeers().length });
+    const now = Date.now(); for (const [id, d] of this.list) if (now - d.ts > 14000) this.list.delete(id);
+    Net.paintList();
+  },
+  async onMsg(m) {
+    if (!m || m.id === this.id) return;
+    if (m.k === 'hi') { this.list.set(m.id, { id: m.id, name: m.name, dev: m.dev, host: !!m.host, n: m.n || 0, ts: Date.now() }); Net.paintList(); return; }
+    if (m.k === 'bye') { this.list.delete(m.id); Net.paintList(); return; }
+    if (m.to !== this.id) return;
+    try {
+      if (m.k === 'join' && Net.role === 'host' && !Net.started && Net.peers.length < 4) {          // ev sahibi: davet üret ve gönder
+        const p = await Net.hostInvite(); p.discId = m.id; p.name = String(m.name || 'Arkadaş').slice(0, 14);
+        this.pub({ k: 'offer', to: m.id, id: this.id, code: p.joinCode });
+      } else if (m.k === 'offer' && this.wantHost === m.id && Net.role !== 'host') {                // katılan: cevap üret ve gönder
+        Net.paintMenu(); const reply = await Net.join(m.code, this.myName());
+        this.pub({ k: 'answer', to: m.id, id: this.id, code: reply });
+      } else if (m.k === 'answer' && Net.role === 'host') {
+        const p = Net.peers.find(x => x.discId === m.id); if (p) await Net.hostAccept(p, m.code);
+      }
+    } catch (e) { this.status = 'Bağlantı hatası: ' + e.message; Net.paintList(); }
+  },
+  join(hostId) {
+    this.wantHost = hostId; this.status = 'Bağlanılıyor…';
+    this.pub({ k: 'join', to: hostId, id: this.id, name: this.myName() });
+    clearTimeout(this.jt); this.jt = setTimeout(() => { if (!(Net.link && Net.link.open)) { this.status = '✖ Bağlanamadı (aynı ağdasınız, oda hâlâ açık mı?)'; if (Net.role === 'client') Net.leave(); Net.paintList(); } }, 25000);
+    Net.paintList();
+  },
+};
+Net.paintList = function () {
+  const box = document.getElementById('netList'); if (!box) return;
+  const D = this.disc, rows = [...D.list.values()];
+  let h = '';
+  if (D.status) h += `<div class="netEmpty">${D.status}</div>`;
+  if (!rows.length && !D.status) h += '<div class="netEmpty">Yakında başka cihaz yok. Arkadaşların oyunu açıp bu paneli açınca burada görünür.</div>';
+  for (const d of rows) {
+    const esc = t => String(t).replace(/[<>&]/g, '');
+    h += `<div class="netRow"><div><b>${esc(d.name)}</b><small>${esc(d.dev)}${d.host ? ' • 🏠 oda kurdu (' + (d.n + 1) + ' kişi)' : ''}</small></div>${d.host && this.role !== 'host' ? `<button class="btn sm pri" data-join="${d.id}">${this.role === 'client' && D.wantHost === d.id ? 'Bağlı ✔' : 'Katıl'}</button>` : ''}</div>`;
+  }
+  if (this._listHtml !== h) {   // aynıysa yeniden çizme (tıklama kaybolmasın)
+    this._listHtml = h; box.innerHTML = h;
+    box.querySelectorAll('[data-join]').forEach(b => b.onclick = () => D.join(b.dataset.join));
+  }
+  this.paintMenu();
+};
+(function () {
+  const $ = id => document.getElementById(id);
+  const orig = Net.bindUI;
+  Net.bindUI = function () {
+    orig.call(this);
+    const nameEl = $('netName');
+    if (!nameEl.value) { nameEl.value = this.disc.devLabel().split(' •')[0] + ' ' + this.disc.id.slice(0, 2); }
+    const open = $('btnNet').onclick;
+    $('btnNet').onclick = () => { open(); this.disc.start(); };
+    const close = $('netClose').onclick;
+    $('netClose').onclick = () => { close(); if (!this.role) this.disc.stop(); };
+    $('netHost').onclick = () => { this.hostName = this.disc.myName(); this.disc.hosting = true; this.role = 'host'; this.disc.announce(); this.paintMenu(); this.paintList(); };
+    $('netRescan').onclick = () => { this.disc.stop(); this.disc.start(); };
+    const leave = $('netLeave').onclick;
+    $('netLeave').onclick = () => { this.disc.hosting = false; this.disc.wantHost = null; leave(); this.disc.announce(); this.paintList(); };
+    nameEl.addEventListener('change', () => this.disc.announce());
   };
 })();

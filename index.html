@@ -254,6 +254,9 @@ input[type=range]{width:100%;accent-color:#e9a83a}
 .netTa{width:100%;box-sizing:border-box;background:#111;color:#9f9;border:1px solid #444;border-radius:8px;padding:8px;font:11px monospace;resize:vertical}
 .netSlot{border:1px solid #3a5a44;border-radius:10px;padding:10px;margin-top:8px;background:#102016;display:flex;flex-direction:column;gap:6px}
 .netStep{font-size:13px;color:#cde}
+.netList{display:flex;flex-direction:column;gap:6px}
+.netRow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px;border:1px solid #3a5a44;border-radius:10px;background:#102016}
+.netRow small{color:#8ab;display:block}.netEmpty{color:#789;padding:10px}
 </style>
 </head>
 <body>
@@ -381,22 +384,24 @@ input[type=range]{width:100%;accent-color:#e9a83a}
 <div id="netPanel" class="screen hidden">
   <div class="panel">
     <div class="row" style="justify-content:space-between;margin-bottom:10px"><b style="font-size:22px">👥 ARKADAŞLARLA OYNA</b><button class="btn sm" id="netClose">GERİ ←</button></div>
-    <div style="font-size:13px;color:var(--dim);margin-bottom:10px">Aynı Wi-Fi'ye (veya internete) bağlı arkadaşlarınla beraber, <b>aynı takımda botlara karşı</b> oynayın. Herkes bu oyunu (HTML dosyasını) açar. Sunucu gerekmez: kodları WhatsApp gibi bir yerden birbirinize yollarsınız. En fazla 4 arkadaş. <b>Çok oyunculuda nişan/tarama yardımı ve hile simülasyonu en fazla orta düzeyde çalışır</b> (ölümsüzlük, sonsuz mermi, hız, duvar ardı nişan vb. kapalı olur; maç bitince eski ayarların geri gelir).</div>
-    <div class="field"><label>Adın</label><input type="text" id="netName" maxlength="14" placeholder="Oyuncu" style="padding:8px;border-radius:8px;border:1px solid #444;background:#111;color:#fff"></div>
-    <div class="field"><label><input type="checkbox" id="netStun" checked> İnternet varsa yardımcı sunucu kullan (aynı ağda bağlanamazsan açık kalsın)</label></div>
+    <div class="field"><label>Cihaz adın (diğerleri seni böyle görür)</label><input type="text" id="netName" maxlength="14" placeholder="Oyuncu" style="padding:8px;border-radius:8px;border:1px solid #444;background:#111;color:#fff"></div>
     <div id="netState" style="margin:8px 0;font-weight:bold">Bağlı değilsin</div>
-    <div class="menuGrid">
-      <div class="field" style="grid-column:1/-1"><label>🏠 Oda kur (sen oda kurucusun: harita, mod ve botları sen seçersin)</label>
-        <button class="btn pri" id="netInvite" style="align-self:flex-start">+ Arkadaş davet et</button>
-        <div id="netSlots"></div>
-        <div style="font-size:12px;color:var(--dim)">Hepsi bağlanınca ana menüden normal şekilde ▶ OYNA'ya bas; maç arkadaşlarında kendiliğinden açılır. Arkadaşların senin takımında olur; bot sayısı takım boyutuna göre azalır.</div></div>
-      <div class="field" style="grid-column:1/-1"><label>🔗 Odaya katıl</label>
-        <textarea id="netOffer" rows="3" class="netTa" placeholder="Oda kurucunun gönderdiği DAVET kodunu buraya yapıştır"></textarea>
-        <button class="btn pri" id="netJoin" style="align-self:flex-start">Katıl</button><div id="netJoinSt" style="font-size:12px;color:var(--dim)"></div>
-        <div id="netReply" class="hidden"><textarea id="netReplyTa" rows="3" class="netTa" readonly></textarea><button class="btn sm" id="netReplyCopy">Kopyala</button></div></div>
-    </div>
-    <div class="row" style="margin-top:12px"><button class="btn" id="netLeave" style="background:#3a1f22;border-color:#a33">Odayı kapat / Ayrıl</button></div>
-    <div style="font-size:12px;color:var(--dim);margin-top:8px">Not: Aynı Wi-Fi'de internet olmasa da çalışır. Bazı kurumsal/okul ağları cihazların birbirine bağlanmasını engeller. Yerdeki silahlar ve sohbet sadece oda kurucuda senkron değildir (basit sürüm).</div>
+    <div class="row" style="margin-bottom:6px"><button class="btn pri" id="netHost">🏠 Oda kur</button><button class="btn sm" id="netRescan">↻ Yenile</button><button class="btn" id="netLeave" style="background:#3a1f22;border-color:#a33">Odayı kapat / Ayrıl</button></div>
+    <div style="font-size:13px;color:var(--dim);margin-bottom:6px">Aynı Wi-Fi / internete bağlı ve bu paneli açan cihazlar aşağıda görünür. Birisi <b>Oda kur</b>'a basarsa diğerleri onun adının yanındaki <b>Katıl</b> düğmesine basar. Sonra oda kurucu ▶ OYNA der.</div>
+    <div id="netList" class="netList"><div class="netEmpty">Cihazlar aranıyor…</div></div>
+    <div style="font-size:12px;color:var(--dim);margin:6px 0">Çok oyunculuda nişan/tarama yardımı ve hile simülasyonu en fazla orta düzeyde çalışır. Arkadaşların senin takımında botlara karşı oynar. Cihazları bulmak için aynı IP'yi paylaşan cihazlar eşleştirilir (ntfy.sh ve ipify.org servisleri kullanılır; sadece adın ve bağlantı bilgisi geçer).</div>
+    <details style="margin-top:8px"><summary style="cursor:pointer;color:#9cf">Elle bağlan (internet yoksa / liste boşsa)</summary>
+      <div class="field"><label><input type="checkbox" id="netStun" checked> İnternet varsa yardımcı sunucu kullan</label></div>
+      <div class="menuGrid">
+        <div class="field" style="grid-column:1/-1"><label>🏠 Oda kur → davet kodu</label>
+          <button class="btn pri" id="netInvite" style="align-self:flex-start">+ Arkadaş davet et</button>
+          <div id="netSlots"></div></div>
+        <div class="field" style="grid-column:1/-1"><label>🔗 Odaya katıl</label>
+          <textarea id="netOffer" rows="3" class="netTa" placeholder="Oda kurucunun gönderdiği DAVET kodunu buraya yapıştır"></textarea>
+          <button class="btn pri" id="netJoin" style="align-self:flex-start">Katıl</button><div id="netJoinSt" style="font-size:12px;color:var(--dim)"></div>
+          <div id="netReply" class="hidden"><textarea id="netReplyTa" rows="3" class="netTa" readonly></textarea><button class="btn sm" id="netReplyCopy">Kopyala</button></div></div>
+      </div>
+    </details>
   </div>
 </div>
 
