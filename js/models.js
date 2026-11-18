@@ -177,7 +177,8 @@ const Models = (function () {
     parts.armL.rotation.set(1.38, 0, 0.62); parts.armL.userData.el.rotation.x = 0.2;
     // silah tutucu
     const gunHolder = new THREE.Group(); gunHolder.position.set(0.08, 0.42, -0.38); upper.add(gunHolder); parts.gun = gunHolder;
-    root.traverse(o => { if (o.isMesh) { o.castShadow = true; } });
+    // gölge: sadece büyük parçalar gölge düşürür (küçük parçalar fark edilmez, çizim sayısı yarıya iner)
+    root.traverse(o => { if (o.isMesh) { o.geometry.computeBoundingSphere(); if (o.geometry.boundingSphere.radius > 0.1) { o.castShadow = true; o.userData.sh = 1; } } });
     return { root, parts };
   }
   function setCharGun(ch, def) {
@@ -186,7 +187,7 @@ const Models = (function () {
     if (!def) return;
     const g = gun(def);
     if (def.type === 'pistol' || def.type === 'knife' || def.type === 'grenade' || def.type === 'bomb') g.position.set(0, -0.02, 0.08);
-    g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+    g.traverse(o => { if (o.isMesh) { o.geometry.computeBoundingSphere(); if (o.geometry.boundingSphere.radius > 0.12) { o.castShadow = true; o.userData.sh = 1; } } });
     h.add(g); h.userData.model = g;
   }
 

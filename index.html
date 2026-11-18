@@ -280,7 +280,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
   <div id="mvp" class="hidden"></div>
   <div id="scope"></div>
   <div id="crosshair"></div>
-  <div id="micBtn" class="hudbox" style="position:absolute;left:12px;top:150px;pointer-events:auto;cursor:pointer;font-size:15px" title="Mikrofon aç/kapat (M)">🎤 Kapalı</div>
+  <div id="micBtn" class="hudbox" style="position:absolute;left:12px;top:200px;pointer-events:auto;cursor:pointer;font-size:15px" title="Mikrofon aç/kapat (M)">🎤 Kapalı</div>
   <div id="micHud" class="hudbox hidden" style="position:absolute;left:50%;top:14%;transform:translateX(-50%);color:#f66">🎤 Sesin duyuluyor!</div>
   <div id="hitmarker"></div>
   <div id="dmgVignette"></div>
@@ -447,6 +447,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
       <div class="field"><label>Grafik Kalitesi</label><div class="seg" data-set="graphics" data-opts='[[0,"Düşük"],[1,"Orta"],[2,"Yüksek"]]' data-reload="1"></div><div style="font-size:12px;color:var(--dim)">Gölge/kalite değişiklikleri sonraki açılışta tam uygulanır.</div></div>
       <div class="field"><label>Doku Stili</label><div class="seg" data-set="texStyle" data-opts='[["retro","Retro (eski okul)"],["modern","Modern"]]' data-reload="1"></div><div style="font-size:12px;color:var(--dim)">Değişiklik oyun yeniden açılınca uygulanır.</div></div>
       <div class="field"><label>Netlik (Çözünürlük)</label><div class="seg" data-set="sharp" data-opts='[[0,"Düşük"],[1,"Orta"],[2,"Yüksek"],[3,"Ultra"]]'></div><div style="font-size:12px;color:var(--dim)">Yüksek = keskin görüntü. Telefon ısınır/kasarsa Orta seç.</div></div>
+      <div class="field"><label>⚡ Otomatik performans</label><div class="seg" data-set="autoRes" data-opts='[[true,"Açık"],[false,"Kapalı"]]'></div><div style="font-size:12px;color:var(--dim)">Kare hızı düşerse çözünürlüğü kendiliğinden azaltır, toparlanınca geri yükseltir.</div></div>
       <div class="field"><label>Arayüz Stili</label><div class="seg" data-set="hudStyle" data-opts='[["modern","Modern"],["classic","Klasik (kehribar)"]]'></div></div>
       <div class="field"><label>Görüş Açısı (FOV) <span class="val" data-val="fov"></span> <small style="text-transform:none">— küçük = uzaktaki rakip daha büyük</small></label><input type="range" min="60" max="95" step="1" data-set="fov"></div>
       <div class="field"><label>Seçenekler</label><label class="check"><input type="checkbox" data-set="shadows" data-reload="1"> Gölgeler</label><label class="check"><input type="checkbox" data-set="showFps"> FPS göster</label><label class="check"><input type="checkbox" data-set="enemyGlow"> Düşmanları vurgula (kırmızı ton)</label></div>

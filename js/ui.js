@@ -76,7 +76,7 @@ const UI = {
     Input.applyButtonStyle();
     Audio3.setVolume(S.volume);
     $('fps').classList.toggle('hidden', !S.showFps);
-    if ((key === 'graphics' || key === 'sharp') && G.renderer) G.applyGraphics();
+    if ((key === 'graphics' || key === 'sharp' || key === 'autoRes') && G.renderer) G.applyGraphics();
     document.body.classList.toggle('hudclassic', S.hudStyle === 'classic');
     if (key === 'mvpStart' || key === 'mvpLen') { Music.clampSel(); Music.drawWave(); }
     if (key === 'map' && G.renderer && !G.running) G.loadMap(S.map === 'random' ? 'dust' : S.map);

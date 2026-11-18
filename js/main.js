@@ -9,12 +9,24 @@
   Mic.init(); Net.bindUI();
   Skins.loadAll(); Music.bind(); Music.init(); BotSongs.bind(); BotSongs.init().then(() => Catalog.render()); Catalog.bind();
   UI.applySettings();
-  let last = performance.now(), fpsAcc = 0, fpsN = 0;
+  let last = performance.now(), fpsAcc = 0, fpsN = 0, arT = 0, arN = 0, arCool = 3;
   function frame(t) {
     requestAnimationFrame(frame);
     let dt = (t - last) / 1000; last = t;
     if (dt > 0.05) dt = 0.05; if (dt <= 0) dt = 0.001;
     fpsAcc += dt; fpsN++;
+    // otomatik çözünürlük: gerçek kare süresine göre
+    if (S.autoRes !== false && G.running && !G.paused && !document.hidden) {
+      arT += (t - (frame.prev || t)) / 1000; arN++;
+      if (arT > 1.5) {
+        const fps = arN / arT; arT = 0; arN = 0; arCool -= 1.5;
+        if (arCool <= 0) {
+          if (fps < 40 && G.resScale > 0.55) { G.resScale = Math.max(0.55, G.resScale - 0.12); G.applyGraphics(); arCool = 3; }
+          else if (fps > 57 && G.resScale < 1) { G.resScale = Math.min(1, G.resScale + 0.06); G.applyGraphics(); arCool = 6; }
+        }
+      }
+    }
+    frame.prev = t;
     if (fpsAcc > 0.5) { G.fps = Math.round(fpsN / fpsAcc); fpsAcc = 0; fpsN = 0; }
     if (G.running && !G.paused) {
       Input.apply(dt);

@@ -83,9 +83,10 @@ G.resize = function () {
   this.camera.aspect = w / h; this.camera.updateProjectionMatrix();
   this.vmCamera.aspect = w / h; this.vmCamera.updateProjectionMatrix();
 };
+G.resScale = 1;   // otomatik çözünürlük çarpanı (kare hızı düşerse azalır)
 G.applyGraphics = function () {
   const q = S.graphics, r = this.renderer;
-  r.setPixelRatio(Math.min(window.devicePixelRatio || 1, [1, 1.5, 2, 3][S.sharp] || 2));
+  r.setPixelRatio(Math.min(window.devicePixelRatio || 1, [1, 1.5, 2, 3][S.sharp] || 2) * (S.autoRes === false ? 1 : this.resScale));
   this.resize();
 };
 
@@ -1169,6 +1170,14 @@ G.render = function (dt) {
       walk(e.model.root);
     }
   }
+  // uzaktaki karakterler gölge düşürmez (gölge geçişi hafifler)
+  for (const e of this.entities) {
+    if (!e.model) continue;
+    const far = e.alive ? Math.hypot(e.pos.x - eye.x, e.pos.z - eye.z) > 45 : true;
+    if (e._shFar !== far) { e._shFar = far; e.model.root.traverse(o => { if (o.isMesh && o.userData.sh) o.castShadow = !far; }); }
+  }
+  // orta grafikte gölge her 2 karede bir yenilenir
+  if (r.shadowMap.enabled) { const full = S.graphics >= 2; r.shadowMap.autoUpdate = full; if (!full) { this._sf = (this._sf || 0) + 1; if (this._sf % 2 === 0) r.shadowMap.needsUpdate = true; } }
   Cheats.applyChams();
   const tp = Cheats.camera(cam, viewE);
   for (const e of this.entities) if (e.model) e.model.root.visible = (tp && e.isPlayer) || (!(e === viewE && e.alive) && !(e.isPlayer && e.alive) && (e.alive || e.deathT < 15));

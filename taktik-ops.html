@@ -280,7 +280,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
   <div id="mvp" class="hidden"></div>
   <div id="scope"></div>
   <div id="crosshair"></div>
-  <div id="micBtn" class="hudbox" style="position:absolute;left:12px;top:150px;pointer-events:auto;cursor:pointer;font-size:15px" title="Mikrofon aç/kapat (M)">🎤 Kapalı</div>
+  <div id="micBtn" class="hudbox" style="position:absolute;left:12px;top:200px;pointer-events:auto;cursor:pointer;font-size:15px" title="Mikrofon aç/kapat (M)">🎤 Kapalı</div>
   <div id="micHud" class="hudbox hidden" style="position:absolute;left:50%;top:14%;transform:translateX(-50%);color:#f66">🎤 Sesin duyuluyor!</div>
   <div id="hitmarker"></div>
   <div id="dmgVignette"></div>
@@ -447,6 +447,7 @@ input[type=range]{width:100%;accent-color:#e9a83a}
       <div class="field"><label>Grafik Kalitesi</label><div class="seg" data-set="graphics" data-opts='[[0,"Düşük"],[1,"Orta"],[2,"Yüksek"]]' data-reload="1"></div><div style="font-size:12px;color:var(--dim)">Gölge/kalite değişiklikleri sonraki açılışta tam uygulanır.</div></div>
       <div class="field"><label>Doku Stili</label><div class="seg" data-set="texStyle" data-opts='[["retro","Retro (eski okul)"],["modern","Modern"]]' data-reload="1"></div><div style="font-size:12px;color:var(--dim)">Değişiklik oyun yeniden açılınca uygulanır.</div></div>
       <div class="field"><label>Netlik (Çözünürlük)</label><div class="seg" data-set="sharp" data-opts='[[0,"Düşük"],[1,"Orta"],[2,"Yüksek"],[3,"Ultra"]]'></div><div style="font-size:12px;color:var(--dim)">Yüksek = keskin görüntü. Telefon ısınır/kasarsa Orta seç.</div></div>
+      <div class="field"><label>⚡ Otomatik performans</label><div class="seg" data-set="autoRes" data-opts='[[true,"Açık"],[false,"Kapalı"]]'></div><div style="font-size:12px;color:var(--dim)">Kare hızı düşerse çözünürlüğü kendiliğinden azaltır, toparlanınca geri yükseltir.</div></div>
       <div class="field"><label>Arayüz Stili</label><div class="seg" data-set="hudStyle" data-opts='[["modern","Modern"],["classic","Klasik (kehribar)"]]'></div></div>
       <div class="field"><label>Görüş Açısı (FOV) <span class="val" data-val="fov"></span> <small style="text-transform:none">— küçük = uzaktaki rakip daha büyük</small></label><input type="range" min="60" max="95" step="1" data-set="fov"></div>
       <div class="field"><label>Seçenekler</label><label class="check"><input type="checkbox" data-set="shadows" data-reload="1"> Gölgeler</label><label class="check"><input type="checkbox" data-set="showFps"> FPS göster</label><label class="check"><input type="checkbox" data-set="enemyGlow"> Düşmanları vurgula (kırmızı ton)</label></div>
@@ -650,6 +651,7 @@ const DEFAULT_SETTINGS = {
   // Ses
   volume: 0.8,
   micMode: 'off', micSens: 0.5,   // mikrofon: botlar sesini duyar
+  autoRes: true,         // kare hızı düşerse çözünürlüğü kendiliğinden azalt
   audio3d: 'hrtf',       // ses konumu: 'hrtf' (3B kulaklık) | 'stereo' (hoparlör)
   texStyle: 'retro',     // 'retro' (eski okul, piksel) veya 'modern'
   layoutV: 3,
@@ -2525,7 +2527,8 @@ const Models = (function () {
     parts.armL.rotation.set(1.38, 0, 0.62); parts.armL.userData.el.rotation.x = 0.2;
     // silah tutucu
     const gunHolder = new THREE.Group(); gunHolder.position.set(0.08, 0.42, -0.38); upper.add(gunHolder); parts.gun = gunHolder;
-    root.traverse(o => { if (o.isMesh) { o.castShadow = true; } });
+    // gölge: sadece büyük parçalar gölge düşürür (küçük parçalar fark edilmez, çizim sayısı yarıya iner)
+    root.traverse(o => { if (o.isMesh) { o.geometry.computeBoundingSphere(); if (o.geometry.boundingSphere.radius > 0.1) { o.castShadow = true; o.userData.sh = 1; } } });
     return { root, parts };
   }
   function setCharGun(ch, def) {
@@ -2534,7 +2537,7 @@ const Models = (function () {
     if (!def) return;
     const g = gun(def);
     if (def.type === 'pistol' || def.type === 'knife' || def.type === 'grenade' || def.type === 'bomb') g.position.set(0, -0.02, 0.08);
-    g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+    g.traverse(o => { if (o.isMesh) { o.geometry.computeBoundingSphere(); if (o.geometry.boundingSphere.radius > 0.12) { o.castShadow = true; o.userData.sh = 1; } } });
     h.add(g); h.userData.model = g;
   }
 
@@ -4257,9 +4260,10 @@ G.resize = function () {
   this.camera.aspect = w / h; this.camera.updateProjectionMatrix();
   this.vmCamera.aspect = w / h; this.vmCamera.updateProjectionMatrix();
 };
+G.resScale = 1;   // otomatik çözünürlük çarpanı (kare hızı düşerse azalır)
 G.applyGraphics = function () {
   const q = S.graphics, r = this.renderer;
-  r.setPixelRatio(Math.min(window.devicePixelRatio || 1, [1, 1.5, 2, 3][S.sharp] || 2));
+  r.setPixelRatio(Math.min(window.devicePixelRatio || 1, [1, 1.5, 2, 3][S.sharp] || 2) * (S.autoRes === false ? 1 : this.resScale));
   this.resize();
 };
 
@@ -5343,6 +5347,14 @@ G.render = function (dt) {
       walk(e.model.root);
     }
   }
+  // uzaktaki karakterler gölge düşürmez (gölge geçişi hafifler)
+  for (const e of this.entities) {
+    if (!e.model) continue;
+    const far = e.alive ? Math.hypot(e.pos.x - eye.x, e.pos.z - eye.z) > 45 : true;
+    if (e._shFar !== far) { e._shFar = far; e.model.root.traverse(o => { if (o.isMesh && o.userData.sh) o.castShadow = !far; }); }
+  }
+  // orta grafikte gölge her 2 karede bir yenilenir
+  if (r.shadowMap.enabled) { const full = S.graphics >= 2; r.shadowMap.autoUpdate = full; if (!full) { this._sf = (this._sf || 0) + 1; if (this._sf % 2 === 0) r.shadowMap.needsUpdate = true; } }
   Cheats.applyChams();
   const tp = Cheats.camera(cam, viewE);
   for (const e of this.entities) if (e.model) e.model.root.visible = (tp && e.isPlayer) || (!(e === viewE && e.alive) && !(e.isPlayer && e.alive) && (e.alive || e.deathT < 15));
@@ -5751,7 +5763,7 @@ const UI = {
     Input.applyButtonStyle();
     Audio3.setVolume(S.volume);
     $('fps').classList.toggle('hidden', !S.showFps);
-    if ((key === 'graphics' || key === 'sharp') && G.renderer) G.applyGraphics();
+    if ((key === 'graphics' || key === 'sharp' || key === 'autoRes') && G.renderer) G.applyGraphics();
     document.body.classList.toggle('hudclassic', S.hudStyle === 'classic');
     if (key === 'mvpStart' || key === 'mvpLen') { Music.clampSel(); Music.drawWave(); }
     if (key === 'map' && G.renderer && !G.running) G.loadMap(S.map === 'random' ? 'dust' : S.map);
@@ -8245,12 +8257,24 @@ const Cheats = {
   Mic.init(); Net.bindUI();
   Skins.loadAll(); Music.bind(); Music.init(); BotSongs.bind(); BotSongs.init().then(() => Catalog.render()); Catalog.bind();
   UI.applySettings();
-  let last = performance.now(), fpsAcc = 0, fpsN = 0;
+  let last = performance.now(), fpsAcc = 0, fpsN = 0, arT = 0, arN = 0, arCool = 3;
   function frame(t) {
     requestAnimationFrame(frame);
     let dt = (t - last) / 1000; last = t;
     if (dt > 0.05) dt = 0.05; if (dt <= 0) dt = 0.001;
     fpsAcc += dt; fpsN++;
+    // otomatik çözünürlük: gerçek kare süresine göre
+    if (S.autoRes !== false && G.running && !G.paused && !document.hidden) {
+      arT += (t - (frame.prev || t)) / 1000; arN++;
+      if (arT > 1.5) {
+        const fps = arN / arT; arT = 0; arN = 0; arCool -= 1.5;
+        if (arCool <= 0) {
+          if (fps < 40 && G.resScale > 0.55) { G.resScale = Math.max(0.55, G.resScale - 0.12); G.applyGraphics(); arCool = 3; }
+          else if (fps > 57 && G.resScale < 1) { G.resScale = Math.min(1, G.resScale + 0.06); G.applyGraphics(); arCool = 6; }
+        }
+      }
+    }
+    frame.prev = t;
     if (fpsAcc > 0.5) { G.fps = Math.round(fpsN / fpsAcc); fpsAcc = 0; fpsN = 0; }
     if (G.running && !G.paused) {
       Input.apply(dt);
