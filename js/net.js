@@ -43,9 +43,9 @@ const Net = {
     return { type: o.t, sdp: o.s };
   },
   // ---------- host ----------
-  async hostInvite() {
+  async hostInvite(discId) {
     this.role = 'host'; this.paintMenu();
-    const p = { id: ++this.idc, name: 'Arkadaş', pc: this.newPC(), r: null, u: null, ready: false, ent: null, joinCode: '' };
+    const p = { id: ++this.idc, name: 'Arkadaş', pc: this.newPC(), r: null, u: null, ready: false, ent: null, joinCode: '', discId };
     p.r = p.pc.createDataChannel('r');
     p.u = p.pc.createDataChannel('u', { ordered: false, maxRetransmits: 0 });
     p.r.onopen = () => { p.ready = true; this.onPeerOpen(p); };
@@ -559,7 +559,7 @@ const Net = {
 Net.disc = {
   id: Math.random().toString(36).slice(2, 8), topic: null, tr: null, list: new Map(), timer: null, hosting: false, wantHost: null, status: '',
   // taşıyıcı: {open(topic,onmsg), publish(topic,obj), close()}; testte değiştirilebilir
-  transport: {
+  mk() { return {
     es: null,
     open(topic, onmsg) {
       this.close();
@@ -568,7 +568,16 @@ Net.disc = {
     },
     publish(topic, obj) { return fetch('https://ntfy.sh/' + topic, { method: 'POST', body: JSON.stringify(obj) }).catch(() => {}); },
     close() { if (this.es) { this.es.close(); this.es = null; } },
+  }; },
+  async hash(txt) { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt)); return 'to' + Array.from(new Uint8Array(h)).slice(0, 12).map(b => b.toString(16).padStart(2, '0')).join(''); },
+  // 6 haneli oda kodu: kodun özeti ortak konu olur; oda kurucu ve katılan aynı konuda buluşur
+  trRoom: null, topicRoom: null, code: null,
+  async openRoom(code) {
+    this.closeRoom(); this.code = code; this.topicRoom = await this.hash('taktikops-room|' + code);
+    this.trRoom = this.mk(); this.trRoom.open(this.topicRoom, m => this.onMsg(m, 'room'));
   },
+  closeRoom() { if (this.trRoom) { this.trRoom.close(); this.trRoom = null; } this.topicRoom = null; this.code = null; },
+  newCode() { return String(Math.floor(Math.random() * 900000) + 100000); },
   async roomKey() {
     let ip = null;
     for (const u of ['https://api.ipify.org?format=json']) { try { const r = await fetch(u); const j = await r.json(); ip = j.ip; break; } catch (e) {} }
@@ -587,28 +596,31 @@ Net.disc = {
     if (this.tr) return;
     this.status = 'Aranıyor…'; Net.paintList();
     try { this.topic = await this.roomKey(); } catch (e) { this.status = 'İnternet yok: cihazlar otomatik bulunamıyor. Aşağıdan "Elle bağlan" ile kodla bağlanabilirsin.'; Net.paintList(); return; }
-    this.tr = this.transport; this.tr.open(this.topic, m => this.onMsg(m));
+    this.tr = this.mk(); this.tr.open(this.topic, m => this.onMsg(m, 'ip'));
     this.status = ''; this.announce(); this.timer = setInterval(() => this.announce(), 4000); Net.paintList();
   },
   stop() { if (this.timer) clearInterval(this.timer); this.timer = null; if (this.tr) { this.pub({ k: 'bye', id: this.id }); this.tr.close(); } this.tr = null; this.list.clear(); },
-  pub(o) { if (this.tr && this.topic) this.tr.publish(this.topic, o); },
+  pub(o, via) { if (via === 'room') { if (this.trRoom) this.trRoom.publish(this.topicRoom, o); } else if (this.tr && this.topic) this.tr.publish(this.topic, o); },
   announce() {
     this.pub({ k: 'hi', id: this.id, name: this.myName(), dev: this.devLabel(), host: !!this.hosting && Net.role === 'host' && !Net.started, n: Net.readyPeers().length });
     const now = Date.now(); for (const [id, d] of this.list) if (now - d.ts > 14000) this.list.delete(id);
     Net.paintList();
   },
-  async onMsg(m) {
+  async onMsg(m, via) {
     if (!m || m.id === this.id) return;
     if (m.k === 'hi') { this.list.set(m.id, { id: m.id, name: m.name, dev: m.dev, host: !!m.host, n: m.n || 0, ts: Date.now() }); Net.paintList(); return; }
     if (m.k === 'bye') { this.list.delete(m.id); Net.paintList(); return; }
-    if (m.to !== this.id) return;
+    if (m.to !== this.id && !(m.to === '*' && Net.role === 'host')) return;
     try {
       if (m.k === 'join' && Net.role === 'host' && !Net.started && Net.peers.length < 4) {          // ev sahibi: davet üret ve gönder
-        const p = await Net.hostInvite(); p.discId = m.id; p.name = String(m.name || 'Arkadaş').slice(0, 14);
-        this.pub({ k: 'offer', to: m.id, id: this.id, code: p.joinCode });
-      } else if (m.k === 'offer' && this.wantHost === m.id && Net.role !== 'host') {                // katılan: cevap üret ve gönder
+        const old = Net.peers.find(x => x.discId === m.id);
+        if (old) { if (!old.ready && old.joinCode) this.pub({ k: 'offer', to: m.id, id: this.id, code: old.joinCode }, via); return; }   // tekrar gelen istek
+        const p = await Net.hostInvite(m.id); p.name = String(m.name || 'Arkadaş').slice(0, 14);
+        this.pub({ k: 'offer', to: m.id, id: this.id, code: p.joinCode }, via);
+      } else if (m.k === 'offer' && (this.wantHost === m.id || this.wantHost === '*') && Net.role !== 'host' && !Net.link) {
+        this.wantHost = m.id;                // katılan: cevap üret ve gönder
         Net.paintMenu(); const reply = await Net.join(m.code, this.myName());
-        this.pub({ k: 'answer', to: m.id, id: this.id, code: reply });
+        this.pub({ k: 'answer', to: m.id, id: this.id, code: reply }, via);
       } else if (m.k === 'answer' && Net.role === 'host') {
         const p = Net.peers.find(x => x.discId === m.id); if (p) await Net.hostAccept(p, m.code);
       }
@@ -620,6 +632,15 @@ Net.disc = {
     clearTimeout(this.jt); this.jt = setTimeout(() => { if (!(Net.link && Net.link.open)) { this.status = '✖ Bağlanamadı (aynı ağdasınız, oda hâlâ açık mı?)'; if (Net.role === 'client') Net.leave(); Net.paintList(); } }, 25000);
     Net.paintList();
   },
+};
+Net.disc.joinCode = async function (code) {
+  code = String(code).replace(/\D/g, '');
+  if (code.length !== 6) { this.status = 'Kod 6 haneli olmalı'; Net.paintList(); return; }
+  this.status = 'Odaya bağlanılıyor…'; Net.paintList();
+  await this.openRoom(code); this.wantHost = '*';
+  const send = () => this.pub({ k: 'join', to: '*', id: this.id, name: this.myName() }, 'room');
+  setTimeout(send, 600); const iv = setInterval(() => { if (Net.link || !this.trRoom) clearInterval(iv); else send(); }, 3000);
+  clearTimeout(this.jt); this.jt = setTimeout(() => { clearInterval(iv); if (!(Net.link && Net.link.open)) { this.status = '✖ Bağlanamadı: kod doğru mu, oda kurucu odayı açtı mı?'; if (Net.role === 'client') Net.leave(); this.closeRoom(); Net.paintList(); } }, 30000);
 };
 Net.paintList = function () {
   const box = document.getElementById('netList'); if (!box) return;
@@ -648,10 +669,11 @@ Net.paintList = function () {
     $('btnNet').onclick = () => { open(); this.disc.start(); };
     const close = $('netClose').onclick;
     $('netClose').onclick = () => { close(); if (!this.role) this.disc.stop(); };
-    $('netHost').onclick = () => { this.hostName = this.disc.myName(); this.disc.hosting = true; this.role = 'host'; this.disc.announce(); this.paintMenu(); this.paintList(); };
+    $('netHost').onclick = async () => { this.hostName = this.disc.myName(); this.disc.hosting = true; this.role = 'host'; const c = this.disc.newCode(); await this.disc.openRoom(c); $('netCode').textContent = c.slice(0, 3) + ' ' + c.slice(3); $('netCodeBox').classList.remove('hidden'); this.disc.announce(); this.paintMenu(); this.paintList(); };
+    $('netCodeJoin').onclick = () => this.disc.joinCode($('netCodeIn').value);
     $('netRescan').onclick = () => { this.disc.stop(); this.disc.start(); };
     const leave = $('netLeave').onclick;
-    $('netLeave').onclick = () => { this.disc.hosting = false; this.disc.wantHost = null; leave(); this.disc.announce(); this.paintList(); };
+    $('netLeave').onclick = () => { this.disc.hosting = false; this.disc.wantHost = null; this.disc.closeRoom(); $('netCodeBox').classList.add('hidden'); leave(); this.disc.announce(); this.paintList(); };
     nameEl.addEventListener('change', () => this.disc.announce());
   };
 })();
