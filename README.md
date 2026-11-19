@@ -36,3 +36,5 @@ Mobilde ve masaüstünde tarayıcıda oynanan, 5v5 bomba kurma / imha modlu takt
 
 ## Masaüstü kontroller
 WASD hareket, fare nişan/ateş, sağ tık dürbün, Boşluk zıpla, Ctrl/C eğil, Shift yürü, R doldur, E kur/imha/al, G bırak, B satın al, 1-5 silahlar, Q son silah, Tab skor, Esc menü.
+- CS2 tarzı skin sistemi: envanter, 3 kasa (nadirlik oranlı, açılış animasyonu), aşınma (float), StatTrak™, jeton ekonomisi; kuşanılan skin arkadaşlarda da görünür.
+- Çok oyunculu: ara değerleme (akıcı hareket), nabız/ping göstergesi, bağlantı kopma algılama, TURN yedeği.

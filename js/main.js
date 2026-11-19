@@ -6,7 +6,7 @@
   UI.init();
   Cheats.init();
   document.getElementById('test3d').onclick = () => { Audio3.init(); Audio3.test3d(); };
-  Mic.init(); Net.bindUI();
+  Mic.init(); Net.bindUI(); Inv.init();
   Skins.loadAll(); Music.bind(); Music.init(); BotSongs.bind(); BotSongs.init().then(() => Catalog.render()); Catalog.bind(); Music.fillAceSel();
   UI.applySettings();
   let last = performance.now(), fpsAcc = 0, fpsN = 0, arT = 0, arN = 0, arCool = 3;

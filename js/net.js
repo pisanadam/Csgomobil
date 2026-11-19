@@ -11,16 +11,19 @@ const Net = {
   pendingStart: null, savedS: null, listeners: [],
   stunOn: true,
   // ---------- imza (signaling) ----------
+  turnOn: true,
   newPC() {
-    const cfg = { iceServers: this.stunOn ? [{ urls: 'stun:stun.l.google.com:19302' }] : [] };
-    return new RTCPeerConnection(cfg);
+    // STUN: farklı ağlardaki cihazların adresini öğrenir. TURN (röle): doğrudan bağlanamayan zor ağlarda trafiği aktarır (herkese açık ücretsiz sunucu).
+    const ice = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] }];
+    if (this.turnOn) ice.push({ urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' });
+    return new RTCPeerConnection({ iceServers: this.stunOn ? ice : [], iceCandidatePoolSize: 2 });
   },
   waitIce(pc, ms) {
     return new Promise(res => {
       if (pc.iceGatheringState === 'complete') return res();
       let done = false; const fin = () => { if (done) return; done = true; clearTimeout(t); pc.removeEventListener('icegatheringstatechange', ch); res(); };
       const ch = () => { if (pc.iceGatheringState === 'complete') fin(); };
-      const t = setTimeout(fin, ms || 3500);
+      const t = setTimeout(fin, ms || 5000);
       pc.addEventListener('icegatheringstatechange', ch);
     });
   },
@@ -50,10 +53,15 @@ const Net = {
     p.u = p.pc.createDataChannel('u', { ordered: false, maxRetransmits: 0 });
     p.r.onopen = () => { p.ready = true; this.onPeerOpen(p); };
     p.r.binaryType = 'arraybuffer';
-    p.r.onmessage = ev => (typeof ev.data === 'string' ? this.onMsgHost(p, JSON.parse(ev.data)) : this.onBin(ev.data, p));
-    p.u.onmessage = ev => { if (typeof ev.data === 'string') this.onMsgHost(p, JSON.parse(ev.data)); };
-    p.pc.onconnectionstatechange = () => { const s = p.pc.connectionState; if (s === 'failed' || s === 'closed' || s === 'disconnected') this.onPeerGone(p); };
-    this.peers.push(p);
+    p.r.onmessage = ev => { p.lastRx = performance.now(); if (typeof ev.data === 'string') this.onMsgHost(p, JSON.parse(ev.data)); else this.onBin(ev.data, p); };
+    p.u.onmessage = ev => { p.lastRx = performance.now(); if (typeof ev.data === 'string') this.onMsgHost(p, JSON.parse(ev.data)); };
+    p.created = performance.now(); p.lastRx = p.created;
+    p.pc.onconnectionstatechange = () => {
+      const st = p.pc.connectionState; clearTimeout(p.dcT);
+      if (st === 'failed' || st === 'closed') this.onPeerGone(p);
+      else if (st === 'disconnected' && p.ready) p.dcT = setTimeout(() => { if (p.pc.connectionState !== 'connected') this.onPeerGone(p); }, 7000);   // kısa kopmalarda bekle
+    };
+    this.peers.push(p); this.startBeat();
     await p.pc.setLocalDescription(await p.pc.createOffer());
     await this.waitIce(p.pc);
     p.joinCode = await this.pack(p.pc.localDescription);
@@ -86,10 +94,16 @@ const Net = {
     pc.ondatachannel = ev => {
       const ch = ev.channel; L[ch.label] = ch;
       ch.binaryType = 'arraybuffer';
-      ch.onmessage = e => (typeof e.data === 'string' ? this.onMsgClient(JSON.parse(e.data)) : this.onBin(e.data, L));
+      ch.onmessage = e => { L.lastRx = performance.now(); if (typeof e.data === 'string') this.onMsgClient(JSON.parse(e.data)); else this.onBin(e.data, L); };
       if (ch.label === 'r') ch.onopen = () => { L.open = true; this.send(L.r, { t: 'hello', name: this.myName }); this.paintMenu(); };
     };
-    pc.onconnectionstatechange = () => { const s = pc.connectionState; if (s === 'failed' || s === 'closed' || s === 'disconnected') this.onHostGone(); };
+    L.lastRx = performance.now();
+    pc.onconnectionstatechange = () => {
+      const st = pc.connectionState; clearTimeout(L.dcT);
+      if (st === 'failed' || st === 'closed') this.onHostGone();
+      else if (st === 'disconnected' && L.open) L.dcT = setTimeout(() => { if (pc.connectionState !== 'connected') this.onHostGone(); }, 7000);
+    };
+    this.startBeat();
     await pc.setRemoteDescription(d);
     await pc.setLocalDescription(await pc.createAnswer());
     await this.waitIce(pc);
@@ -106,7 +120,7 @@ const Net = {
     for (const p of this.peers) { try { p.pc.close(); } catch (e) {} if (p.ent) p.ent.remote = null; }
     this.peers = [];
     if (this.link) { try { this.link.pc.close(); } catch (e) {} this.link = null; }
-    this.removeLimits();
+    this.removeLimits(); this.stopBeat();
     if (this.role === 'client') this.restoreS();
     this.role = null; this.started = false; this.pendingStart = null;
     this.paintMenu();
@@ -287,6 +301,8 @@ const Net = {
       case 'pkreq': if (e && e.alive && G.running) { const pk = G.pickups.find(x => x.id === m.id); if (pk && dist2(e.pos, pk.pos) < 3.2) { this.pkDelete(m.id); this.pkSet.delete(m.id); this.sendAll({ t: 'pkdel', id: m.id }); this.send(p.r, { t: 'pkgive', w: pk.w.def.id, mag: pk.w.mag, reserve: pk.w.reserve }); } } break;
       case 'songh': this.songHeader(p, m); break;
       case 'songe': this.songDone(p, m, p); break;
+      case 'ping': this.send(p.r, { t: 'pong', ts: m.ts }); break;
+      case 'pong': p.rtt = performance.now() - m.ts; break;
       case 'hello': p.name = String(m.name || 'Arkadaş').slice(0, 14); this.send(p.r, { t: 'welcome', id: p.id }); this.lobbyBroadcast(); this.paintMenu(); break;
       case 'st': if (e && G.running) this.applyRemoteState(e, m); break;
       case 'shot': if (e && e.alive && G.running) { const def = WEAPONS[m.w]; if (def) { e.lastShot = G.now; G.onShot(e, def); } } break;
@@ -303,7 +319,7 @@ const Net = {
   },
   applyRemoteState(e, m) {
     if (!e.alive) return;
-    e._tp = { x: m.x, y: m.y, z: m.z, yaw: m.yaw, pitch: m.pitch };
+    this.pushSnap(e, { x: m.x, y: m.y, z: m.z, yaw: m.yaw, pitch: m.pitch });
     e.vel.x = m.vx; e.vel.z = m.vz; e.vel.y = 0; e.onGround = !!m.g;
     e.crouchT = m.c; e.armor = m.a; e.helmet = !!m.h; e.kit = !!m.k; e.money = m.m; e.input.walk = !!m.wk;
     e.plantT = m.pl ? 1 : 0;
@@ -355,12 +371,14 @@ const Net = {
         if (old) G.spawnPickup(old, { x: p.pos.x + f.x * 1.2, z: p.pos.z + f.z * 1.2 }, p, null, 0.7);
         p.inv[slot] = { def, mag: m.mag, reserve: m.reserve, sil: true, burst: false }; p.switchTo(slot, true); UI.toast(def.name + ' alındı', 1.2); Audio3.click(null, 1200);
       } break;
+      case 'ping': this.toHost({ t: 'pong', ts: m.ts }); break;
+      case 'pong': this.rtt = performance.now() - m.ts; break;
       case 'songh': this.songHeader(this.link, m); break;
       case 'songe': this.songDone(this.link, m, null); break;
       case 'bye': { const was = G.running; this.leave(); if (was) UI.quit(); alert('Oda kapatıldı.'); break; }
       case 'start': this.pendingStart = m; if (!G.running || G.matchOver) UI.play(); else UI.play(); break;
       case 'round': if (G.running) this.applyRound(m); break;
-      case 's': if (G.running) this.applySnap(m); break;
+      case 's': if (G.running && m.q > this.lastQ) { this.lastQ = m.q; this.applySnap(m); } break;
       case 'kill': if (G.running) this.applyKill(m); break;
       case 'hurt': if (G.running) this.applyHurt(m); break;
       case 'money': { const p = G.player; if (p) p.money = Math.max(0, Math.min(ECON.max, p.money + m.d)); break; }
@@ -397,7 +415,7 @@ const Net = {
     G.round.num = 0; G.running = true; G.paused = false; G.matchOver = false; this.started = true;
     UI.onMatchStart(); Audio3.ambStart(MAP.info.theme);
     G.bomb = { state: 'none', carrier: null, pos: { x: 0, y: -100, z: 0 }, timer: 0, defuser: null, beepT: 0, site: null };
-    this.lastBombState = 'none'; this.snapT = 0; G.now = 0;
+    this.lastBombState = 'none'; this.snapT = 0; G.now = 0; this.lastQ = 0;
     this.songs.clear(); this.shareMySong(); this.shareMySkins();
   },
   applyRound(m) {
@@ -416,7 +434,7 @@ const Net = {
     for (const a of m.es) {
       const e = this.byNid(a[0]); if (!e) continue;
       e.team = a[4];
-      e.pos.x = a[1]; e.pos.y = 0; e.pos.z = a[2]; e.vel.x = e.vel.y = e.vel.z = 0; e.yaw = a[3]; e.pitch = 0; e._tp = null;
+      e.pos.x = a[1]; e.pos.y = 0; e.pos.z = a[2]; e.vel.x = e.vel.y = e.vel.z = 0; e.yaw = a[3]; e.pitch = 0; e._buf = null;
       e.alive = true; e.hp = 100; e.deathT = 0; e.flashT = 0; e.crouch = 0; e.height = STAND_H; e.plantT = 0; e.defuseT = 0;
       e.recoilIdx = 0; e.fireInacc = 0; e.punch.x = e.punch.y = 0; e.scoped = 0; e.reloadT = 0; e.zoomed = false; e.burstLeft = 0; e.nextFire = 0; e.roundKills = 0;
       e.dmgBy.clear(); e.trig = false; e.bought = []; e.protectUntil = 0;
@@ -462,6 +480,7 @@ const Net = {
     if (!v) return;
     if (m.sv) v.stats = m.sv; if (k && m.sk) k.stats = m.sk;
     const def = (m.w && WEAPONS[m.w]) || (m.wn ? { name: m.wn } : null);
+    if (k && k.isPlayer && k !== v && !(!G.ffa && k.team === v.team)) Inv.onKill(def, true);
     v.alive = false; v.hp = 0; v.deathDir = Math.random() < 0.5 ? 1 : -1; v.plantT = 0; v.defuseT = 0;
     if (!v.isPlayer) Audio3.death(v.pos);
     UI.killfeed(k && k !== v ? k : null, v, def, !!m.hs, !!m.wb);
@@ -484,7 +503,7 @@ const Net = {
     const now = G.now;
     for (const a of m.e) {
       const e = this.byNid(a[0]); if (!e || e === G.player) continue;
-      e._tp = { x: a[1], y: a[2], z: a[3], yaw: a[4], pitch: a[5] };
+      this.pushSnap(e, { x: a[1], y: a[2], z: a[3], yaw: a[4], pitch: a[5] });
       e.vel.x = a[6]; e.vel.z = a[7]; e.crouchT = a[8]; e.alive = !!a[9]; e.hp = a[10];
       if (a[11] && e.cw !== a[11] && WEAPONS[a[11]]) { e.cw = a[11]; if (e.model && e.alive) Models.setCharGun(e.model, WEAPONS[a[11]]); }
       if (a[12]) e.spottedUntil = Math.max(e.spottedUntil, now + 0.3);
@@ -496,21 +515,62 @@ const Net = {
   // host: her kare (G.update sonunda)
   hostTick(dt) {
     if (!this.started) return;
-    this.acc += dt; if (this.acc < 0.05) return; this.acc = 0; this.tick++;
+    this.acc += dt; if (this.acc < 0.033) return; this.acc = 0; this.tick++;
     const R = G.round, B = G.bomb;
     const es = G.entities.map(e => [this.nid(e), +e.pos.x.toFixed(2), +e.pos.y.toFixed(2), +e.pos.z.toFixed(2), +e.yaw.toFixed(3), +e.pitch.toFixed(3), +e.vel.x.toFixed(2), +e.vel.z.toFixed(2), +e.crouch.toFixed(2), e.alive ? 1 : 0, Math.round(e.hp), e.alive ? e.def.id : 0, e.spottedUntil > G.now ? 1 : 0, e.team]);
-    const msg = { t: 's', ph: R.phase, tm: +R.timer.toFixed(2), tl: +R.timeLeft.toFixed(2), bl: +R.buyLeft.toFixed(2), sc: G.score, e: es, bs: { st: B.state, x: B.pos.x, y: B.pos.y || 0, z: B.pos.z, tm: +B.timer.toFixed(2), df: B.defuser ? this.nid(B.defuser) : 0 } };
+    const msg = { t: 's', q: ++this.seq, ph: R.phase, tm: +R.timer.toFixed(2), tl: +R.timeLeft.toFixed(2), bl: +R.buyLeft.toFixed(2), sc: G.score, e: es, bs: { st: B.state, x: B.pos.x, y: B.pos.y || 0, z: B.pos.z, tm: +B.timer.toFixed(2), df: B.defuser ? this.nid(B.defuser) : 0 } };
     for (const id of [...this.pkSet]) if (!G.pickups.some(x => x.id === id)) { this.pkSet.delete(id); this.sendAll({ t: 'pkdel', id }); }
     if (this.tick % 20 === 0) msg.st = G.entities.map(e => [this.nid(e), e.stats]);
     this.sendAllU(msg);
   },
+  // ---------- akıcılık: görüntü tamponu (100 ms geriden, iki paket arası yumuşak geçiş) ----------
+  pushSnap(e, s) {
+    const b = e._buf || (e._buf = []); s.t = performance.now(); b.push(s); if (b.length > 14) b.shift();
+    if (b.length === 1) { e.pos.x = s.x; e.pos.y = s.y; e.pos.z = s.z; e.yaw = s.yaw; e.pitch = s.pitch; }
+  },
+  interp(e) {
+    const b = e._buf; if (!b || !b.length) return;
+    const rt = performance.now() - 100;
+    let i = b.length - 1; while (i > 0 && b[i].t > rt) i--;
+    const a = b[i], c = b[Math.min(i + 1, b.length - 1)];
+    if (c === a || c.t <= a.t) {                    // paket gecikti: kısa süre hızla ileri tahmin et
+      const ex = Math.min(0.25, Math.max(0, (rt - a.t) / 1000));
+      e.pos.x = a.x + e.vel.x * ex; e.pos.y = a.y; e.pos.z = a.z + e.vel.z * ex; e.yaw = a.yaw; e.pitch = a.pitch;
+    } else {
+      const f = Math.max(0, Math.min(1, (rt - a.t) / (c.t - a.t)));
+      e.pos.x = a.x + (c.x - a.x) * f; e.pos.y = a.y + (c.y - a.y) * f; e.pos.z = a.z + (c.z - a.z) * f;
+      e.yaw = a.yaw + angDiff(a.yaw, c.yaw) * f; e.pitch = a.pitch + (c.pitch - a.pitch) * f;
+    }
+  },
+  // ---------- bağlantı sağlığı: nabız (ping/pong), gecikme, zaman aşımı ----------
+  rtt: 0, beatT: null, seq: 0, lastQ: 0,
+  startBeat() {
+    if (this.beatT) return;
+    this.beatT = setInterval(() => {
+      const now = performance.now();
+      if (this.role === 'host') {
+        for (const p of this.peers.slice()) {
+          if (p.ready) { this.send(p.r, { t: 'ping', ts: now }); if (now - p.lastRx > 10000) { p.pc.close && this.onPeerGone(p); } }
+          else if (now - p.created > 70000) { try { p.pc.close(); } catch (e) {} this.peers.splice(this.peers.indexOf(p), 1); }   // yarım kalan davetleri temizle
+        }
+      } else if (this.role === 'client' && this.link && this.link.open) {
+        this.toHost({ t: 'ping', ts: now });
+        if (now - this.link.lastRx > 10000) this.onHostGone();
+      }
+      this.paintPing();
+    }, 2000);
+  },
+  stopBeat() { clearInterval(this.beatT); this.beatT = null; this.rtt = 0; this.paintPing(); },
+  paintPing() {
+    const el = document.getElementById('pingBox'); if (!el) return;
+    const on = this.role && this.started && G.running;
+    el.classList.toggle('hidden', !on); if (!on) return;
+    const r = this.role === 'host' ? Math.max(0, ...this.readyPeers().map(p => p.rtt || 0)) : this.rtt;
+    el.textContent = '📶 ' + Math.round(r) + ' ms'; el.style.color = r < 60 ? '#7f7' : r < 130 ? '#fd6' : '#f77';
+  },
   // host: uzak oyuncu eşitleme (hareket yumuşatma + adım sesi)
   hostRemote(e, dt) {
-    if (e._tp) {
-      const k = Math.min(1, dt * 16), t = e._tp;
-      e.pos.x += (t.x - e.pos.x) * k; e.pos.y += (t.y - e.pos.y) * k; e.pos.z += (t.z - e.pos.z) * k;
-      e.yaw += angDiff(e.yaw, t.yaw) * k; e.pitch += (t.pitch - e.pitch) * k;
-    }
+    this.interp(e);
     this.crouchSync(e, dt);
     const hs = e.hspeed();
     if (e.onGround && hs > 3.0 && !e.input.walk && e.crouch < 0.5) { e.stepAcc += hs * dt; if (e.stepAcc > 2.3) { e.stepAcc = 0; G.onFootstep(e); } }
@@ -531,11 +591,7 @@ const Net = {
         continue;
       }
       if (!e.alive) { G.animateDeath(e, dt); continue; }
-      if (e._tp) {
-        const k = Math.min(1, dt * 16), t = e._tp;
-        e.pos.x += (t.x - e.pos.x) * k; e.pos.y += (t.y - e.pos.y) * k; e.pos.z += (t.z - e.pos.z) * k;
-        e.yaw += angDiff(e.yaw, t.yaw) * k; e.pitch += (t.pitch - e.pitch) * k;
-      }
+      this.interp(e);
       this.crouchSync(e, dt);
       const hs = e.hspeed();
       if (hs > 3.0 && e.crouch < 0.5 && !e.input.walk) { e.stepAcc += hs * dt; if (e.stepAcc > 2.3) { e.stepAcc = 0; Audio3.footstep(e.pos, G.ally(e, p) ? 0.5 : 1); } }
@@ -554,7 +610,7 @@ const Net = {
     G.updatePlayerAssist(dt);
     if (!p.alive && (!G.spec || !G.spec.alive)) G.spec = G.entities.find(e => e.alive && e !== p && G.ally(e, p)) || G.entities.find(e => e.alive) || null;
     // kendi durumunu host'a yolla (20 Hz)
-    this.acc += dt; if (this.acc >= 0.05) {
+    this.acc += dt; if (this.acc >= 0.033) {
       this.acc = 0;
       const w = p.alive ? p.def.id : 0;
       this.toHost({ t: 'st', x: +p.pos.x.toFixed(2), y: +p.pos.y.toFixed(2), z: +p.pos.z.toFixed(2), yaw: +p.yaw.toFixed(3), pitch: +p.pitch.toFixed(3), vx: +p.vel.x.toFixed(2), vz: +p.vel.z.toFixed(2), c: +p.crouch.toFixed(2), g: p.onGround ? 1 : 0, w, a: Math.round(p.armor), h: p.helmet ? 1 : 0, k: p.kit ? 1 : 0, m: p.money, wk: p.input.walk ? 1 : 0, pl: p.plantT > 0 ? 1 : 0, b: p.inv.bomb ? 1 : 0 }, true);
@@ -710,6 +766,7 @@ const Net = {
       } catch (e) { st.textContent = '✖ ' + e.message; this.role = null; this.link = null; }
     };
     $('netStun').onchange = ev => { this.stunOn = ev.target.checked; };
+    if ($('netTurn')) $('netTurn').onchange = ev => { this.turnOn = ev.target.checked; };
     this.paintMenu();
   };
 })();

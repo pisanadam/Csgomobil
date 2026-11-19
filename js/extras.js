@@ -21,7 +21,7 @@ const Skins = {
         const k = localStorage.key(i); if (!k || k.indexOf('taktikops_skin_') !== 0) continue;
         const id = k.slice(15); if (!WEAPONS[id]) continue;
         const img = new Image();
-        img.onload = () => { const c = this.ensure(id); c.getContext('2d').drawImage(img, 0, 0, this.W, this.H); this.textures[id].needsUpdate = true; };
+        img.onload = () => { if (typeof Inv !== 'undefined' && Inv.isEq(id)) return; const c = this.ensure(id); c.getContext('2d').drawImage(img, 0, 0, this.W, this.H); this.textures[id].needsUpdate = true; };
         img.src = localStorage.getItem(k);
       }
     } catch (e) {}

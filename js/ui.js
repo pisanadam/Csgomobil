@@ -387,7 +387,8 @@ const UI = {
     if (this.cache.buyz !== inBuy) { this.cache.buyz = inBuy; $('money').className = 'hudbox' + (inBuy ? ' buyzone' : ''); $('bBuy').classList.toggle('hidden', !inBuy); if (!inBuy && this.buyOpen) this.toggleBuy(false); }
     const w = view.weapon();
     const d = w ? w.def : WEAPONS.knife;
-    this.set('wname', d.name + (w && w.burst ? ' • SERİ' : '') + (w && d.silenced && w.sil === false ? ' • susturucusuz' : ''));
+    const skI = typeof Inv !== 'undefined' && Inv.data && Inv.data.equipped[d.id] ? Inv.get(Inv.data.equipped[d.id]) : null;
+    this.set('wname', d.name + (skI ? ' | ' + Inv.FIN[skI.fid].n + (skI.st ? ' • ST ' + (skI.stK || 0) : '') : '') + (w && w.burst ? ' • SERİ' : '') + (w && d.silenced && w.sil === false ? ' • susturucusuz' : ''));
     if (d.mag) { this.set('ammo', String(w.mag)); this.set('reserve', '/ ' + w.reserve); }
     else if (d.type === 'grenade') { this.set('ammo', String(view.inv.grenades.filter(g => g === d.id).length)); this.set('reserve', ''); }
     else { this.set('ammo', d.type === 'knife' ? '—' : 'C4'); this.set('reserve', ''); }
