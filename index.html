@@ -495,6 +495,10 @@ input[type=range]{width:100%;accent-color:#e9a83a}
         <div id="songStat" style="font-size:12px;font-weight:700">Cihazda: 0 şarkı</div>
         <div style="font-size:12px;color:var(--dim)">Her bota rastgele bir şarkı atanır; bot raundun oyuncusu olunca şarkısı çalar ve ekranda adı görünür. Şarkılar (≈1 MB/şarkı) bir kez indirilip cihazda saklanır; sonra internetsiz çalar. Maçta atanan şarkılar kendiliğinden de indirilir.</div>
         <div class="seg" data-set="mvpWhen" data-opts='[["me","Ben olunca çal"],["always","Her raunt sonunda çal"],["off","Kapalı"]]'></div>
+        <div style="font-size:12px;color:var(--dim);font-weight:700;margin-top:6px">🏆 ACE ŞARKISI (tek başına tüm rakipleri öldürünce)</div>
+        <div class="seg" data-set="aceMode" data-opts='[["on","Açık"],["off","Kapalı"]]'></div>
+        <div class="row"><select id="aceSel" style="flex:1;min-width:180px;padding:8px;border-radius:8px;border:1px solid #444;background:#111;color:#fff"></select><button class="btn sm" id="aceTry">▶ Dene</button></div>
+        <div class="rgm"><span style="font-size:12px;color:var(--dim)">ACE şarkısı süresi <span class="val" data-val="aceLen"></span> sn</span><input type="range" min="5" max="30" step="1" data-set="aceLen"></div>
         <div class="rgm"><span style="font-size:12px;color:var(--dim)">Müzik sesi <span class="val" data-val="musicVol"></span></span><input type="range" min="0" max="1" step="0.05" data-set="musicVol"></div>
         <div style="font-size:12px;color:var(--dim)">MP3, OGG, WAV, M4A gibi sesler ya da <b>MP4</b> video seçebilirsin: MP4'ün sesi otomatik olarak MP3'e çevrilip kaydedilir (en fazla ilk 6 dakika). Dosya bu cihazda saklanır; raunt sonunda ~9 saniye çalar.</div></div>
     </div>

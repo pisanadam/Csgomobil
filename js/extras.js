@@ -370,6 +370,31 @@ const Music = {
     }, 50);
     return true;
   },
+  // ACE şarkısı: seçilen katalog şarkısı / yüklediğin müzik / rastgele; S.aceLen sn çalar
+  async playAce(test) {
+    if (S.aceMode === 'off') return false;
+    const len = S.aceLen || 16, sel = S.aceSong || 'random';
+    if (sel === 'mvp' && this.url) { this.play(len); return true; }
+    let a, t;
+    if (sel !== 'random' && sel !== 'mvp' && sel.indexOf('|') > 0) { const i = sel.indexOf('|'); a = sel.slice(0, i); t = sel.slice(i + 1); }
+    else {
+      const all = [].concat(BotSongs.LIST.tr, BotSongs.LIST.en, BotSongs.LIST.xx);
+      const pool = BotSongs.embedded ? all.filter(s => BotSongs.embedded[BotSongs.key(s[0], s[1])]) : navigator.onLine ? all : all.filter(s => BotSongs.saved.has(BotSongs.key(s[0], s[1])));
+      if (!pool.length) { if (this.url) { this.play(len); return true; } return false; }
+      const s = pool[Math.floor(Math.random() * pool.length)]; a = s[0]; t = s[1];
+    }
+    const start = len > 24 ? 0 : 4;
+    BotSongs.resolve(a, t).then(info => { if (info) this.play(len, info.url, start); else if (this.url) this.play(len); });
+    return true;
+  },
+  fillAceSel() {
+    const el = document.getElementById('aceSel'); if (!el) return;
+    const all = [].concat(BotSongs.LIST.tr, BotSongs.LIST.en, BotSongs.LIST.xx).slice().sort((x, y) => (x[0] + x[1]).localeCompare(y[0] + y[1]));
+    el.innerHTML = '<option value="random">🎲 Rastgele (katalogdan)</option><option value="mvp">📁 Yüklediğim müzik</option>' + all.map(s => `<option value="${(s[0] + '|' + s[1]).replace(/"/g, '&quot;')}">${s[0].replace(/</g, '')} — ${s[1].replace(/</g, '')}</option>`).join('');
+    el.value = S.aceSong || 'random'; if (el.value !== (S.aceSong || 'random')) el.value = 'random';
+    el.onchange = () => { S.aceSong = el.value; Settings.save(); };
+    const tb = document.getElementById('aceTry'); if (tb) tb.onclick = () => { Audio3.init(); this.playAce(true); };
+  },
   stop() { if (this.fadeT) { clearInterval(this.fadeT); this.fadeT = null; } if (this.audio) { try { this.audio.pause(); } catch (e) {} this.audio = null; } },
   refreshUI() { const el = document.getElementById('mvpName'); if (el) el.textContent = this.url ? '♪ ' + this.name : 'Yüklü müzik yok'; const tr = document.getElementById('mvpTrim'); if (tr) tr.classList.toggle('hidden', !this.url); },
   bind() {

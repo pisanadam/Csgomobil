@@ -532,6 +532,7 @@ G.onKill = function (v, k, def, hs, wallbang) {
   if (k && k !== v) {
     if (!this.ally(k, v)) {
       k.stats.kills++; if (hs) k.stats.hs++; k.roundKills = (k.roundKills || 0) + 1;
+      if (!this.dm && !this.aim) { const foes = this.entities.filter(o => o.team !== k.team).length; if (foes >= 2 && k.roundKills === foes) this.onAce(k); }   // tek başına tüm rakipler = ACE
       if (this.aim && k.isPlayer) Trainer.onDummyKill(hs);
       if (this.dm) {
         this.score[k.group]++;
@@ -1050,7 +1051,8 @@ G.endRound = function (win, reason) {
   if (mvp) mvp.stats.mvp = (mvp.stats.mvp || 0) + 1;
   const pw = win === this.player.team;
   let song = null;
-  if (mvp && Music.url && S.mvpWhen !== 'off' && (S.mvpWhen === 'always' || mvp.isPlayer)) { Music.play(); song = { own: true }; }
+  if (this.aceUntil > this.now) { /* ACE şarkısı çalıyor, raunt sonu müziği çalmaz */ }
+  else if (mvp && Music.url && S.mvpWhen !== 'off' && (S.mvpWhen === 'always' || mvp.isPlayer)) { Music.play(); song = { own: true }; }
   else if (mvp && mvp.remote && S.mvpWhen !== 'off' && Net.songs.has(Net.nid(mvp))) { const r = Net.songs.get(Net.nid(mvp)); Music.play(r.len, r.url, r.start); Net.curSong = { o: Net.nid(mvp) }; }
   else if (mvp && !mvp.isPlayer && S.botMusic !== 'off' && mvp.song && mvp.song.info) {
     // botun kendi şarkısı: 30 sn'lik önizlemenin başından (nakarata yakın kısım için 6. sn'den) çalar
@@ -1294,6 +1296,12 @@ G.respawn = function (e) {
   if (e.isPlayer) { this.spec = null; UI.message('', 0); }
 };
 
+G.aceUntil = 0;
+G.onAce = function (k) {
+  UI.toast(`★ ${k.isPlayer ? 'SEN' : k.name} ACE yaptı!`, 3.5, 'money');
+  if (k.isPlayer && Music.playAce()) this.aceUntil = this.now + (S.aceLen || 16);
+  if (Net.role === 'host' && Net.started) Net.sendAll({ t: 'ace', n: Net.nid(k), name: k.name });
+};
 G.ally = function (a, b) { return !this.ffa && a.team === b.team; };
 
 // Karakter modelini sahneden kaldır ve GPU belleğini boşalt (paylaşılan silah modelleri hariç)

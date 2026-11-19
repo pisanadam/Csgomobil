@@ -371,6 +371,7 @@ const Net = {
       case 'give': if (G.player && m.bomb) { G.player.inv.bomb = true; UI.toast('Bombayı aldın', 1.5); } break;
       case 'end': if (G.running) this.applyEnd(m); break;
       case 'matchend': { const st = m.st || []; for (const a of st) { const e = this.byNid(a[0]); if (e) e.stats = a[1]; } G.score = m.score; G.running = false; G.matchOver = true; UI.matchEnd(m.score[0], m.score[1]); break; }
+      case 'ace': { UI.toast(`★ ${m.n === this.myNid ? 'SEN' : m.name} ACE yaptı!`, 3.5, 'money'); if (m.n === this.myNid && Music.playAce()) G.aceUntil = G.now + (S.aceLen || 16); break; }
       case 'boom': FX.explosion(G.bomb.pos, true); Audio3.explosion(G.bomb.pos, true); G.bombMesh.visible = false; G.shake = 1.5; break;
     }
   },
@@ -438,11 +439,11 @@ const Net = {
     const mvp = m.mvp !== undefined && m.mvp !== null ? this.byNid(m.mvp) : null;
     const pw = m.win === G.player.team;
     const ms = m.ms; let played = false;
-    if (ms && S.mvpWhen !== 'off') {
+    if (ms && S.mvpWhen !== 'off' && !(G.aceUntil > G.now)) {
       if (ms.o !== undefined) { if (ms.o === this.myNid) played = Music.play(); else { const r = this.songs.get(ms.o); if (r) played = Music.play(r.len, r.url, r.start); } }
       else if (ms.a && S.botMusic !== 'off') { BotSongs.resolve(ms.a, ms.t).then(info => { if (info) Music.play(10, info.url, 4); }); played = true; }
     }
-    if (!played) Audio3.roundEnd(pw);
+    if (!played && !(G.aceUntil > G.now)) Audio3.roundEnd(pw);
     UI.roundEnd(m.win, m.reason, pw, mvp, m.why || '', null);
   },
   applyShot(m) {

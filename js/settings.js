@@ -42,6 +42,7 @@ const DEFAULT_SETTINGS = {
   aimScenario: 'grid', aimTime: 60, aimSize: 1, aimSpeed: 1,
   botMusic: 'all',      // botların şarkıları: 'both' | 'tr' | 'en' | 'off'
   mvpStart: 0, mvpLen: 10, // yüklenen şarkıdan çalınacak bölüm (sn)
+  aceMode: 'on', aceSong: 'random', aceLen: 16,   // ACE şarkısı
   mvpWhen: 'me',         // MVP müziği: 'me' (ben olunca) | 'always' | 'off'
   musicVol: 0.8,
   map: 'dust',            // dust, harbor, snow, town, random
