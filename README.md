@@ -17,7 +17,7 @@ Mobilde ve masaüstünde tarayıcıda oynanan, 5v5 bomba kurma / imha modlu takt
 - Fare hassasiyeti CS2 ölçüsünde (0.022°/birim); varsayılan 5.73 (önceki oyunla aynı his), rakam kutusuyla 0,01 hassasiyetle ayar, DPI/eDPI göstergesi
 - Ctrl ile eğilirken sekmenin kapanmasına karşı: tam ekranda klavye kilidi, kapatma onayı, Ctrl kısayollarını engelleme, eğilme tuşu seçimi
 - Aynı raunt satın alınan eşyayı tam fiyata geri satma (alım süresi içinde, "Son alımı geri al")
-- Müzik kataloğu: her dilden 135 popüler şarkı (Türkçe, İngilizce, İspanyolca, Korece, Fransızca, Almanca, İtalyanca, Arapça, Hintçe, Japonca...)
+- Müzik kataloğu: her dilden 137 popüler şarkı (Türkçe, İngilizce, İspanyolca, Korece, Fransızca, Almanca, İtalyanca, Arapça, Hintçe, Japonca...)
 - Yüklenen şarkıdan çalınacak bölümü seçme (dalga formu, başlangıç ve süre)
 - Daha hareketli botlar: köşeden kafa uzatma, sağa-sola sallanma, devriye, hızlı baskın/sahte saldırı stratejileri, sürünerek ilerleme, kovalama
 - CS2 tarzı sabit tarama (sprey) desenleri (AK-47: yukarı, sola, sağa, sola); silaha özel desenler
