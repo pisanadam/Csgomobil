@@ -83,7 +83,7 @@ const Net = {
     if (G.running && typeof UI !== 'undefined') UI.toast(`${p.name} oyundan ayrıldı`, 2.5);
     this.lobbyBroadcast(); this.paintMenu();
   },
-  lobbyBroadcast() { const names = [this.hostName || 'Oda kurucu'].concat(this.readyPeers().map(p => p.name)); this.sendAll({ t: 'lobby', names }); },
+  lobbyBroadcast() { const names = [this.hostName || 'Oda kurucu'].concat(this.readyPeers().map(p => p.name)); this.sendAll({ t: 'lobby', names, cheats: this.cheatCats() }); },
   // ---------- client ----------
   async join(offerCode, name) {
     if (this.role === 'host') throw new Error('Önce odanı kapat');
@@ -120,7 +120,7 @@ const Net = {
     for (const p of this.peers) { try { p.pc.close(); } catch (e) {} if (p.ent) p.ent.remote = null; }
     this.peers = [];
     if (this.link) { try { this.link.pc.close(); } catch (e) {} this.link = null; }
-    this.removeLimits(); this.stopBeat();
+    this.removeLimits(); this.stopBeat(); this.ackKey = null;
     if (this.role === 'client') this.restoreS();
     this.role = null; this.started = false; this.pendingStart = null;
     this.paintMenu();
@@ -133,19 +133,27 @@ const Net = {
   toHost(o, unrel) { if (this.link) this.send(unrel ? this.link.u : this.link.r, o); },
   // Çok oyunculuda yardımlar en fazla "orta" düzeyde: nişan/tarama yardımı <= 2, hile simülasyonu sınırlı
   assist(v) { return (this.role && this.started) ? Math.min(v, 2) : v; },
+  // Hileli oda: oda kurucu açıkça izin verirse ve herkes onaylarsa seçilen hile grupları serbest kalır; aksi halde hepsi kapalı
+  CATS: { aim: ['aimbot', 'trigger', 'aimWalls'], esp: ['esp', 'chams', 'radar', 'espLines'], move: ['speed', 'god', 'spin', 'third'], weapon: ['norecoil', 'nospread', 'ammo'] },
+  CAT_N: { aim: 'Nişan (aimbot/trigger)', esp: 'Görsel (ESP/wallhack/radar)', move: 'Oyuncu (hız/ölümsüzlük/spinbot/3. şahıs)', weapon: 'Silah (geri tepme/dağılma/mermi)' },
+  allowed: new Set(),
+  cheatCats() { return S.netCheats === 'on' ? (S.netCheatCats || []).filter(c => this.CATS[c]) : []; },
+  setAllowed(cats) { this.allowed = new Set(); (cats || []).forEach(c => (this.CATS[c] || []).forEach(k => this.allowed.add(k))); },
+  catNames(cats) { return (cats || []).map(c => this.CAT_N[c] || c).join(', '); },
   applyLimits() {
     if (this.savedC) return;
     this.savedC = Object.assign({}, Cheats.c);
     const had = Cheats.any();
     this.enforceLimits();
-    if (had) UI.toast('Çok oyunculu maçta hile kullanılamaz: tüm hileler kapatıldı', 4);
+    if (this.allowed.size) UI.toast('🧪 HİLELİ ODA — serbest: ' + this.catNames(this.cheatCatsActive), 6, 'warn');
+    else if (had) UI.toast('Çok oyunculu maçta hile kullanılamaz: tüm hileler kapatıldı', 4);
   },
-  removeLimits() { if (this.savedC) { this._restoring = true; Object.assign(Cheats.c, this.savedC); this.savedC = null; Cheats.save(); this._restoring = false; } },
+  removeLimits() { if (this.savedC) { this._restoring = true; Object.assign(Cheats.c, this.savedC); this.savedC = null; Cheats.save(); this._restoring = false; } this.allowed = new Set(); this.cheatCatsActive = []; },
   limited() { return !!(this.role && this.started && G.running && !G.matchOver && !this._restoring); },
   // maç sırasında hile menüsünden açılsa bile yasak seçenekler hemen kapatılır
   enforceLimits() {
     const c = Cheats.c;
-    for (const k of ['aimbot', 'trigger', 'esp', 'chams', 'radar', 'norecoil', 'nospread', 'god', 'ammo', 'speed', 'spin', 'third', 'aimWalls', 'espLines']) c[k] = false;
+    for (const cat in this.CATS) for (const k of this.CATS[cat]) if (!this.allowed.has(k)) c[k] = false;
   },
   nid(e) { return e.nid !== undefined ? e.nid : e.id; },
   byNid(n) { return G.entities.find(e => this.nid(e) === n); },
@@ -210,9 +218,9 @@ const Net = {
     if (this.role === 'host') for (const p of this.readyPeers()) if (p !== from) this.sendSongTo(p.r, rx.o, rec);   // diğer arkadaşlara ilet
   },
   afterStartMatch() {
-    this.started = true; this.applyLimits();
+    this.started = true; this.cheatCatsActive = this.cheatCats(); this.setAllowed(this.cheatCatsActive); this.applyLimits();
     const ents = G.entities.map(e => ({ n: e.nid, name: e.isPlayer ? (this.hostName || 'Oda kurucu') : e.name, team: e.team, g: e.group, human: !!e.remote || e.isPlayer }));
-    const cfg = { map: MAP.current, mode: S.mode, maxRounds: S.maxRounds, dmTime: S.dmTime, teamSize: S.teamSize, friendlyFire: !!S.friendlyFire, c4Time: S.c4Time, roundTime: S.roundTime, freezeTime: S.freezeTime, startMoney: S.startMoney };
+    const cfg = { map: MAP.current, mode: S.mode, maxRounds: S.maxRounds, dmTime: S.dmTime, teamSize: S.teamSize, friendlyFire: !!S.friendlyFire, c4Time: S.c4Time, roundTime: S.roundTime, freezeTime: S.freezeTime, startMoney: S.startMoney, cheats: this.cheatCats() };
     for (const p of this.readyPeers()) {
       this.send(p.r, { t: 'start', cfg, ents, me: p.ent.nid, sog: G.sideOfGroup, dm: G.dm, FREEZE: G.FREEZE, ROUND_TIME: G.ROUND_TIME, BOMB_TIME: G.BOMB_TIME, start: ECON.start });
     }
@@ -361,7 +369,15 @@ const Net = {
   onMsgClient(m) {
     switch (m.t) {
       case 'welcome': this.paintMenu(); break;
-      case 'lobby': this.lobbyNames = m.names; this.paintMenu(); break;
+      case 'lobby': {
+        this.lobbyNames = m.names; this.paintMenu();
+        const key = JSON.stringify(m.cheats || []);
+        if (m.cheats && m.cheats.length && this.ackKey !== key) {      // hileli oda: katılan onaylamalı
+          this.ackKey = key;
+          if (!confirm('⚠ Bu oda HİLEYE İZİN VERİYOR.\nSerbest: ' + this.catNames(m.cheats) + '\n\nHerkes bu gruplardaki hileleri kullanabilir. Odada kalmak istiyor musun?')) { this.leave(); UI.toast('Odadan ayrıldın', 2); }
+        } else if (!(m.cheats && m.cheats.length)) this.ackKey = '[]';
+        break;
+      }
       case 'skh': this.skinHeader(this.link, m); break;
       case 'ske': this.skinDone(this.link, m, null); break;
       case 'pk': if (G.running && WEAPONS[m.w]) G.spawnPickup({ def: WEAPONS[m.w], mag: m.mag, reserve: m.reserve }, null, null, m, m.d); break;
@@ -395,6 +411,7 @@ const Net = {
   },
   clientStart(m) {
     // host ayarlarını geçici uygula (maç bitince geri yüklenir)
+    const chs = m.cfg.cheats || []; delete m.cfg.cheats;
     if (!this.savedS) { this.savedS = {}; for (const k in m.cfg) this.savedS[k] = S[k]; }
     Object.assign(S, m.cfg);
     for (const e of G.entities) if (e.model) G.disposeModel(e.model);
@@ -405,7 +422,7 @@ const Net = {
     G.sideOfGroup = m.sog; G.score = [0, 0]; G.lossStreak = { T: 0, CT: 0 };
     G.dm = m.dm; G.ffa = m.dm; G.FREEZE = m.FREEZE; G.ROUND_TIME = m.ROUND_TIME; G.BOMB_TIME = m.BOMB_TIME; ECON.start = m.start;
     document.body.classList.toggle('hudclassic', S.hudStyle === 'classic');
-    this.myNid = m.me; this.applyLimits();
+    this.myNid = m.me; this.cheatCatsActive = chs; this.setAllowed(chs); this.applyLimits();
     for (const d of m.ents) {
       const mine = d.n === m.me;
       const e = new Entity(mine ? this.myName : d.name, d.team, mine); e.group = d.g; e.nid = d.n; e.human = d.human;
@@ -566,7 +583,7 @@ const Net = {
     const on = this.role && this.started && G.running;
     el.classList.toggle('hidden', !on); if (!on) return;
     const r = this.role === 'host' ? Math.max(0, ...this.readyPeers().map(p => p.rtt || 0)) : this.rtt;
-    el.textContent = '📶 ' + Math.round(r) + ' ms'; el.style.color = r < 60 ? '#7f7' : r < 130 ? '#fd6' : '#f77';
+    el.textContent = (this.allowed.size ? '🧪 Hileli oda  ' : '') + '📶 ' + Math.round(r) + ' ms'; el.style.color = r < 60 ? '#7f7' : r < 130 ? '#fd6' : '#f77';
   },
   // host: uzak oyuncu eşitleme (hareket yumuşatma + adım sesi)
   hostRemote(e, dt) {
@@ -950,4 +967,16 @@ Net.paintList = function () {
     const e = ch && ch.ent;
     if (def && e && !e.isPlayer && (e.remote || e.human)) { const k = Net.skinKey(e.nid, def.id); if (Skins.has(k)) Skins.apply(ch.parts.gun.userData.model, k); }
   };
+})();
+
+// Hileli oda: grup onay kutuları
+(function () {
+  const init = () => {
+    const box = document.getElementById('netCheatCats'); if (!box) return;
+    box.querySelectorAll('[data-cat]').forEach(el => {
+      el.checked = (S.netCheatCats || []).includes(el.dataset.cat);
+      el.onchange = () => { const s = new Set(S.netCheatCats || []); el.checked ? s.add(el.dataset.cat) : s.delete(el.dataset.cat); S.netCheatCats = [...s]; Settings.save(); if (Net.role === 'host') Net.lobbyBroadcast(); };
+    });
+  };
+  const o = Net.bindUI; Net.bindUI = function () { o.call(this); init(); };
 })();

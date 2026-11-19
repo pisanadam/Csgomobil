@@ -216,8 +216,13 @@ const Cheats = {
     });
     document.getElementById('chMoney').onclick = () => { if (G.player) { G.player.money = ECON.max; Audio3.ui(1200); } };
     if (Net.limited()) {
-      box.insertAdjacentHTML('afterbegin', '<div class="hint" style="color:#fc6;margin-bottom:8px">🎮 Çok oyunculu maçta hile kullanılamaz. Tüm hileler kilitli; maç bitince ayarların geri gelir.</div>');
-      box.querySelectorAll('input,button').forEach(el => { el.disabled = true; if (el.type === 'checkbox') el.checked = false; });
+      const A = Net.allowed, any = A.size > 0;
+      box.insertAdjacentHTML('afterbegin', any ? '<div class="hint" style="color:#fc6;margin-bottom:8px">🧪 Hileli oda: sadece oda kurucunun izin verdiği gruplar açılabilir (' + Net.catNames(Net.cheatCatsActive) + '). Diğerleri kilitli; maç bitince ayarların geri gelir.</div>' : '<div class="hint" style="color:#fc6;margin-bottom:8px">🎮 Çok oyunculu maçta hile kullanılamaz. Tüm hileler kilitli; maç bitince ayarların geri gelir.</div>');
+      const need = { aimFov: 'aimbot', aimSmooth: 'aimbot', trigDelay: 'trigger' };
+      const gated = new Set([].concat(...Object.values(Net.CATS)));
+      box.querySelectorAll('[data-ck]').forEach(el => { if (gated.has(el.dataset.ck) && !A.has(el.dataset.ck)) { el.disabled = true; el.checked = false; } });
+      box.querySelectorAll('[data-cr]').forEach(el => { if (!A.has(need[el.dataset.cr])) el.disabled = true; });
+      box.querySelectorAll('[data-cs]').forEach(el => { if (!A.has('aimbot')) el.disabled = true; });
     }
   },
   open() {

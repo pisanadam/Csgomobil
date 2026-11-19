@@ -51,6 +51,7 @@ const DEFAULT_SETTINGS = {
   // Ses
   volume: 0.8,
   micMode: 'off', micSens: 0.5,   // mikrofon: botlar sesini duyar
+  netCheats: 'off', netCheatCats: ['aim', 'esp', 'move', 'weapon'],   // hileli oda (herkes onaylar)
   netMode: 'coop', netBots: true,   // çok oyunculu parti modu: coop | teams | duel | ffa
   autoRes: true,         // kare hızı düşerse çözünürlüğü kendiliğinden azalt
   audio3d: 'hrtf',       // ses konumu: 'hrtf' (3B kulaklık) | 'stereo' (hoparlör)

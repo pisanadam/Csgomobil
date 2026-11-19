@@ -78,6 +78,7 @@ const UI = {
     $('fps').classList.toggle('hidden', !S.showFps);
     if ((key === 'graphics' || key === 'sharp' || key === 'autoRes') && G.renderer) G.applyGraphics();
     document.body.classList.toggle('hudclassic', S.hudStyle === 'classic');
+    if ((key === 'netCheats' || key === 'netCheatCats') && Net.role === 'host') Net.lobbyBroadcast();
     if (key === 'mvpStart' || key === 'mvpLen') { Music.clampSel(); Music.drawWave(); }
     if (key === 'map' && G.renderer && !G.running) G.loadMap(S.map === 'random' ? 'dust' : S.map);
     if (key === 'fov' && G.camera) { G.camera.fov = S.fov; G.camera.updateProjectionMatrix(); }

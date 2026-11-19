@@ -19,10 +19,10 @@ function build(s) {
 async function refresh() {
   const s = await api.state(); if (!body.firstChild) build(s);
   if (!s.ok) { st.className = 'st idle'; st.textContent = 'Oyun bekleniyor…'; return; }
-  const locked = s.mp;
-  st.className = 'st ' + (locked ? 'lock' : 'ok');
-  st.textContent = locked ? '🔒 Çok oyunculu: hileler kilitli ve kapalı' : (s.running ? '✔ Tek oyunculu maç: hileler kullanılabilir' : '✔ Menüde (maç başlayınca etkin)');
-  body.querySelectorAll('input,select').forEach(e => e.disabled = locked);
+  const A = s.mp ? new Set(s.allowed || []) : null, need = { aimFov: 'aimbot', aimSmooth: 'aimbot', aimBone: 'aimbot', aimKey: 'aimbot', trigDelay: 'trigger' };
+  st.className = 'st ' + (s.mp ? (A.size ? 'idle' : 'lock') : 'ok');
+  st.textContent = s.mp ? (A.size ? '🧪 Hileli oda: sadece izin verilen hileler açılabilir' : '🔒 Çok oyunculu: hileler kilitli ve kapalı') : (s.running ? '✔ Tek oyunculu maç: hileler kullanılabilir' : '✔ Menüde (maç başlayınca etkin)');
+  body.querySelectorAll('[data-k],[data-r],[data-s]').forEach(e => { const k = e.dataset.k || e.dataset.r || e.dataset.s; e.disabled = !!A && !A.has(need[k] || k); });
   for (const e of body.querySelectorAll('[data-k]')) e.checked = !!s.cheats[e.dataset.k];
   for (const e of body.querySelectorAll('[data-r]')) { e.value = s.cheats[e.dataset.r]; body.querySelector(`[data-v="${e.dataset.r}"]`).textContent = s.cheats[e.dataset.r]; }
   for (const e of body.querySelectorAll('[data-s]')) e.value = s.cheats[e.dataset.s];

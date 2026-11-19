@@ -2,7 +2,7 @@
 
 Oyunu kendi pencerede açar, yanında **hile paneli** gösterir (aimbot, triggerbot, ESP, hız, ölümsüzlük, geri tepme yok, spinbot, profiller, kısayollar).
 
-**Güvenlik kuralı:** Hileler yalnızca tek oyunculuda (botlara karşı) çalışır. Çok oyunculu odaya girince panel kilitlenir ve oyunun kendisi de tüm hileleri kapatır. Başka oyunlara/programlara müdahale etmez; sadece kendi penceresindeki bu oyunu yönetir.
+**Kural:** Tek oyunculuda hileler serbest. Çok oyunculu odada hileler varsayılan olarak kilitlidir; yalnızca oda kurucu "🧪 Hileli oda"yı açar ve katılan herkes uyarıyı onaylarsa, izin verilen gruplar panelden de açılabilir. Başka oyunlara/programlara müdahale etmez; sadece kendi penceresindeki bu oyunu yönetir.
 
 ## Windows'ta .exe üretme
 1. [Node.js](https://nodejs.org) (LTS) kur.
