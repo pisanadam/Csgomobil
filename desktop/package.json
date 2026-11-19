@@ -1,0 +1,22 @@
+{
+  "name": "taktik-ops-masaustu",
+  "version": "1.0.0",
+  "description": "Taktik Ops masaüstü başlatıcı + tek oyunculu hile paneli",
+  "main": "main.js",
+  "scripts": {
+    "prepare-game": "node copy-game.js",
+    "start": "node copy-game.js && electron .",
+    "dist": "node copy-game.js && electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "tr.taktikops.masaustu",
+    "productName": "TaktikOps-Masaustu",
+    "files": ["main.js", "preload.js", "panel.html", "panel.js", "game/**/*"],
+    "win": { "target": "portable" },
+    "portable": { "artifactName": "TaktikOps-Masaustu.exe" }
+  }
+}

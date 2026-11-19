@@ -1,0 +1,15 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>Hile Paneli</title>
+<style>
+body{margin:0;background:#12151b;color:#dde;font:13px Segoe UI,Arial,sans-serif;padding:10px}
+h3{margin:10px 0 4px;color:#fc6;font-size:13px}
+label.c{display:flex;align-items:center;gap:6px;padding:3px 0}
+.st{padding:8px;border-radius:8px;margin-bottom:8px;font-weight:700}.ok{background:#12341c;color:#7f7}.lock{background:#3a1515;color:#f88}.idle{background:#2a2a1a;color:#fd6}
+input[type=range]{width:100%}.row{display:flex;gap:6px;align-items:center}button,select,input[type=text]{background:#222a35;color:#fff;border:1px solid #445;border-radius:6px;padding:5px 8px}
+small{color:#89a}
+</style></head><body>
+<div id="st" class="st idle">Oyun bekleniyor…</div>
+<small>Kısayollar: F5 aimbot • F6 trigger • F7 ESP • F8 hız • F9 ölümsüz • F10 geri tepme yok</small>
+<div id="body"></div>
+<h3>Profil</h3><div class="row"><select id="prof"></select><button id="load">Yükle</button></div><div class="row" style="margin-top:4px"><input type="text" id="pname" placeholder="profil adı" style="flex:1"><button id="save">Kaydet</button></div>
+<div class="row" style="margin-top:8px"><button id="fs">⛶ Tam ekran</button></div>
+<script src="panel.js"></script></body></html>
