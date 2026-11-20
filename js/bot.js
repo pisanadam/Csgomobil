@@ -6,6 +6,17 @@ const BOT_DIFF = [
   { name: 'Zor', react: [0.19, 0.32], turn: 420, err: 1.9, settle: 0.3, hs: 0.5, spray: 0.78, counter: 0.85, fov: 140, tapDist: 22, burstPause: [0.25, 0.45], jitter: 0.18, nade: 0.75 },
   { name: 'Uzman', react: [0.13, 0.22], turn: 620, err: 1.1, settle: 0.2, hs: 0.68, spray: 0.93, counter: 1, fov: 150, tapDist: 20, burstPause: [0.18, 0.32], jitter: 0.08, nade: 0.9 },
 ];
+// Ara seviyeler (0.5, 1.5, 2.5): komşu iki seviyenin değerleri doğrusal karıştırılır
+const _diffCache = {};
+function botDiffAt(l) {
+  const n = BOT_DIFF.length - 1; l = Math.max(0, Math.min(n, +l || 0));
+  if (_diffCache[l]) return _diffCache[l];
+  const a = BOT_DIFF[Math.floor(l)], b = BOT_DIFF[Math.ceil(l)], f = l - Math.floor(l);
+  if (!f) return (_diffCache[l] = a);
+  const mix = (x, y) => Array.isArray(x) ? x.map((v, i) => v + (y[i] - v) * f) : (typeof x === 'number' ? x + (y - x) * f : x);
+  const o = {}; for (const k in a) o[k] = mix(a[k], b[k]);
+  o.name = a.name + '+'; return (_diffCache[l] = o);
+}
 const BOT_NAMES = ['Ahmet', 'Burak', 'Can', 'Deniz', 'Emre', 'Ferhat', 'Gökhan', 'Hakan', 'İlker', 'Kaan', 'Levent', 'Mert', 'Onur', 'Ozan', 'Serkan', 'Tolga', 'Umut', 'Volkan', 'Yiğit', 'Baran', 'Arda', 'Efe', 'Barış', 'Cem'];
 const rnd = (a, b) => a + Math.random() * (b - a);
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
@@ -31,7 +42,7 @@ class Bot {
   }
   // zorluk: oyuncunun takımındaki botlar ve rakip botlar ayrı ayarlanır (Ölüm Kalım'da herkes rakip)
   get lvl() { const ally = !G.ffa && G.player && this.e.group === G.player.group; const v = ally ? S.botDiffAlly : S.botDifficulty; return (v === undefined || v === null) ? 1 : v; }
-  get D() { return BOT_DIFF[this.lvl] || BOT_DIFF[1]; }
+  get D() { return botDiffAt(this.lvl); }
   // ----- Tur başı -----
   roundStart(role) {
     this.role = role; this.path = null; this.goal = null; this.goalKey = '';

@@ -358,8 +358,8 @@ input[type=range]{width:100%;accent-color:#e9a83a}
       <div class="field aimOnly hidden"><label>Hedef Boyutu</label><div class="seg" data-set="aimSize" data-opts='[[2,"Büyük"],[1,"Orta"],[0,"Küçük"]]'></div></div>
       <div class="field aimOnly hidden"><label>Hedef Hızı</label><div class="seg" data-set="aimSpeed" data-opts='[[0,"Yavaş"],[1,"Normal"],[2,"Hızlı"]]'></div></div>
       <div class="field notAim"><label>Takım</label><div class="seg" data-set="playerTeam" data-opts='[["auto","Otomatik"],["T","Saldırı"],["CT","Savunma"]]'></div></div>
-      <div class="field notAim"><label>Rakip Takım Zorluğu</label><div class="seg" data-set="botDifficulty" data-opts='[[0,"Kolay"],[1,"Normal"],[2,"Zor"],[3,"Uzman"]]'></div></div>
-      <div class="field notAim"><label>Kendi Takımının Zorluğu</label><div class="seg" data-set="botDiffAlly" data-opts='[[0,"Kolay"],[1,"Normal"],[2,"Zor"],[3,"Uzman"]]'></div></div>
+      <div class="field notAim"><label>Rakip Takım Zorluğu</label><div class="seg" data-set="botDifficulty" data-opts='[[0,"Kolay"],[0.5,"Kolay+"],[1,"Normal"],[1.5,"Normal+"],[2,"Zor"],[2.5,"Zor+"],[3,"Uzman"]]'></div></div>
+      <div class="field notAim"><label>Kendi Takımının Zorluğu</label><div class="seg" data-set="botDiffAlly" data-opts='[[0,"Kolay"],[0.5,"Kolay+"],[1,"Normal"],[1.5,"Normal+"],[2,"Zor"],[2.5,"Zor+"],[3,"Uzman"]]'></div></div>
       <div class="field notAim"><label>Takım Boyutu</label><div class="seg" data-set="teamSize" data-opts='[[1,"1v1"],[2,"2v2"],[3,"3v3"],[4,"4v4"],[5,"5v5"]]'></div></div>
       <div class="field notAim"><label>Maç Uzunluğu</label><div class="seg" data-set="maxRounds" data-opts='[[8,"Kısa (8)"],[16,"Normal (16)"],[30,"Rekabetçi (30)"]]'></div></div>
       <div class="field notAim"><label>Ölüm Kalım Süresi</label><div class="seg" data-set="dmTime" data-opts='[[180,"3 dk"],[300,"5 dk"],[600,"10 dk"]]'></div></div>
@@ -509,8 +509,8 @@ input[type=range]{width:100%;accent-color:#e9a83a}
         <div style="font-size:12px;color:var(--dim)">MP3, OGG, WAV, M4A gibi sesler ya da <b>MP4</b> video seçebilirsin: MP4'ün sesi otomatik olarak MP3'e çevrilip kaydedilir (en fazla ilk 6 dakika). Dosya bu cihazda saklanır; raunt sonunda ~9 saniye çalar.</div></div>
     </div>
     <div class="menuGrid tabc hidden" data-tab="bot">
-      <div class="field"><label>Kendi Takımının Zorluğu</label><div class="seg" data-set="botDiffAlly" data-opts='[[0,"Kolay"],[1,"Normal"],[2,"Zor"],[3,"Uzman"]]'></div><div style="font-size:12px;color:var(--dim)">Takım arkadaşı botların seviyesi. Ölüm Kalım'da herkes rakip sayılır.</div></div>
-      <div class="field"><label>Rakip Takım Zorluğu</label><div class="seg" data-set="botDifficulty" data-opts='[[0,"Kolay"],[1,"Normal"],[2,"Zor"],[3,"Uzman"]]'></div>
+      <div class="field"><label>Kendi Takımının Zorluğu</label><div class="seg" data-set="botDiffAlly" data-opts='[[0,"Kolay"],[0.5,"Kolay+"],[1,"Normal"],[1.5,"Normal+"],[2,"Zor"],[2.5,"Zor+"],[3,"Uzman"]]'></div><div style="font-size:12px;color:var(--dim)">Takım arkadaşı botların seviyesi. Ölüm Kalım'da herkes rakip sayılır.</div></div>
+      <div class="field"><label>Rakip Takım Zorluğu</label><div class="seg" data-set="botDifficulty" data-opts='[[0,"Kolay"],[0.5,"Kolay+"],[1,"Normal"],[1.5,"Normal+"],[2,"Zor"],[2.5,"Zor+"],[3,"Uzman"]]'></div>
         <div style="font-size:12px;color:var(--dim)">Tepki süresi, nişan hızı, sprey kontrolü, kafa vuruşu oranı, karşı-strafe ve el bombası kullanımı değişir.</div></div>
       <div class="field"><label>Takım Boyutu</label><div class="seg" data-set="teamSize" data-opts='[[1,"1v1"],[2,"2v2"],[3,"3v3"],[4,"4v4"],[5,"5v5"]]'></div></div>
       <div class="field"><label>Maç Uzunluğu</label><div class="seg" data-set="maxRounds" data-opts='[[8,"Kısa (8)"],[16,"Normal (16)"],[30,"Rekabetçi (30)"]]'></div></div>
@@ -3486,6 +3486,17 @@ const BOT_DIFF = [
   { name: 'Zor', react: [0.19, 0.32], turn: 420, err: 1.9, settle: 0.3, hs: 0.5, spray: 0.78, counter: 0.85, fov: 140, tapDist: 22, burstPause: [0.25, 0.45], jitter: 0.18, nade: 0.75 },
   { name: 'Uzman', react: [0.13, 0.22], turn: 620, err: 1.1, settle: 0.2, hs: 0.68, spray: 0.93, counter: 1, fov: 150, tapDist: 20, burstPause: [0.18, 0.32], jitter: 0.08, nade: 0.9 },
 ];
+// Ara seviyeler (0.5, 1.5, 2.5): komşu iki seviyenin değerleri doğrusal karıştırılır
+const _diffCache = {};
+function botDiffAt(l) {
+  const n = BOT_DIFF.length - 1; l = Math.max(0, Math.min(n, +l || 0));
+  if (_diffCache[l]) return _diffCache[l];
+  const a = BOT_DIFF[Math.floor(l)], b = BOT_DIFF[Math.ceil(l)], f = l - Math.floor(l);
+  if (!f) return (_diffCache[l] = a);
+  const mix = (x, y) => Array.isArray(x) ? x.map((v, i) => v + (y[i] - v) * f) : (typeof x === 'number' ? x + (y - x) * f : x);
+  const o = {}; for (const k in a) o[k] = mix(a[k], b[k]);
+  o.name = a.name + '+'; return (_diffCache[l] = o);
+}
 const BOT_NAMES = ['Ahmet', 'Burak', 'Can', 'Deniz', 'Emre', 'Ferhat', 'Gökhan', 'Hakan', 'İlker', 'Kaan', 'Levent', 'Mert', 'Onur', 'Ozan', 'Serkan', 'Tolga', 'Umut', 'Volkan', 'Yiğit', 'Baran', 'Arda', 'Efe', 'Barış', 'Cem'];
 const rnd = (a, b) => a + Math.random() * (b - a);
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
@@ -3511,7 +3522,7 @@ class Bot {
   }
   // zorluk: oyuncunun takımındaki botlar ve rakip botlar ayrı ayarlanır (Ölüm Kalım'da herkes rakip)
   get lvl() { const ally = !G.ffa && G.player && this.e.group === G.player.group; const v = ally ? S.botDiffAlly : S.botDifficulty; return (v === undefined || v === null) ? 1 : v; }
-  get D() { return BOT_DIFF[this.lvl] || BOT_DIFF[1]; }
+  get D() { return botDiffAt(this.lvl); }
   // ----- Tur başı -----
   roundStart(role) {
     this.role = role; this.path = null; this.goal = null; this.goalKey = '';
